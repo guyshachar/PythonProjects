@@ -1,1 +1,2 @@
-playwright==4.12.2
+playwright
+playwright.sync_api
