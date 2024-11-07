@@ -1,0 +1,111 @@
+
+hello_world:
+    module: hello
+    class: HelloWorldApp
+    disable: true
+
+refPortal:
+    module: refPortalApp
+    class: RefPortalApp
+    log_level: INFO  # specify the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    url: 'https://ref.football.org.il/login'
+    polling_interval: 5000
+    topic: 'my/mqtt/refPortal/raw'
+
+tzevaAdomNew:
+    module: tzevaAdomAppNew
+    class: TzevaAdomAppNew
+    disable: false
+    log_level: INFO  # specify the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    url: 'https://api.tzevaadom.co.il/notifications'
+    polling_interval: 1000
+    live_logging_interval: 2
+    raw_topic: 'my/mqtt/tzevaAdomNew/raw'
+    error_topic: 'my/mqtt/tzevaAdomNew/error'
+    url_sensor_alerts: 'sensor.pikud_haoref_alerts'
+    notify_criteria:
+        - 
+            - name: 'home'
+            - topic: 'my/mqtt/tzevaAdomNew/notify/validated'
+            - sensor: 'sensor.tzeva_adom_notification_new'
+            - notifiedMobiles:
+                - mobile_app_guy_iphone
+                - mobile_app_yael_iphone_2
+            - toggleLights: True
+            - cities:
+                -
+                    - גבעתיים
+                    - רמת גן - מערב
+                -
+                    - תל אביב
+                    - רמת גן - מזרח
+                -
+                    - ALL
+        -
+            - name: 'family'
+            - topic: 'my/mqtt/tzevaAdomNew/notify/family'
+            - sensor: ''
+            - notifiedMobiles:
+                - mobile_app_shimiphone
+                - mobile_app_h_iphone_shl_nvh
+            - toggleLights: False
+            - cities:
+                -
+                    - רמת גן - מערב
+                -
+                    - גבעתיים
+                    - תל אביב
+                    - רמת גן - מזרח
+                -
+                    - ALL
+
+tzevaAdom:
+    module: startautomation1
+    class: TzevaAdomApp
+    disable: true
+    log_level: INFO  # specify the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    url: 'https://api.tzevaadom.co.il/notifications'
+    notify_criteria1: [{'name':'home','topic':'my/mqtt/tzevaAdom/validated','sensor':'sensor.tzeva_adom_notification','notifiedMobiles':['mobile_app_guy_iphone','mobile_app_yael_iphone_2'],'toggleLights':True,'cities':[['רמת גן - מערב','גבעתיים'],['רמת גן - מזרח','תל אביב'],['ALL']]},{'name':'family','topic':'my/mqtt/tzevaAdom/family','sensor':'','notifiedMobiles':['mobile_app_shimiphone','mobile_app_h_iphone_shl_nvh'],'toggleLights':False,'cities':[['רמת גן - מערב'],['תל אביב','גבעתיים'],['ALL']]}]
+    polling_interval: 1000
+    live_logging_interval: 2
+    topic: 'my/mqtt/tzevaAdom/raw'
+    testMode: True
+    notify_criteria:
+        - 
+            - name: 'home'
+            - topic: 'my/mqtt/tzevaAdom/validated'
+            - sensor: 'sensor.tzeva_adom_notification'
+            - notifiedMobiles:
+                - mobile_app_guy_iphone
+                - mobile_app_yael_iphone_2
+            - toggleLights: True
+            - cities:
+                -
+                    - גבעתיים
+                    - רמת גן - מערב
+                -
+                    - תל אביב
+                    - רמת גן - מזרח
+                -
+                    - ALL
+        -
+            - name: 'family'
+            - topic: 'my/mqtt/tzevaAdom/family'
+            - sensor: ''
+            - notifiedMobiles:
+                - mobile_app_shimiphone
+                - mobile_app_h_iphone_shl_nvh
+            - toggleLights: False
+            - cities:
+                -
+                    - רמת גן - מערב
+                -
+                    - גבעתיים
+                    - תל אביב
+                    - רמת גן - מזרח
+                -
+                    - ALL
+
+#logRedirect:
+#  module: startlogredirect
+#  class: LogRedirectApp
