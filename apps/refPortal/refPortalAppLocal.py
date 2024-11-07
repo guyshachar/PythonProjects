@@ -7,8 +7,8 @@ import datetime
 import json
 
 from playwright.sync_api import sync_playwright
-from plyer import notification
-from plyer import audio
+#from plyer import notification
+#from plyer import audio
 
 #class RefPortalApp(hass.Hass):
 class RefPortalApp():
@@ -122,7 +122,7 @@ class RefPortalApp():
         
         try:
             # Example usage
-            self.send_notification("עדכון שיבוץ בפורטל", result)
+            #self.send_notification("עדכון שיבוץ בפורטל", result)
             #self.call_service("mqtt/publish", topic=self.topic, payload=json.dumps(result), qos=1)
             pass
         finally:
