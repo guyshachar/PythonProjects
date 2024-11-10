@@ -49,7 +49,8 @@ class RefPortalApp():
             result = ''
 
             try:
-                browser = p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
+                browser1 = p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
+                browser = p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
                 self.logger.info(f'launch')
                 print(f"Before newpage")
                 page = browser.new_page()
