@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libnspr4 \
     libnss3 \
-    libvpx6 \
+    #libvpx6 \
     libxcomposite1 \
     libxdamage1 \
     && apt-get clean
