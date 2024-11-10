@@ -6,7 +6,10 @@ import time
 import datetime
 import json
 
-from playwright.sync_api import sync_playwright
+import asyncio
+from playwright.async_api import async_playwright
+
+#from playwright.sync_api import sync_playwright
 #from plyer import notification
 #from plyer import audio
 
@@ -43,17 +46,17 @@ class RefPortalApp():
         self.start()
         pass
 
-    def login(self):
-        with sync_playwright() as p:
+    async def login(self):
+        with async_playwright() as p:
             self.logger.info(f'login')
             result = ''
 
             try:
-                browser1 = p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
-                browser = p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+                browser1 = await p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
+                browser = await p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
                 self.logger.info(f'launch')
                 print(f"Before newpage")
-                page = browser.new_page()
+                page = await browser.new_page()
                 print(f"After newpage")
                 self.logger.info(f'new page')
                 # Navigate to the URL
@@ -138,7 +141,7 @@ class RefPortalApp():
         finally:
             pass
     
-    def start(self):
+    async def start(self):
         self.logger.info('Start')
         lastResult = ''
         while True:
@@ -147,7 +150,7 @@ class RefPortalApp():
             self.logger.info(f'Next run {next_run}')
 
             try:
-                result = self.login()  # Call the method
+                result = await self.login()  # Call the method
                 if result:
                     if result != lastResult:
                         lastResult = result
@@ -167,5 +170,6 @@ class RefPortalApp():
 
 if __name__ == "__main__":
     app = RefPortalApp()
-    app.start()
+    #app.start()
+    asyncio.run(app.start())
     pass
