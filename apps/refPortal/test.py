@@ -7,7 +7,7 @@ async def run():
     logger = logging.getLogger(__name__)
     async with async_playwright() as p:
         logger.info("Hello1")
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox','--disable-gpu','--single-process'])
         logger.info("Hello2")
         page = await browser.new_page()
         logger.info("Hello3")
