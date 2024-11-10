@@ -53,7 +53,7 @@ class RefPortalApp():
 
             try:
                 #browser1 = await p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
-                browser = await p.chromium.launch(headless=True, args=['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--single-process'])
+                browser = await p.chromium.launch(headless=True, args=['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'])
                 self.logger.info(f'launch')
                 page = await browser.new_page()
                 self.logger.info(f'new page')
@@ -165,7 +165,7 @@ class RefPortalApp():
             if sleep_duration > 0:
                 self.logger.debug(f'loop {sleep_duration} {time.perf_counter()}')
                 #time.sleep(sleep_duration)
-                await asyncio.sleep(sleep_duration)
+                await asyncio.sleep(self.pollingInterval / 1000)
 
 if __name__ == "__main__":
     app = RefPortalApp()
