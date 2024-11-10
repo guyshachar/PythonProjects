@@ -153,7 +153,6 @@ class RefPortalApp():
                 self.logger.debug(f'loop {sleep_duration} {time.perf_counter()}')
                 time.sleep(sleep_duration)
 
-if __name__ == "__main__":
-    app = RefPortalApp()
-    app.start()
-    pass
+app = RefPortalApp()
+app.start()
+pass
