@@ -55,9 +55,7 @@ class RefPortalApp():
                 #browser1 = await p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
                 browser = await p.chromium.launch(headless=True, args=['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--single-process'])
                 self.logger.info(f'launch')
-                print(f"Before newpage")
                 page = await browser.new_page()
-                print(f"After newpage")
                 self.logger.info(f'new page')
                 # Navigate to the URL
                 page.goto(self.url)  # Replace with your target URL
@@ -97,7 +95,7 @@ class RefPortalApp():
                 pass
     
             finally:
-                self.logger.info(f'Close')
+                self.logger.info(f'close')
                 browser.close()
                 return result
                 pass
@@ -166,7 +164,8 @@ class RefPortalApp():
             sleep_duration = next_run - time.perf_counter()
             if sleep_duration > 0:
                 self.logger.debug(f'loop {sleep_duration} {time.perf_counter()}')
-                time.sleep(sleep_duration)
+                #time.sleep(sleep_duration)
+                await asyncio.sleep(sleep_duration)
 
 if __name__ == "__main__":
     app = RefPortalApp()
