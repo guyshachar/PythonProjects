@@ -45,28 +45,15 @@ class RefPortalApp():
 
     def login(self):
         with sync_playwright() as p:
-            self.logger.info(f'launch1')
-            browser = p.chromium.launch(headless=True)
-            self.logger.info(f'newpage1')
-            self.logger.info(f'newpage11')
-            page = browser.new_page()
-            self.logger.info(f'newpage12')
-            page = browser.new_page()
-            self.logger.info(f'goto1')
-            page.goto('https://example.com')
-            self.logger.info(f'screenshot1')
-            page.screenshot(path='example.png')
-            self.logger.info(f'close1')
-            browser.close()
-
-        with sync_playwright() as p:
             self.logger.info(f'login')
             result = ''
 
             try:
                 browser = p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
                 self.logger.info(f'launch')
+                print(f"Before newpage")
                 page = browser.new_page()
+                print(f"After newpage")
                 self.logger.info(f'new page')
                 # Navigate to the URL
                 page.goto(self.url)  # Replace with your target URL
@@ -100,6 +87,7 @@ class RefPortalApp():
                 pass
 
             except Exception as ex:
+                print(f"An error occurred: {e}")
                 self.logger.info(f'Error: {ex}')
                 self.logger.error(f'Error: {ex}')
                 pass
