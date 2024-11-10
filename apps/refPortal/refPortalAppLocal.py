@@ -45,6 +45,18 @@ class RefPortalApp():
 
     def login(self):
         with sync_playwright() as p:
+            self.logger.info(f'launch1')
+            browser = p.chromium.launch(headless=True)
+            self.logger.info(f'newpage1')
+            page = browser.new_page()
+            self.logger.info(f'goto1')
+            page.goto('https://example.com')
+            self.logger.info(f'screenshot1')
+            page.screenshot(path='example.png')
+            self.logger.info(f'close1')
+            browser.close()
+
+       with sync_playwright() as p:
             self.logger.info(f'login')
             result = ''
 
@@ -85,10 +97,12 @@ class RefPortalApp():
                 pass
 
             except Exception as ex:
+                self.logger.info(f'Error: {ex}')
                 self.logger.error(f'Error: {ex}')
                 pass
     
             finally:
+                self.logger.info(f'Close')
                 browser.close()
                 return result
                 pass
