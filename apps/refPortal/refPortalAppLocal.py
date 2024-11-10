@@ -56,7 +56,7 @@ class RefPortalApp():
             self.logger.info(f'close1')
             browser.close()
 
-       with sync_playwright() as p:
+        with sync_playwright() as p:
             self.logger.info(f'login')
             result = ''
 
