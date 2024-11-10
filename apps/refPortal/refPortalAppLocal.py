@@ -164,8 +164,9 @@ class RefPortalApp():
             sleep_duration = next_run - time.perf_counter()
             if sleep_duration > 0:
                 self.logger.debug(f'loop {sleep_duration} {time.perf_counter()}')
-                #time.sleep(sleep_duration)
-                await asyncio.sleep(self.pollingInterval / 1000)
+            
+            #time.sleep(sleep_duration)
+            await asyncio.sleep(self.pollingInterval / 1000)
 
 if __name__ == "__main__":
     app = RefPortalApp()
