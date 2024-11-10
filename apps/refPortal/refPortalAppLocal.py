@@ -47,7 +47,7 @@ class RefPortalApp():
         pass
 
     async def login(self):
-        with async_playwright() as p:
+        async with async_playwright() as p:
             self.logger.info(f'login')
             result = ''
 
