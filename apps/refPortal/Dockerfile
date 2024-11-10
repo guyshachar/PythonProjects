@@ -52,4 +52,5 @@ COPY . .
 #RUN playwright install-deps 
 
 # Command to run the script
-CMD ["python", "refPortalAppLocal.py"]
+CMD ["python", "test.py"]
+#CMD ["python", "refPortalAppLocal.py"]
