@@ -9,7 +9,9 @@ WORKDIR /app
 COPY refPortalAppLocal.py .
 
 # Install any necessary dependencies (if needed)
-RUN pip install playwright && playwright install && playwright install-deps 
+RUN pip install playwright 
+RUN playwright install 
+RUN playwright install-deps 
 
 # Command to run the script
 CMD ["python", "refPortalAppLocal.py"]
