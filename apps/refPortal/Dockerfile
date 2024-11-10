@@ -39,6 +39,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright and browsers
 RUN playwright install
+RUN playwright install-deps    
 
 # Copy the script into the container
 #RUN mkdir -p /Shared
