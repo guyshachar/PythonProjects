@@ -45,14 +45,17 @@ class RefPortalApp():
 
     def login(self):
         with sync_playwright() as p:
+            self.logger.info(f'login')
             result = ''
 
             try:
                 browser = p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
+                self.logger.info(f'launch')
                 page = browser.new_page()
-
+                self.logger.info(f'new page')
                 # Navigate to the URL
                 page.goto(self.url)  # Replace with your target URL
+                self.logger.info(f'goto {self.url}')
 
                 title = page.title()
                 # Perform actions, e.g., print the title of the page
@@ -92,6 +95,7 @@ class RefPortalApp():
 
     def readPortal(self, page):
         try:
+            self.logger.info(f'before readPortal')
             table_elements = page.query_selector_all('table')
             table_html = table_elements[0].inner_html()
             table_text = table_elements[0].inner_text()
