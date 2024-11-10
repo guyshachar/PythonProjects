@@ -9,6 +9,7 @@ WORKDIR /app
 COPY refPortalAppLocal.py .
 
 # Install any necessary dependencies (if needed)
+RUN pip install --upgrade pip
 RUN pip install playwright 
 RUN playwright install 
 RUN playwright install-deps 

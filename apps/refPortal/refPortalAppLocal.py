@@ -129,10 +129,12 @@ class RefPortalApp():
             pass
     
     def start(self):
+        self.logger.info("Start")
         lastResult = ''
         while True:
             timeNow = datetime.datetime.now().timestamp()
             next_run = time.perf_counter() + self.pollingInterval / 1000
+            self.logger.info(f'Next run {next_run}')
 
             try:
                 result = self.login()  # Call the method
@@ -153,6 +155,7 @@ class RefPortalApp():
                 self.logger.debug(f'loop {sleep_duration} {time.perf_counter()}')
                 time.sleep(sleep_duration)
 
-app = RefPortalApp()
-app.start()
-pass
+if __name__ == "__main__":
+    app = RefPortalApp()
+    app.start()
+    pass
