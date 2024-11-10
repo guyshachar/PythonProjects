@@ -129,7 +129,7 @@ class RefPortalApp():
             pass
     
     def start(self):
-        self.logger.info("Start")
+        self.logger.info('Start')
         lastResult = ''
         while True:
             timeNow = datetime.datetime.now().timestamp()
