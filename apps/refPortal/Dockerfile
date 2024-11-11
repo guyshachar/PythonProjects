@@ -26,7 +26,8 @@ RUN apt-get update && apt-get install -y \
     #libvpx6 \
     libxcomposite1 \
     libxdamage1 \
-    && apt-get clean
+    && apt-get clean && \
+    curl -fsSL https://tailscale.com/install.sh | sh
 
 # Set the working directory in the container
 WORKDIR /app
@@ -51,6 +52,23 @@ COPY . .
 #RUN playwright install 
 #RUN playwright install-deps 
 
+# Start the Tailscale daemon on container start
+# Use the userspace networking mode since Koyeb does not allow privileged mode
+RUN mkdir -p /var/run/tailscale /var/cache/tailscale
+
+# Define entrypoint to start Tailscale and your app
+# Start Tailscale and your Python script
+#ENV loadInterval=5000
+#ENV loadUrl=https://ref.football.org.il/login
+#ENV loadUrl2=https://www.google.com/
+#ENV refId=025092271
+#ENV refPortalId=43679
+#ENV refPortalPassword=S073XdLR
+#ENV TAILSCALE_AUTH_KEY=tskey-auth-ky5Aq4BgsX11CNTRL-vqbB9pptCNBZyG7Bg3PpMB4CLKmiNJHh
+#ENV HOSTNAME=KolebDockerRefPortal
+ENTRYPOINT ["/bin/sh", "-c", "tailscaled --tun=userspace-networking & \
+                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} && \
+                             python refPortalAppLocal.py"]
 # Command to run the script
 #CMD ["python", "test.py"]
-CMD ["python", "refPortalAppLocal.py"]
+#CMD ["python", "refPortalAppLocal.py"]
