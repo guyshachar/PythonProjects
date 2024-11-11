@@ -68,7 +68,7 @@ RUN mkdir -p /var/run/tailscale /var/cache/tailscale
 #ENV HOSTNAME=KoyebDockerRefPortal
 #ENV TS_EXIT_NODE=100.104.124.86
 ENTRYPOINT ["/bin/sh", "-c", "tailscaled --tun=userspace-networking & \
-                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} --exit-node=${TS_EXIT_NODE} --exit-node-allow-lan-access=true && \
+                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} --exit-node=${TS_EXIT_NODE} --exit-node-allow-lan-access --accept-routes=true && \
                              python refPortalAppLocal.py"]
 # Command to run the script
 #CMD ["python", "test.py"]
