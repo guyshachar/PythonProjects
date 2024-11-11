@@ -53,59 +53,59 @@ class RefPortalApp():
 
             try:
                 #browser1 = await p.chromium.launch(headless=True)  # Launch browser (headless=True for no UI)
-                browser = await p.chromium.launch(headless=True, args=['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'])
+                browser = await p.chromium.launch(headless=True, args=['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--single-process'])
                 self.logger.info(f'launch')
                 page = await browser.new_page()
                 self.logger.info(f'new page')
                 # Navigate to the URL
-                page.goto(self.url)  # Replace with your target URL
+                await page.goto(self.url)  # Replace with your target URL
                 self.logger.info(f'goto {self.url}')
 
-                title = page.title()
+                title = await page.title()
+                self.logger.info(f'{title}')
                 # Perform actions, e.g., print the title of the page
                 # print("Page title is:", title)
                 
-                input_elements = page.query_selector_all('input')
+                input_elements = await page.query_selector_all('input')
                 
                 usernameField = input_elements[0]
-                usernameField.fill(self.refId)
+                await usernameField.fill(self.refId)
 
                 passwordField = input_elements[1]
-                passwordField.fill(self.refPass)
+                await passwordField.fill(self.refPass)
 
                 idField = input_elements[2]
-                idField.fill(self.id)
+                await idField.fill(self.id)
 
                 # Find the submit button and click it
-                button_elements = page.query_selector_all('button')
+                button_elements = await page.query_selector_all('button')
                 mainButton = button_elements[0]
-                mainButton.click()  # Replace selector as needed
+                await mainButton.click()  # Replace selector as needed
 
-                page.wait_for_timeout(3000)  # Wait for 2 seconds
+                await page.wait_for_timeout(3000)  # Wait for 2 seconds
 
                 # Execute the callback function
-                result = self.readPortal(page)
+                result = await self.readPortal(page)
 
                 pass
 
             except Exception as ex:
-                print(f"An error occurred: {e}")
                 self.logger.info(f'Error: {ex}')
                 self.logger.error(f'Error: {ex}')
                 pass
     
             finally:
                 self.logger.info(f'close')
-                browser.close()
+                await browser.close()
                 return result
                 pass
 
-    def readPortal(self, page):
+    async def readPortal(self, page):
         try:
             self.logger.info(f'before readPortal')
-            table_elements = page.query_selector_all('table')
-            table_html = table_elements[0].inner_html()
-            table_text = table_elements[0].inner_text()
+            table_elements = await page.query_selector_all('table')
+            table_html = await table_elements[0].inner_html()
+            table_text = await table_elements[0].inner_text()
             result = table_text
             pass
 
@@ -143,10 +143,6 @@ class RefPortalApp():
         self.logger.info('Start')
         lastResult = ''
         while True:
-            timeNow = datetime.datetime.now().timestamp()
-            next_run = time.perf_counter() + self.pollingInterval / 1000
-            self.logger.info(f'Next run {next_run}')
-
             try:
                 result = await self.login()  # Call the method
                 if result:
@@ -161,11 +157,6 @@ class RefPortalApp():
             except Exception as ex:
                 self.logger.error(f'{ex}')
 
-            sleep_duration = next_run - time.perf_counter()
-            if sleep_duration > 0:
-                self.logger.debug(f'loop {sleep_duration} {time.perf_counter()}')
-            
-            #time.sleep(sleep_duration)
             await asyncio.sleep(self.pollingInterval / 1000)
 
 if __name__ == "__main__":
