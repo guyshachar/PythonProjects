@@ -5,7 +5,7 @@ import logging
 import time
 import datetime
 import json
-
+import os
 import asyncio
 from playwright.async_api import async_playwright
 
@@ -30,13 +30,13 @@ class RefPortalApp():
         self.pollingInterval = self.args['polling_interval']
         self.topic = self.args['topic']
         """   
-        self.url = 'https://ref.football.org.il/login'
-        self.pollingInterval = 5000
+        self.url = os.environ.get('loadUrl')
+        self.pollingInterval = int(os.environ.get('loadInterval'))
         self.topic = 'my/mqtt/refPortal/new'
 
-        self.refId = '43679'
-        self.refPass = 'S073XdLR'
-        self.id = '025092271'
+        self.refId = os.environ.get('refPortalId')
+        self.refPass = os.environ.get('refPortalPassword')
+        self.id = os.environ.get('refId')
 
         self.logger.info(f'url={self.url}')
 
