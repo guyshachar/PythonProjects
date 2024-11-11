@@ -64,10 +64,11 @@ RUN mkdir -p /var/run/tailscale /var/cache/tailscale
 #ENV refId=025092271
 #ENV refPortalId=43679
 #ENV refPortalPassword=S073XdLR
-#ENV TAILSCALE_AUTH_KEY=tskey-auth-kPYdfhZQDy11CNTRL-gAm5YiugGwKZR3UU1DmbvKCu6hdB2boP
-#ENV HOSTNAME=KolebDockerRefPortal
+#ENV TAILSCALE_AUTH_KEY=tskey-auth-kbjxGEommL11CNTRL-qyyVi2mmzfKxrb2wnUdfgKdEx856WWML
+#ENV HOSTNAME=KoyebDockerRefPortal
+#ENV TS_EXIT_NODE=100.104.124.86
 ENTRYPOINT ["/bin/sh", "-c", "tailscaled --tun=userspace-networking & \
-                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} --exit-node=homeassistant-1 && \
+                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} --exit-node=${TS_EXIT_NODE} && \
                              python refPortalAppLocal.py"]
 # Command to run the script
 #CMD ["python", "test.py"]
