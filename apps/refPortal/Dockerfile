@@ -25,10 +25,10 @@ RUN apt-get update && apt-get install -y \
     libnss3 \
     #libvpx6 \
     libxcomposite1 \
-    libxdamage1 \
     telnet \
-    ping \
+#    ping \
     traceroute \
+    libxdamage1 \
     && apt-get clean && \
     curl -fsSL https://tailscale.com/install.sh | sh
 
