@@ -101,6 +101,7 @@ class RefPortalApp():
                 pass
 
     async def readPortal(self, page):
+        result = ''
         try:
             self.logger.info(f'before readPortal')
             table_elements = await page.query_selector_all('table')
@@ -110,6 +111,7 @@ class RefPortalApp():
             pass
 
         except Exception as ex:
+            self.logger.error(f'readPortal error: {ex}')
             pass
 
         finally:        
@@ -155,9 +157,10 @@ class RefPortalApp():
                 else:
                     pass
             except Exception as ex:
-                self.logger.error(f'{ex}')
+                self.logger.error(f'start error: {ex}')
 
-            await asyncio.sleep(self.pollingInterval / 1000)
+            finally:
+                await asyncio.sleep(self.pollingInterval / 1000)
 
 if __name__ == "__main__":
     app = RefPortalApp()

@@ -58,17 +58,18 @@ RUN mkdir -p /var/run/tailscale /var/cache/tailscale
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-#ENV loadInterval=5000
-#ENV loadUrl=https://ref.football.org.il/login
-#ENV loadUrl2=https://www.google.com/
-#ENV refId=025092271
-#ENV refPortalId=43679
-#ENV refPortalPassword=S073XdLR
-#ENV TAILSCALE_AUTH_KEY=tskey-auth-kbjxGEommL11CNTRL-qyyVi2mmzfKxrb2wnUdfgKdEx856WWML
-#ENV HOSTNAME=KoyebDockerRefPortal
-#ENV TS_EXIT_NODE=100.104.124.86
+ENV loadInterval=5000
+ENV loadUrl=https://ref.football.org.il/login
+ENV loadUrl2=https://www.google.com/
+ENV refId=025092271
+ENV refPortalId=43679
+ENV refPortalPassword=S073XdLR
+ENV TAILSCALE_AUTH_KEY=tskey-auth-koZUNRNL4a11CNTRL-ewV6uQLLLXHdF5v7L64AYHPVbyDZhKyd
+ENV HOSTNAME=KoyebDockerRefPortal
+ENV TS_EXIT_NODE=100.104.124.186
 ENTRYPOINT ["/bin/sh", "-c", "tailscaled --tun=userspace-networking & \
-                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} --exit-node=${TS_EXIT_NODE} --exit-node-allow-lan-access --accept-routes=true && \
+                             tailscale up --authkey=${TAILSCALE_AUTH_KEY} --hostname=${HOSTNAME} && \
+                             tailscale set --exit-node=${TS_EXIT_NODE} --exit-node-allow-lan-access --accept-routes=true && \
                              python refPortalAppLocal.py"]
 # Command to run the script
 #CMD ["python", "test.py"]
