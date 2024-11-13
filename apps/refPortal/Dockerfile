@@ -26,6 +26,9 @@ RUN apt-get update && apt-get install -y \
     #libvpx6 \
     libxcomposite1 \
     libxdamage1 \
+    telnet \
+    ping \
+    traceroute \
     && apt-get clean && \
     curl -fsSL https://tailscale.com/install.sh | sh
 
@@ -64,7 +67,7 @@ ENV loadUrl2=https://www.google.com/
 ENV refId=025092271
 ENV refPortalId=43679
 ENV refPortalPassword=S073XdLR
-ENV TAILSCALE_AUTH_KEY=tskey-auth-koZUNRNL4a11CNTRL-ewV6uQLLLXHdF5v7L64AYHPVbyDZhKyd
+ENV TAILSCALE_AUTH_KEY=tskey-auth-kU4aJgfjBm11CNTRL-hG1N4RaQEb9xT47RQ8qga9gdAgX39urca
 ENV HOSTNAME=KoyebDockerRefPortal
 ENV TS_EXIT_NODE=100.104.124.186
 ENTRYPOINT ["/bin/sh", "-c", "tailscaled --tun=userspace-networking & \
