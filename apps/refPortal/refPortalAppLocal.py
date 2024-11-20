@@ -61,8 +61,8 @@ class RefPortalApp():
             ]
         self.logger.info(f'Referees#: {len(self.referees)}')
         
-        account_sid = refPortalSecret and refPortalSecret.get("twilio_account_sid", None) or 'ACc28a1c0a3ee4b2d606c0250819f8ae85'
-        auth_token = refPortalSecret and refPortalSecret.get("twilio_auth_token", None) or 'c0aeae45f047b713b0b4d72b5d85ffb2'
+        account_sid = refPortalSecret and refPortalSecret.get("twilio_account_sid", None)
+        auth_token = refPortalSecret and refPortalSecret.get("twilio_auth_token", None)
         self.twilioClient = Client(account_sid, auth_token)
         self.twilioFromMobile = '+14155238886'
         self.twilioSend = True
