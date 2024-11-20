@@ -8,7 +8,7 @@ import json
 import os
 import asyncio
 from playwright.async_api import async_playwright
-from twilio.rest import Client as TwilioClient
+from twilio.rest import Client
 #from html2image import Html2Image
 from bs4 import BeautifulSoup
 import html2text
@@ -26,8 +26,7 @@ class RefPortalApp():
 
         #Logger(self)   
         # Configure logging
-        logLevel = eval(f'logging.{os.environ.get('logLevel') or 'INFO'}')
-        logging.basicConfig(level=logLevel, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
      
         self.logger.info("Ref Portal")
@@ -65,8 +64,7 @@ class RefPortalApp():
         
         account_sid = refPortalSecret and refPortalSecret.get("twilio_account_sid", None)
         auth_token = refPortalSecret and refPortalSecret.get("twilio_auth_token", None)
-        logging.getLogger("twilio").setLevel(logging.WARNING)
-        self.twilioClient = TwilioClient(account_sid, auth_token)
+        self.twilioClient = Client(account_sid, auth_token)
         self.twilioFromMobile = '+14155238886'
         self.twilioSend = True
 
@@ -74,12 +72,8 @@ class RefPortalApp():
 
         pass
 
-    def initialize(self):
-        self.start()
-        pass
-
     def get_secret(self, secretName):
-        self.logger.debug(f'secret: {secretName}')
+        self.logger.info(f'secret: {secretName}')
         region_name = "il-central-1"
         secret = None
 
@@ -91,11 +85,11 @@ class RefPortalApp():
         )
 
         try:
-            self.logger.debug(f'secret: Get Value')
+            self.logger.info(f'secret: Get Value')
             get_secret_value_response = client.get_secret_value(
                 SecretId=secretName
             )
-            self.logger.debug(f'secret: Get Value String')
+            self.logger.info(f'secret: Get Value String')
             secretStr = get_secret_value_response['SecretString']
             #self.logger.info(f'secretStr: {secretStr}')
             secret = json.loads(secretStr)
@@ -117,7 +111,7 @@ class RefPortalApp():
     async def readPortal(self, page):
         result = ''
         try:
-            self.logger.debug(f'before readPortal')
+            self.logger.info(f'before readPortal')
             table_elements = await page.query_selector_all('table')
             if len(table_elements) > 0:
                 result = table_elements[0]
@@ -217,13 +211,13 @@ class RefPortalApp():
         page = referee["page"]
         await page.reload()
         await page.wait_for_load_state("load")
-        self.logger.debug(f'url={page.url}')
+        self.logger.info(f'url={page.url}')
         input_elements = await page.query_selector_all('input')
         if page.url == 'about:blank' or len(input_elements) >= 3:
             await self.login(referee)
         
         title = await page.title()
-        self.logger.debug(f'{referee["name"]}: {title}')
+        self.logger.info(f'{referee["name"]}: {title}')
         
         # Execute the callback function
         result = await self.readPortal(page)
@@ -244,7 +238,7 @@ class RefPortalApp():
 
     async def login(self, referee):
         # Navigate to the URL
-        self.logger.debug(f'login')
+        self.logger.info(f'login')
         page = referee['page']
         await page.goto(self.url) 
         await page.reload()
@@ -271,19 +265,19 @@ class RefPortalApp():
         await page.wait_for_timeout(3000)  # Wait for 2 seconds
 
     async def start(self):
-        self.logger.debug('Start')
+        self.logger.info('Start')
         browser = None
         
         try:
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True, args=['--no-sandbox','--disable-setuid-sandbox','--disable-gpu'])
-                self.logger.debug(f'launch')
+                self.logger.info(f'launch')
 
                 for referee in self.referees:
-                    self.logger.debug(f'{json.dumps(referee)}')
+                    self.logger.info(f'{json.dumps(referee)}')
                     referee["page"] = await browser.new_page()
                     referee["last_hText"] = ''
-                    self.logger.debug(f'{referee["name"]}: new page')
+                    self.logger.info(f'{referee["name"]}: new page')
                     pass
 
                 while True:
@@ -311,5 +305,11 @@ class RefPortalApp():
 if __name__ == "__main__":
     app = RefPortalApp()
     #app.start()
-    asyncio.run(app.start())
+    #asyncio.run(app.start())
+    #asyncio.run(app.send_notification("","בוקר טוב",'+14155238886',"+972547961875","ארז"))
+    l1 = logging.INFO
+    lvl = 'DEBUG1'
+    l2 = eval(f'logging.{lvl}')
+    print(l1)
+    print(l2)
     pass

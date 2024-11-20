@@ -26,6 +26,7 @@ COPY . .
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
+ENV logLevel=INFO
 ENV loadInterval=30000
 ENV loadUrl=https://ref.football.org.il/login
 ENV loadUrl2=https://www.google.com/
