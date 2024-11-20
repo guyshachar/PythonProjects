@@ -35,7 +35,7 @@ class RefPortalApp():
         self.pollingInterval = int(os.environ.get('loadInterval') or '5000')
         self.topic = 'my/mqtt/refPortal/new'
 
-        secretName = os.environ.get('refPortalSM') or "refPortal/referees"
+        secretName = os.environ.get('refPortalSM') or "refPortal/referees2"
         refPortalSecret = self.get_secret(secretName)
         refereesKey = refPortalSecret and refPortalSecret.get("refPortal_referees", None)
 
