@@ -1,0 +1,47 @@
+version: '3.8'
+services:
+  app:
+    image: guyshacharacc/refportal:latest
+    environment:
+      - TZ=Asia/Jerusalem
+      - logLevel=DEBUG
+      - twilioSend=True
+      - alwaysClosePage=False
+    secrets:
+      - refPortal_referees
+      - twilio_account_sid
+      - twilio_auth_token
+      - mqtt_broker
+      - mqtt_username
+      - mqtt_password
+    volumes:
+      - /Volumes/GuyMacExternal/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/referees:/run/referees
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: "1g"
+          cpus: "1.5"
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=30 # Check every 30 seconds
+
+secrets:
+  refPortal_referees:
+    external: true
+  twilio_account_sid:
+    external: true
+  twilio_auth_token:
+    external: true
+  mqtt_broker:
+    external: true
+  mqtt_username:
+    external: true
+  mqtt_password:
+    external: true
