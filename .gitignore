@@ -1,1 +1,8 @@
 apps/refPortal/CheerAppMaui.code-workspace
+apps/refPortal/secret/twilio_auth_token
+apps/refPortal/secret/twilio_account_sid
+apps/refPortal/secret/twilio_auth_token
+apps/refPortal/secret/refPortal_referees
+apps/refPortal/secret/mqtt_username
+apps/refPortal/secret/mqtt_password
+apps/refPortal/secret/mqtt_broker

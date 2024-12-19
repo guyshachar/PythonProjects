@@ -434,16 +434,20 @@ class RefPortalApp():
 
     async def readRefereeFile(self, type, referee):
         readFileText = None
+        file_datetime = None
+        
         try:
             referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
             referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{type}'
+            file_datetime = datetime.fromtimestamp(os.path.getmtime(referee_file_path)
+                                                   )
             with open(referee_file_path, 'r') as referee_file:
                 readFileText = referee_file.read().strip()
         except Exception as e:
             pass
 
         self.logger.debug(f'readFileText: {readFileText}')
-        return readFileText
+        return (readFileText, file_datetime)
 
     async def writeRefereeFile(self, type, refId, writeFileText):
         try:
@@ -497,8 +501,10 @@ class RefPortalApp():
         helpers.stopwatch_start(self, swName)
 
         helpers.stopwatch_start(self, f'{swName}ReadFile')
-        readFile = await self.readRefereeFile(type, referee)
+        (readFile, file_datetime) = await self.readRefereeFile(type, referee)
         referee[f'last_{type}Text'] = readFile
+        referee[f"last_{type}Text_time"] = f'{file_datetime.strftime("%Y-%m-%d %H:%M:%S")}'
+
         if "parse" in self.dataDic[type] and self.dataDic[type]["parse"]:
             parsedList = await self.dataDic[type]["parse"](type, readFile)
             referee[f'last_{type}List'] = parsedList
