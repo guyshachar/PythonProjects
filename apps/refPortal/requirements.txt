@@ -6,4 +6,4 @@ boto3
 firebase_admin
 paho-mqtt
 colorama
-#watchdog
+watchdog

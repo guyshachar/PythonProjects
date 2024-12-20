@@ -12,6 +12,7 @@ import asyncio
 #from html2image import Html2Image
 from bs4 import BeautifulSoup
 import html2text
+import re
 import firebase_admin
 from firebase_admin import credentials, messaging
 import helpers
@@ -49,11 +50,13 @@ class RefPortalApp():
                 "actions": self.gamesActions,
                 "notify": self.notifyUpdate,
                 "notifyTitle" : "שיבוצים:",
-                "tags" : [ "תאריך", "יום", "מסגרת משחקים", "משחק", "סבב", "מחזור", "מגרש", "סטטוס" ],
-                "סטטוסTagDic": [("15.svg", "מאושר"), ("16.svg", "מחכה לאישור"), ("17.svg", "לא מאושר")],
+                "tags" : [ "תאריך", "יום", "מסגרת משחקים", "משחק", "סבב", "מחזור", "מגרש", "סטטוס",
+                           "תפקיד", "* שם", "* דרג", "* טלפון", "* כתובת" ],
                 "initTag" : "תאריך",
-                "refereesTags" : [ "שופט ראשי", "ע. שופט 1", "ע. שופט 2", "שופט רביעי", "שופט שני", "שופט ראשון", "שופט מזכירות" ],
-                "refereeSubTags" : [ "* שם", "* דרג", "* טלפון", "* כתובת" ],
+                "refereesTags1" : [ "שופט ראשי", "ע. שופט 1", "ע. שופט 2", "שופט רביעי", "שופט שני", "שופט ראשון", "שופט מזכירות" ],
+                "refereeSubTags1" : [ "* שם", "* דרג", "* טלפון", "* כתובת" ],
+                "סטטוסTagDic": [("15.svg", "מאושר"), ("16.svg", "מחכה לאישור"), ("17.svg", "לא מאושר")],
+                "* שםTagDic": [('class="approved"', "מאשר"), ('class="reject"', "לא מאשר"), ('', "טרם אושר")],
                 "pkTags": ["מסגרת משחקים", "משחק"],
                 "removeFilter": "תאריך"
            },
@@ -86,7 +89,7 @@ class RefPortalApp():
             self.concurrentPages = len(self.refereeDetails)
 
         self.twilioClient = twilioClient.TwilioClient(self, '+14155238886')
-        self.twilioSend = eval(os.environ.get('twilioSend') or 'False')
+        self.twilioSend = eval(os.environ.get('twilioSend') or 'True')
 
         # Initialize Firebase Admin SDK
         jsonKeyFile = "path/to/your/serviceAccountKey.json"
@@ -154,7 +157,60 @@ class RefPortalApp():
 
         finally:        
             return result
-    
+
+    def getTagText(self, objType, tag, cell, cellText):
+        #self.logger.warning(f'tag={tag} {f'{tag}TagDic' in self.dataDic[objType]}')
+        if tag and f'{tag}TagDic' in self.dataDic[objType]:
+            for filter, useText in self.dataDic[objType][f'{tag}TagDic']:
+                #self.logger.warning(self.dataDic[objType][f'{tag}TagDic'])
+                if filter == None or filter in str(cell):
+                    if cellText:
+                        cellText = f'{cellText} ({useText})'
+                    else:
+                        cellText = useText
+                    break
+        
+        return cellText
+
+    def transformHtmlTable(self, html):
+        # Parse the HTML
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # Create the table and header row
+        table = soup.new_tag('table')
+        header_row = soup.new_tag('tr')
+        headers = ['תפקיד', '* שם', '* דרג', '* טלפון', '* כתובת']
+
+        for header in headers:
+            th = soup.new_tag('th')
+            span = soup.new_tag('span', _ngcontent_nop_c149="", **{"class": "info"})
+            span.string = header
+            th.append(span)
+            header_row.append(th)
+
+        table.append(header_row)
+
+        # Process each 'info-box'
+        for info_box in soup.find_all('div', class_='info-box'):
+            data_row = soup.new_tag('tr')
+            # Add role (title)
+            title_td = soup.new_tag('td')
+            title_span = info_box.find('span', class_='title')
+            title_td.append(title_span)
+            data_row.append(title_td)
+
+            # Add other fields from list items
+            for li in info_box.find_all('li'):
+                data_td = soup.new_tag('td')
+                data_span = li.find_all('span')[-1]  # The value is in the second <span>
+                data_td.append(data_span)
+                data_row.append(data_td)
+            
+            table.append(data_row)
+
+        # Output the transformed HTML
+        return str(table.prettify())
+        
     async def convertGamesTableToText(self, html):
         games = "games"
         # Parse the HTML using BeautifulSoup
@@ -179,19 +235,18 @@ class RefPortalApp():
                 cells = row.find_all('td')
                 if len(cells) == len(headers):  # Regular rows
                     for header, cell in zip(headers, cells):
-                        cellText = ''
-                        if header and f'{header}TagDic' in self.dataDic[games]:
-                            for filter, useText in self.dataDic[games][f'{header}TagDic']:
-                                if filter in str(cell):
-                                    cellText = useText
-                                    break
-                        else:
-                            cellText = cell.get_text(strip=True)
+                        cellText = self.getTagText(games, header, cell, cell.get_text(strip=True))
                         if header or cellText:
                             result.append(f"{header}: {cellText}")
                 elif len(cells) == 1:  # Row with colspan
-                    result.append(h.handle(cells[0].decode_contents()))
-
+                    html1 = self.transformHtmlTable(str(cells[0]))
+                    #self.logger.warning(str(html1))
+                    nestedResult = await self.convertGamesTableToText(html1)
+                    result.append('')
+                    result.append(nestedResult)
+                    #self.logger.warning(h.handle(cells[0].decode_contents()))
+                    #cellText = self.getTagText(games, header, cells[0], h.handle(cells[0].decode_contents()))
+                    #result.append(cellText)
         return "\n".join(result)
 
     async def convertReviewsTableToText(self, html):
@@ -226,43 +281,44 @@ class RefPortalApp():
 
         return "\n".join(result)
 
-    async def parseText(self, type, text):
+    async def parseText(self, objType, text):
         try:
-            data = self.dataDic[type]
+            data = self.dataDic[objType]
             listObjects = []
             obj = None
             objText = ''
-            for line in text.split('\n'):
-                line = line.strip()
-                if line:
-                    idx = line.find(':')
-                    if idx > -1:
-                        self.logger.debug(f'{idx} {len(line)} {line}')
-                        tag = line[:idx].strip()
-                        tagValue = line[idx+1:].strip()
 
-                        if tag in data["tags"]:
-                            if tag == data["initTag"]:
-                                if obj:
-                                    obj["objText"] = objText
-                                    listObjects.append(obj)
-                                    objText = ''
-                                obj = {}
-                            obj[tag] = tagValue
-                        elif "refereeSubTags" in data and tag in data["refereeSubTags"]:
-                            obj[refereeTag][tag] = tagValue
+            if text:
+                for line in text.split('\n'):
+                    line = line.strip()
+                    if line:
+                        idx = line.find(':')
+                        if idx > -1:
+                            self.logger.debug(f'{idx} {len(line)} {line}')
+                            tag = line[:idx].strip()
+                            tagValue = line[idx+1:].strip()
+                            if tag in data["tags"]:
+                                if tag == data["initTag"]:
+                                    if obj:
+                                        obj["objText"] = objText
+                                        listObjects.append(obj)
+                                        objText = ''
+                                    obj = {}
+                                obj[tag] = tagValue
+                            elif "refereeSubTags" in data and tag in data["refereeSubTags"]:
+                                obj[refereeTag][tag] = tagValue
 
-                        if "excludeCompareTags" not in self.dataDic[type] or tag not in self.dataDic[type]["excludeCompareTags"]:
+                            if "excludeCompareTags" not in self.dataDic[objType] or tag not in self.dataDic[objType]["excludeCompareTags"]:
+                                objText += f'{line}\n'
+
+                        elif "refereesTags" in data and line and line in data["refereesTags"]:
+                            refereeTag = line
+                            obj[refereeTag] = {}
                             objText += f'{line}\n'
-
-                    elif "refereesTags" in data and line and line in data["refereesTags"]:
-                        refereeTag = line
-                        obj[refereeTag] = {}
-                        objText += f'{line}\n'
-                    
-            if obj:
-                obj["objText"] = objText
-                listObjects.append(obj)
+                        
+                if obj:
+                    obj["objText"] = objText
+                    listObjects.append(obj)
 
             for obj in listObjects:
                 pk = ''
@@ -278,10 +334,10 @@ class RefPortalApp():
             self.logger.error(f'parse: {e}')
             return None
 
-    async def listCompare(self, type, referee):
+    async def listCompare(self, objType, referee):
         try:
-            last = referee[f'last_{type}List']
-            current = referee[f'{type}List']
+            last = referee[f'last_{objType}List']
+            current = referee[f'{objType}List']
 
             #Added
             lastIds = {d[self.dataDic["pk"]] for d in last}
@@ -291,7 +347,7 @@ class RefPortalApp():
                 referee["addedText"] += f'{item["objText"]}\n'
 
             #Removed
-            if "removeFilter" in self.dataDic[type]:
+            if "removeFilter" in self.dataDic[objType]:
                 filteredLast = []
                 for lastItem in last:          
                     gameDate = datetime.strptime(lastItem["תאריך"], "%d/%m/%y %H:%M")
@@ -320,7 +376,7 @@ class RefPortalApp():
         except Exception as e:
             self.logger.error(f'listCompare: {e}')
     
-    async def gamesActions(self, type, referee, games):
+    async def gamesActions(self, objType, referee, games):
         try:
             self.logger.debug(self.colorText(referee, f'reminders'))
             if games:
@@ -407,40 +463,43 @@ class RefPortalApp():
         if toDeviceToken:
             await self.send_push_notification(deviceToken=toDeviceToken, title=title, body=message1)
 
-    async def notifyUpdate(self, type, referee):
+    async def notifyUpdate(self, objType, referee):
         try:
-            message =''
-            if len(referee["added"]) > 0:
-                message += f'*חדש*\n{referee["addedText"]}\n'
-                self.logger.debug(self.colorText(referee, f'{type} added list#{len(referee["added"])}={referee["added"]}')) 
+            message = ''
+            if f"forceSend{objType}" in referee and referee[f"forceSend{objType}"] == True:
+                message = referee[f'{objType}List']
+            else:
+                if len(referee["added"]) > 0:
+                    message += f'*חדש*\n{referee["addedText"]}\n'
+                    self.logger.debug(self.colorText(referee, f'{objType} added list#{len(referee["added"])}={referee["added"]}')) 
 
-            if len(referee["removed"]) > 0:
-                message += f'*נמחק*\n{referee["removedText"]}\n'
-                self.logger.debug(self.colorText(referee, f'{type} removed list#{len(referee["removed"])}={referee["removed"]}'))
+                if len(referee["removed"]) > 0:
+                    message += f'*נמחק*\n{referee["removedText"]}\n'
+                    self.logger.debug(self.colorText(referee, f'{objType} removed list#{len(referee["removed"])}={referee["removed"]}'))
 
-            if len(referee["changed"]) > 0:
-                message += f'*עדכון*\n{referee["changedText"]}\n'
-                self.logger.debug(self.colorText(referee, f'{type} changed list#{len(referee["changed"])}={referee["changed"]}'))
+                if len(referee["changed"]) > 0:
+                    message += f'*עדכון*\n{referee["changedText"]}\n'
+                    self.logger.debug(self.colorText(referee, f'{objType} changed list#{len(referee["changed"])}={referee["changed"]}'))
 
             if len(referee["added"]) > 0:
                 message += f'{self.loginUrl}'
 
-            self.logger.info(self.colorText(referee, f'notify: {type}: {message}'))
+            self.logger.info(self.colorText(referee, f'notify: {objType}: {message}'))
         
-            title = self.dataDic[type]["notifyTitle"]
+            title = self.dataDic[objType]["notifyTitle"]
             await self.send_notification(title, message, referee["id"], referee["mobile"], referee["name"])
         except Exception as e:
             self.logger.error(f'notifyUpdate: {e}')
 
-    async def readRefereeFile(self, type, referee):
+    async def readRefereeFile(self, objType, referee):
         readFileText = None
         file_datetime = None
         
         try:
             referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
-            referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{type}'
-            file_datetime = datetime.fromtimestamp(os.path.getmtime(referee_file_path)
-                                                   )
+            referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{objType}'
+            #self.logger.warning(f'file: {referee_file_path}')
+            file_datetime = datetime.fromtimestamp(os.path.getmtime(referee_file_path))
             with open(referee_file_path, 'r') as referee_file:
                 readFileText = referee_file.read().strip()
         except Exception as e:
@@ -449,14 +508,15 @@ class RefPortalApp():
         self.logger.debug(f'readFileText: {readFileText}')
         return (readFileText, file_datetime)
 
-    async def writeRefereeFile(self, type, refId, writeFileText):
+    async def writeRefereeFile(self, objType, refId, writeFileText):
         try:
             referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
             self.logger.debug(f'check dir: {referee_file_path}')
             if referee_file_path and not os.path.exists(referee_file_path):
                 self.logger.debug(f'create dir: {referee_file_path}')
                 os.makedirs(referee_file_path)
-            referee_file_path = f'{referee_file_path}refId{refId}_{type}'
+            referee_file_path = f'{referee_file_path}refId{refId}_{objType}'
+            #self.logger.warning(f'file: {referee_file_path}')
             if os.path.exists(referee_file_path):
                 fileDateTime = datetime.fromtimestamp(os.path.getmtime(referee_file_path))
                 shutil.copy(referee_file_path, f'{referee_file_path}_{fileDateTime}')
@@ -468,13 +528,12 @@ class RefPortalApp():
     async def checkRefereeTask(self, manager, referee):
         semaphore, page = await manager.acquire_page()
         self.logger.debug(self.colorText(referee, f'seq={referee["seq"]}'))
-        #page = manager.get_page(referee["seq"])
         referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
         try:
             await self.sendGeneralReminders(referee)
 
             await self.login(referee, page)
-            self.logger.debug(self.colorText(referee, f'after login {type}'))
+            self.logger.debug(self.colorText(referee, f'after login'))
 
             if self.checkGames:
                 await self.checkRefereeData("games", referee, page)
@@ -496,18 +555,20 @@ class RefPortalApp():
                 manager.renew_page(semaphore, page)
             #await manager.context.tracing.stop(path=f"{referee_file_path}traceFinally{datetime.now().strftime("%Y%m%d%H%M%S")}}.zip")
 
-    async def checkRefereeData(self, type, referee, page):
-        swName = f'checkRefereeData={referee["name"]}{type}'
+    async def checkRefereeData(self, objType, referee, page):
+        swName = f'checkRefereeData={referee["name"]}{objType}'
         helpers.stopwatch_start(self, swName)
 
         helpers.stopwatch_start(self, f'{swName}ReadFile')
-        (readFile, file_datetime) = await self.readRefereeFile(type, referee)
-        referee[f'last_{type}Text'] = readFile
-        referee[f"last_{type}Text_time"] = f'{file_datetime.strftime("%Y-%m-%d %H:%M:%S")}'
+        (readFile, file_datetime) = await self.readRefereeFile(objType, referee)
+        referee[f'last_{objType}Text'] = readFile
+        referee[f"last_{objType}Text_time"] = None
+        if file_datetime:
+            referee[f"last_{objType}Text_time"] = f'{file_datetime.strftime("%Y-%m-%d %H:%M:%S")}'
 
-        if "parse" in self.dataDic[type] and self.dataDic[type]["parse"]:
-            parsedList = await self.dataDic[type]["parse"](type, readFile)
-            referee[f'last_{type}List'] = parsedList
+        if "parse" in self.dataDic[objType] and self.dataDic[objType]["parse"]:
+            parsedList = await self.dataDic[objType]["parse"](objType, readFile)
+            referee[f'last_{objType}List'] = parsedList
         helpers.stopwatch_stop(self, f'{swName}ReadFile', level=self.swLevel)
 
         found = False
@@ -515,7 +576,7 @@ class RefPortalApp():
 
         for i in range(2):
             helpers.stopwatch_start(self, f'{swName}Url')
-            await page.goto(self.dataDic[type]["url"])
+            await page.goto(self.dataDic[objType]["url"])
             await page.wait_for_load_state(state='load', timeout=5000)
             helpers.stopwatch_stop(self, f'{swName}Url', level=self.swLevel)
 
@@ -526,60 +587,61 @@ class RefPortalApp():
                 helpers.stopwatch_start(self, f'{swName}Read')
                 await asyncio.sleep(150 * (j + 1) / 1000)
                 self.logger.debug(f'url={page.url}')
-                result = await self.dataDic[type]["read"](page)
+                result = await self.dataDic[objType]["read"](page)
                 title = await page.title()
                 self.logger.debug(self.colorText(referee, f'title: {title}'))
                 table_outer_html = await result.evaluate("element => element.outerHTML")
                 helpers.stopwatch_stop(self, f'{swName}Read', level=self.swLevel)
-                #self.logger.info(f'table_outer_html: {table_outer_html}')
+                #self.logger.warning(f'table_outer_html: {table_outer_html}')
                 helpers.stopwatch_start(self, f'{swName}Convert')
-                hText = await self.dataDic[type]["convert"](table_outer_html)
+                hText = await self.dataDic[objType]["convert"](table_outer_html)
                 hText = hText.strip()
+                #self.logger.warning(hText)
                 helpers.stopwatch_stop(self, f'{swName}Convert', level=self.swLevel)
 
                 parsedList = None
-                if "parse" in self.dataDic[type] and self.dataDic[type]["parse"]:
+                if "parse" in self.dataDic[objType] and self.dataDic[objType]["parse"]:
                     helpers.stopwatch_start(self, f'{swName}ParseActions')
-                    parsedList = await self.dataDic[type]["parse"](type, hText)
-                    if parsedList and "actions" in self.dataDic[type] and self.dataDic[type]["actions"]:
-                        await self.dataDic[type]["actions"](type, referee, parsedList)
+                    parsedList = await self.dataDic[objType]["parse"](objType, hText)
+                    if parsedList and "actions" in self.dataDic[objType] and self.dataDic[objType]["actions"]:
+                        await self.dataDic[objType]["actions"](objType, referee, parsedList)
                     helpers.stopwatch_stop(self, f'{swName}ParseActions', level=self.swLevel)
 
                     if parsedList and len(parsedList) > 0:
                         found = True
                         cnt = len(parsedList)
 
-                elif "parse" not in self.dataDic[type] and len(hText) > len(referee[f"last_{type}Text"]):
+                elif "parse" not in self.dataDic[objType] and len(hText) > len(referee[f"last_{objType}Text"]):
                     found = True
 
-                self.logger.debug(self.colorText(referee, f'parseactions type={type} t={t} found={found} parsedList={cnt}'))
+                self.logger.debug(self.colorText(referee, f'parseactions objType={objType} t={t} found={found} parsedList={cnt}'))
     
-                referee[f'{type}List'] = parsedList
+                referee[f'{objType}List'] = parsedList
                 self.logger.debug(self.colorText(referee, f'list {referee}'))
 
                 if found == True:
                     break
 
-            if found == True or len(referee[f'last_{type}List']) == 0:
+            if found == True or len(referee[f'last_{objType}List']) == 0:
                 break
 
         if hText:
-            if "compare" in self.dataDic[type] and self.dataDic[type]["compare"]:
-                await self.dataDic[type]["compare"](type, referee)
+            if "compare" in self.dataDic[objType] and self.dataDic[objType]["compare"]:
+                await self.dataDic[objType]["compare"](objType, referee)
                 
                 # Update file if text changed
-                if hText != referee[f"last_{type}Text"]:
-                    await self.writeRefereeFile(type, referee["refId"], hText)
+                if hText != referee[f"last_{objType}Text"]:
+                    await self.writeRefereeFile(objType, referee["refId"], hText)
                 
-                if len(referee["added"]) > 0 or len(referee["removed"]) or len(referee["changed"]):
-                    self.logger.info(self.colorText(referee, f'{type} A:{len(referee["added"])} R:{len(referee["removed"])} C:{len(referee["changed"])} #{cnt}/{t}'))
+                if len(referee["added"]) > 0 or len(referee["removed"]) > 0 or len(referee["changed"]) > 0 or f"forceSend{objType}" in referee and referee[f"forceSend{objType}"] == True:
+                    self.logger.info(self.colorText(referee, f'{objType} A:{len(referee["added"])} R:{len(referee["removed"])} C:{len(referee["changed"])} #{cnt}/{t}'))
 
-                    referee[f"last_{type}Text"] = hText
-                    referee[f"last_{type}Text_time"] = f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+                    referee[f"last_{objType}Text"] = hText
+                    referee[f"last_{objType}Text_time"] = f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
 
-                    await self.dataDic[type]["notify"](type, referee)
+                    await self.dataDic[objType]["notify"](objType, referee)
                 else:
-                    self.logger.info(self.colorText(referee, f'No {type} update since {referee[f"last_{type}Text_time"]} #{cnt}/{t}'))
+                    self.logger.info(self.colorText(referee, f'No {objType} update since {referee[f"last_{objType}Text_time"]} #{cnt}/{t}'))
         
         helpers.stopwatch_stop(self, f'{swName}', level=self.swLevel)
 

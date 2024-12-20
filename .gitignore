@@ -1,2 +1,6 @@
 apps/refPortal/CheerAppMaui.code-workspace
 apps/refPortal/secret/
+apps/refPortal/referees/
+.DS_Store
+.DS_Store
+apps/refPortal/.DS_Store

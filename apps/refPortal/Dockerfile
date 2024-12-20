@@ -3,8 +3,6 @@ FROM python:3.13-slim
 VOLUME ["/run/referees"]
 VOLUME ["/run/config"]
 
-ENV BUILD_DATE=202412192256
-
 # Set the working directory in the container
 WORKDIR /app
 
@@ -31,6 +29,7 @@ COPY config/* .
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
+ENV BUILD_DATE=202412202144
 ENV logLevel=INFO
 ENV loadInterval=30000
 ENV loadUrl=https://ref.football.org.il/login
