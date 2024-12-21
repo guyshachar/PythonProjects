@@ -53,8 +53,6 @@ class RefPortalApp():
                 "tags" : [ "תאריך", "יום", "מסגרת משחקים", "משחק", "סבב", "מחזור", "מגרש", "סטטוס",
                            "תפקיד", "* שם", "* דרג", "* טלפון", "* כתובת" ],
                 "initTag" : "תאריך",
-                "refereesTags1" : [ "שופט ראשי", "ע. שופט 1", "ע. שופט 2", "שופט רביעי", "שופט שני", "שופט ראשון", "שופט מזכירות" ],
-                "refereeSubTags1" : [ "* שם", "* דרג", "* טלפון", "* כתובת" ],
                 "סטטוסTagDic": [("15.svg", "מאושר"), ("16.svg", "מחכה לאישור"), ("17.svg", "לא מאושר")],
                 "* שםTagDic": [('class="approved"', "מאשר"), ('class="reject"', "לא מאשר"), ('', "טרם אושר")],
                 "pkTags": ["מסגרת משחקים", "משחק"],
@@ -85,11 +83,14 @@ class RefPortalApp():
         self.loadReferees()
 
         self.concurrentPages = int(os.environ.get('concurrentPages') or '4')
-        if len(self.refereeDetails) < self.concurrentPages:
-            self.concurrentPages = len(self.refereeDetails)
+        activeReferees = len([referee for referee in self.refereeDetails if referee["status"] == "active"])
+        if activeReferees < self.concurrentPages:
+            self.concurrentPages = activeReferees
+
+        self.logger.info(f'Referees#: {len(self.refereeDetails)} Active#: {activeReferees}')
 
         self.twilioClient = twilioClient.TwilioClient(self, '+14155238886')
-        self.twilioSend = eval(os.environ.get('twilioSend') or 'True')
+        self.twilioSend = eval(os.environ.get('twilioSend') or 'False')
 
         # Initialize Firebase Admin SDK
         jsonKeyFile = "path/to/your/serviceAccountKey.json"
@@ -106,9 +107,10 @@ class RefPortalApp():
         try:
             result = None
             self.logger.debug(f'before readPortalGames')
-            table_elements = await page.query_selector_all('table')
-            if len(table_elements) > 0:
-                result = table_elements[0]
+
+            tables = await page.query_selector_all('table.ng-tns-c150-1')
+            if len(tables) == 1:
+                result = tables[0]
 
         except Exception as ex:
             self.logger.error(f'readPortal error: {ex}')
@@ -127,9 +129,6 @@ class RefPortalApp():
                 readText = refereeDetails_file.read().strip()
             self.refereeDetails = json.loads(readText)
 
-            for referee in self.refereeDetails:
-                referee["logger"] = logging.getLogger(f'{__name__}_{referee["name"]}')
-
         except Exception as ex:
             self.logger.error(f'loadReferees error: {ex}')
 
@@ -141,8 +140,6 @@ class RefPortalApp():
             self.refereeSecrets = {
                 "refId43679" : "S073XdLR"
             }
-
-        self.logger.info(f'Referees#: {len(self.refereeDetails)}')
 
     async def readPortalReviews(self, page):
         result = None
@@ -213,41 +210,52 @@ class RefPortalApp():
         
     async def convertGamesTableToText(self, html):
         games = "games"
-        # Parse the HTML using BeautifulSoup
-        soup = BeautifulSoup(html, 'html.parser')
-
-        h = html2text.HTML2Text()
-        # Ignore converting links from HTML
-        h.ignore_links = False
-
-        # Extract table rows
-        rows = soup.find_all('tr')
-
-        # Get headers (assumes the first row contains headers)
-        headers = [th.get_text(strip=True) for th in rows[0].find_all('th')]
-
-        # Process each subsequent row and map to headers
         result = []
-        if len(rows)==1:
-            result.append(f"אין שיבוצים")
-        else:
-            for row in rows[1:]:  # Skip the header row
-                cells = row.find_all('td')
-                if len(cells) == len(headers):  # Regular rows
-                    for header, cell in zip(headers, cells):
-                        cellText = self.getTagText(games, header, cell, cell.get_text(strip=True))
-                        if header or cellText:
-                            result.append(f"{header}: {cellText}")
-                elif len(cells) == 1:  # Row with colspan
-                    html1 = self.transformHtmlTable(str(cells[0]))
-                    #self.logger.warning(str(html1))
-                    nestedResult = await self.convertGamesTableToText(html1)
-                    result.append('')
-                    result.append(nestedResult)
-                    #self.logger.warning(h.handle(cells[0].decode_contents()))
-                    #cellText = self.getTagText(games, header, cells[0], h.handle(cells[0].decode_contents()))
-                    #result.append(cellText)
-        return "\n".join(result)
+
+        try:
+            if html == None:
+                result.append(f"אין שיבוצים")
+                return result
+
+            # Parse the HTML using BeautifulSoup
+            soup = BeautifulSoup(html, 'html.parser')
+
+            h = html2text.HTML2Text()
+            # Ignore converting links from HTML
+            h.ignore_links = False
+
+            # Extract table rows
+            rows = soup.find_all('tr')
+
+            # Get headers (assumes the first row contains headers)
+            headers = [th.get_text(strip=True) for th in rows[0].find_all('th')]
+
+            # Process each subsequent row and map to headers
+            if len(rows)<=1:
+                result.append(f"אין שיבוצים")
+            else:
+                for row in rows[1:]:  # Skip the header row
+                    cells = row.find_all('td')
+                    if len(cells) == len(headers):  # Regular rows
+                        for header, cell in zip(headers, cells):
+                            cellText = self.getTagText(games, header, cell, cell.get_text(strip=True))
+                            if header or cellText:
+                                result.append(f"{header}: {cellText}")
+                    elif len(cells) == 1:  # Row with colspan
+                        html1 = self.transformHtmlTable(str(cells[0]))
+                        #self.logger.warning(str(html1))
+                        nestedResult = await self.convertGamesTableToText(html1)
+                        result.append('')
+                        result.append(nestedResult)
+                        #self.logger.warning(h.handle(cells[0].decode_contents()))
+                        #cellText = self.getTagText(games, header, cells[0], h.handle(cells[0].decode_contents()))
+                        #result.append(cellText)
+    
+        except Exception as e:
+            self.logger.error(f'convertGamesTableToText {e}')
+
+        finally:
+            return "\n".join(result)
 
     async def convertReviewsTableToText(self, html):
         # Parse the HTML using BeautifulSoup
@@ -331,79 +339,98 @@ class RefPortalApp():
             return listObjects
 
         except Exception as e:
-            self.logger.error(f'parse: {e}')
+            self.logger.error(f'parseText: {e}')
             return None
 
     async def listCompare(self, objType, referee):
         try:
-            last = referee[f'last_{objType}List']
-            current = referee[f'{objType}List']
+            lastList = referee[f'last_{objType}List']
+            currentList = referee[f'{objType}List']
 
             #Added
-            lastIds = {d[self.dataDic["pk"]] for d in last}
-            referee["added"] = [d for d in current if d[self.dataDic["pk"]] not in lastIds]
+            lastListIds = {d[self.dataDic["pk"]] for d in lastList}
+            referee["added"] = [d for d in currentList if d[self.dataDic["pk"]] not in lastListIds]
             referee["addedText"] = ''
             for item in referee["added"]:
                 referee["addedText"] += f'{item["objText"]}\n'
 
             #Removed
             if "removeFilter" in self.dataDic[objType]:
-                filteredLast = []
-                for lastItem in last:          
-                    gameDate = datetime.strptime(lastItem["תאריך"], "%d/%m/%y %H:%M")
+                filteredlastList = []
+                for lastListItem in lastList:          
+                    gameDate = datetime.strptime(lastListItem["תאריך"], "%d/%m/%y %H:%M")
                     if gameDate >= datetime.now():
-                        filteredLast.append(lastItem)
+                        filteredlastList.append(lastListItem)
             else:
-                filteredLast = last
+                filteredlastList = lastList
 
-            currentIds = {d[self.dataDic["pk"]] for d in current}
-            referee["removed"] = [d for d in filteredLast if d[self.dataDic["pk"]] not in currentIds]
+            currentListIds = {d[self.dataDic["pk"]] for d in currentList}
+            referee["removed"] = [d for d in filteredlastList if d[self.dataDic["pk"]] not in currentListIds]
             referee["removedText"] = ''
             for item in referee["removed"]:
                 referee["removedText"] += f'{item["objText"]}\n'
 
             #Changed
             changedList = []
-            for lastItem in last:
-                for currentItem in current:
-                    if lastItem[self.dataDic["pk"]] == currentItem[self.dataDic["pk"]] and lastItem[self.dataDic["objText"]] != currentItem[self.dataDic["objText"]]:
-                        changedList.append(currentItem)
+            for lastListItem in lastList:
+                for currentListItem in currentList:
+                    if lastListItem[self.dataDic["pk"]] == currentListItem[self.dataDic["pk"]] and lastListItem[self.dataDic["objText"]] != currentListItem[self.dataDic["objText"]]:
+                        if "1stReminder" in lastListItem:
+                            currentListItem["1stReminder"] = lastListItem["1stReminder"]
+                        if "2ndReminder" in lastListItem:
+                            currentListItem["2ndReminder"] = lastListItem["2ndReminder"]
+                        changedList.append(currentListItem)
 
-            referee["changed"]=changedList
+            referee["changed"] = changedList
             referee["changedText"] = ''
             for item in referee["changed"]:
                 referee["changedText"] += f'{item["objText"]}\n'
         except Exception as e:
             self.logger.error(f'listCompare: {e}')
     
-    async def gamesActions(self, objType, referee, games):
+    async def gamesActions(self, objType, referee):
         try:
             self.logger.debug(self.colorText(referee, f'reminders'))
-            if games:
+            if "reminders" in referee and referee["reminders"] == "True":
+                games = referee[f'{objType}List']
+                
                 for game in games:
                     gameDate = datetime.strptime(game["תאריך"], "%d/%m/%y %H:%M")
-                    if "reminders" in referee and referee["reminders"] == "True":
-                        self.logger.debug(self.colorText(referee, f'reminders1 {gameDate}'))
+                    self.logger.debug(self.colorText(referee, f'reminders1 {gameDate}'))
 
-                        await self.reminder(referee, gameDate, 24, 1.5, 
+                    if "1stReminder" not in game or game["1stReminder"] == False:
+                        game["1stReminder"] = True
+                        await self.reminder(referee, gameDate, 24, 5, 
                             f'תזכורת ראשונה למשחק {game["מסגרת משחקים"]}:',
                             f"מחר יש לך משחק {game["משחק"]} נא לתאם עם הצוות")
-
-                        await self.reminder(referee, gameDate, 3, 1.5, 
+                    
+                    if "2ndReminder" not in game or game["2ndReminder"] == False:
+                        game["2ndReminder"] = True
+                        await self.reminder(referee, gameDate, 3, 5, 
                             f'תזכורת אחרונה למשחק {game["מסגרת משחקים"]}:',
                             f'בעוד שלוש שעות מתחיל המשחק {game["משחק"]} נא להערך בהתאם')
+                
+                referee[f'{objType}List'] = games
+
         except Exception as e:
             self.logger.error(f'actions: {len(games)} {e}')
 
     async def sendGeneralReminders(self, referee):
         now = datetime.now()
+        
         next_10am = now.replace(hour=10, minute=0, second=0, microsecond=0)
-
-        # If it's already past 9:00 AM today, schedule for the next day
         if now >= next_10am:
             next_10am += timedelta(days=1)
 
-        await self.reminder(referee, next_10am, 0, 1.5, 
+        await self.reminder(referee, next_10am, 0, 5, 
+                            f'תזכורת חידוש רישום',
+                            f'https://api.whatsapp.com/send/?phone=%2B14155238886&text=join+of-wheel&type=phone_number&app_absent=0')
+
+        next_10pm = now.replace(hour=22, minute=0, second=0, microsecond=0)
+        if now >= next_10pm:
+            next_10pm += timedelta(days=1)
+
+        await self.reminder(referee, next_10pm, 0, 2, 
                             f'תזכורת חידוש רישום',
                             f'https://api.whatsapp.com/send/?phone=%2B14155238886&text=join+of-wheel&type=phone_number&app_absent=0')
 
@@ -474,7 +501,7 @@ class RefPortalApp():
                     self.logger.debug(self.colorText(referee, f'{objType} added list#{len(referee["added"])}={referee["added"]}')) 
 
                 if len(referee["removed"]) > 0:
-                    message += f'*נמחק*\n{referee["removedText"]}\n'
+                    message += f'*נמחק*\n~{referee["removedText"]}~\n'
                     self.logger.debug(self.colorText(referee, f'{objType} removed list#{len(referee["removed"])}={referee["removed"]}'))
 
                 if len(referee["changed"]) > 0:
@@ -543,8 +570,6 @@ class RefPortalApp():
 
         except Exception as ex:
             self.logger.error(f'CheckRefereeTask error: {ex}')
-            fileDateTime = datetime.fromtimestamp(os.path.getmtime(referee_file_path))
-            #await manager.context.tracing.stop(path=f"{referee_file_path}traceExcept{datetime.now().strftime("%Y%m%d%H%M%S")}}.zip")
 
         finally:
             loggedoutSuccessfully = await self.logout(referee, page)
@@ -556,94 +581,102 @@ class RefPortalApp():
             #await manager.context.tracing.stop(path=f"{referee_file_path}traceFinally{datetime.now().strftime("%Y%m%d%H%M%S")}}.zip")
 
     async def checkRefereeData(self, objType, referee, page):
-        swName = f'checkRefereeData={referee["name"]}{objType}'
-        helpers.stopwatch_start(self, swName)
+        try:
+            swName = f'checkRefereeData={referee["name"]}{objType}'
+            helpers.stopwatch_start(self, swName)
 
-        helpers.stopwatch_start(self, f'{swName}ReadFile')
-        (readFile, file_datetime) = await self.readRefereeFile(objType, referee)
-        referee[f'last_{objType}Text'] = readFile
-        referee[f"last_{objType}Text_time"] = None
-        if file_datetime:
-            referee[f"last_{objType}Text_time"] = f'{file_datetime.strftime("%Y-%m-%d %H:%M:%S")}'
+            helpers.stopwatch_start(self, f'{swName}ReadFile')
+            (readFile, file_datetime) = await self.readRefereeFile(objType, referee)
+            referee[f'last_{objType}Text'] = readFile
+            referee[f"last_{objType}Text_time"] = None
+            if file_datetime:
+                referee[f"last_{objType}Text_time"] = f'{file_datetime.strftime("%Y-%m-%d %H:%M:%S")}'
 
-        if "parse" in self.dataDic[objType] and self.dataDic[objType]["parse"]:
-            parsedList = await self.dataDic[objType]["parse"](objType, readFile)
-            referee[f'last_{objType}List'] = parsedList
-        helpers.stopwatch_stop(self, f'{swName}ReadFile', level=self.swLevel)
+            if "parse" in self.dataDic[objType] and self.dataDic[objType]["parse"]:
+                parsedList = await self.dataDic[objType]["parse"](objType, readFile)
+                referee[f'last_{objType}List'] = parsedList
+            helpers.stopwatch_stop(self, f'{swName}ReadFile', level=self.swLevel)
 
-        found = False
-        hText = None
+            found = False
+            hText = None
 
-        for i in range(2):
-            helpers.stopwatch_start(self, f'{swName}Url')
-            await page.goto(self.dataDic[objType]["url"])
-            await page.wait_for_load_state(state='load', timeout=5000)
-            helpers.stopwatch_stop(self, f'{swName}Url', level=self.swLevel)
+            for i in range(2):
+                helpers.stopwatch_start(self, f'{swName}Url')
+                await page.goto(self.dataDic[objType]["url"])
+                await page.wait_for_load_state(state='load', timeout=5000)
+                helpers.stopwatch_stop(self, f'{swName}Url', level=self.swLevel)
 
-            cnt = 0
-            for j in range(5):
-                t = i * 5 + j + 1
-                #self.logger.warning(f'{i} {j} {t}')
-                helpers.stopwatch_start(self, f'{swName}Read')
-                await asyncio.sleep(150 * (j + 1) / 1000)
-                self.logger.debug(f'url={page.url}')
-                result = await self.dataDic[objType]["read"](page)
-                title = await page.title()
-                self.logger.debug(self.colorText(referee, f'title: {title}'))
-                table_outer_html = await result.evaluate("element => element.outerHTML")
-                helpers.stopwatch_stop(self, f'{swName}Read', level=self.swLevel)
-                #self.logger.warning(f'table_outer_html: {table_outer_html}')
-                helpers.stopwatch_start(self, f'{swName}Convert')
-                hText = await self.dataDic[objType]["convert"](table_outer_html)
-                hText = hText.strip()
-                #self.logger.warning(hText)
-                helpers.stopwatch_stop(self, f'{swName}Convert', level=self.swLevel)
+                cnt = 0
+                for j in range(5):
+                    t = i * 5 + j + 1
+                    #self.logger.warning(f'{i} {j} {t}')
+                    helpers.stopwatch_start(self, f'{swName}Read')
+                    await asyncio.sleep(150 * (j + 1) / 1000)
+                    self.logger.debug(f'url={page.url}')
+                    result = await self.dataDic[objType]["read"](page)
+                    title = await page.title()
+                    self.logger.debug(self.colorText(referee, f'title: {title}'))
+                    table_outer_html = None
+                    if result:
+                        table_outer_html = await result.evaluate("element => element.outerHTML")
+                    helpers.stopwatch_stop(self, f'{swName}Read', level=self.swLevel)
+                    #self.logger.warning(f'table_outer_html: {objType} {table_outer_html}')
+                    helpers.stopwatch_start(self, f'{swName}Convert')
+                    hText = await self.dataDic[objType]["convert"](table_outer_html)
+                    hText = hText.strip()
+                    #self.logger.warning(hText)
+                    helpers.stopwatch_stop(self, f'{swName}Convert', level=self.swLevel)
 
-                parsedList = None
-                if "parse" in self.dataDic[objType] and self.dataDic[objType]["parse"]:
-                    helpers.stopwatch_start(self, f'{swName}ParseActions')
-                    parsedList = await self.dataDic[objType]["parse"](objType, hText)
-                    if parsedList and "actions" in self.dataDic[objType] and self.dataDic[objType]["actions"]:
-                        await self.dataDic[objType]["actions"](objType, referee, parsedList)
-                    helpers.stopwatch_stop(self, f'{swName}ParseActions', level=self.swLevel)
+                    if hText:
+                        parsedList = None
+                        if "parse" in self.dataDic[objType] and self.dataDic[objType]["parse"]:
+                            helpers.stopwatch_start(self, f'{swName}ParseActions')
+                            parsedList = await self.dataDic[objType]["parse"](objType, hText)
+                            helpers.stopwatch_stop(self, f'{swName}ParseActions', level=self.swLevel)
 
-                    if parsedList and len(parsedList) > 0:
-                        found = True
-                        cnt = len(parsedList)
+                            if parsedList and len(parsedList) > 0:
+                                found = True
+                                cnt = len(parsedList)
 
-                elif "parse" not in self.dataDic[objType] and len(hText) > len(referee[f"last_{objType}Text"]):
-                    found = True
+                        elif "parse" not in self.dataDic[objType] and len(hText) > len(referee[f"last_{objType}Text"]):
+                            found = True
 
-                self.logger.debug(self.colorText(referee, f'parseactions objType={objType} t={t} found={found} parsedList={cnt}'))
-    
-                referee[f'{objType}List'] = parsedList
-                self.logger.debug(self.colorText(referee, f'list {referee}'))
+                        self.logger.debug(self.colorText(referee, f'parseactions objType={objType} t={t} found={found} parsedList={cnt}'))
+            
+                        referee[f'{objType}List'] = parsedList
+                        self.logger.debug(self.colorText(referee, f'list {referee}'))
 
-                if found == True:
+                        if found == True:
+                            break
+
+                if found == True or f'last_{objType}List' in referee and len(referee[f'last_{objType}List']) == 0:
                     break
 
-            if found == True or len(referee[f'last_{objType}List']) == 0:
-                break
+            if hText:
+                if "compare" in self.dataDic[objType] and self.dataDic[objType]["compare"]:
+                    await self.dataDic[objType]["compare"](objType, referee)
+                    
+                    # Update file if text changed
+                    if hText != referee[f"last_{objType}Text"]:
+                        await self.writeRefereeFile(objType, referee["refId"], hText)
+                    
+                    if len(referee["added"]) > 0 or len(referee["removed"]) > 0 or len(referee["changed"]) > 0 or f"forceSend{objType}" in referee and referee[f"forceSend{objType}"] == True:
+                        self.logger.info(self.colorText(referee, f'{objType} A:{len(referee["added"])} R:{len(referee["removed"])} C:{len(referee["changed"])} #{cnt}/{t}'))
 
-        if hText:
-            if "compare" in self.dataDic[objType] and self.dataDic[objType]["compare"]:
-                await self.dataDic[objType]["compare"](objType, referee)
+                        referee[f"last_{objType}Text"] = hText
+                        referee[f"last_{objType}Text_time"] = f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
+
+                        await self.dataDic[objType]["notify"](objType, referee)
+                    else:
+                        self.logger.info(self.colorText(referee, f'No {objType} update since {referee[f"last_{objType}Text_time"]} #{cnt}/{t}'))
+            
+                if f'{objType}List' in referee and referee[f'{objType}List'] \
+                        and "actions" in self.dataDic[objType] and self.dataDic[objType]["actions"]:
+                    await self.dataDic[objType]["actions"](objType, referee)
                 
-                # Update file if text changed
-                if hText != referee[f"last_{objType}Text"]:
-                    await self.writeRefereeFile(objType, referee["refId"], hText)
-                
-                if len(referee["added"]) > 0 or len(referee["removed"]) > 0 or len(referee["changed"]) > 0 or f"forceSend{objType}" in referee and referee[f"forceSend{objType}"] == True:
-                    self.logger.info(self.colorText(referee, f'{objType} A:{len(referee["added"])} R:{len(referee["removed"])} C:{len(referee["changed"])} #{cnt}/{t}'))
-
-                    referee[f"last_{objType}Text"] = hText
-                    referee[f"last_{objType}Text_time"] = f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'
-
-                    await self.dataDic[objType]["notify"](objType, referee)
-                else:
-                    self.logger.info(self.colorText(referee, f'No {objType} update since {referee[f"last_{objType}Text_time"]} #{cnt}/{t}'))
-        
-        helpers.stopwatch_stop(self, f'{swName}', level=self.swLevel)
+            helpers.stopwatch_stop(self, f'{swName}', level=self.swLevel)
+        except Exception as ex:
+            self.logger.error(f'CheckRefereeData error: {ex}')
 
     def colorText(self, referee, text):
         color = Fore.WHITE
@@ -751,9 +784,10 @@ class RefPortalApp():
                     referee["last_reviewsText_time"] = None
                     referee["seq"] = i
                     i+=1
+
                 while True:
                     try:
-                        refereesTasks = [self.checkRefereeTask(manager, referee) for referee in self.refereeDetails]
+                        refereesTasks = [self.checkRefereeTask(manager, referee) for referee in self.refereeDetails if referee["status"] == "active"]
                         await asyncio.gather(*refereesTasks)
 
                     except Exception as ex:
