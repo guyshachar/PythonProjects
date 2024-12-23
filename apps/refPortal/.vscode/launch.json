@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "MY_REFEREE_FILE": "./referees/",
+                "MY_CONFIG_FILE": "./config/",
+                "MY_SECRET_FILE": "./secret/"
+              }
+       }
+    ]
+}

@@ -31,7 +31,7 @@ class RefPortalApp():
         logging.basicConfig(level=logLevel, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
-        self.fileVersion = 'v2'
+        self.fileVersion = 'v3'
         self.openText=f'Ref Portal {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} build#{os.environ.get("BUILD_DATE")} host={socket.gethostname()}'
         self.logger.info(self.openText)
 
@@ -47,6 +47,7 @@ class RefPortalApp():
                 "read": self.readPortalGames,
                 "convert": self.convertGamesTableToText,
                 "parse": self.parseText,
+                "postParse": self.postParseGames,
                 "compare": self.compareList,
                 "actions": self.gamesActions,
                 "notify": self.notifyUpdate,
@@ -82,6 +83,8 @@ class RefPortalApp():
         self.swLevel = os.environ.get('swLevel') or 'debug'
 
         self.loadReferees()
+
+        self.loadFields()
 
         self.concurrentPages = int(os.environ.get('concurrentPages') or '4')
         activeReferees = len([referee for referee in self.refereeDetails if referee["status"] == "active"])
@@ -125,7 +128,7 @@ class RefPortalApp():
         try:
             readText = None
             referee_file_path = os.getenv("MY_CONFIG_FILE", f"/run/config/")
-            referee_file_path = f'{referee_file_path}refereesDetails'
+            referee_file_path = f'{referee_file_path}refereesDetails.json'
             with open(referee_file_path, 'r') as refereeDetails_file:
                 readText = refereeDetails_file.read().strip()
             self.refereeDetails = json.loads(readText)
@@ -142,6 +145,15 @@ class RefPortalApp():
                 "refId43679" : "S073XdLR"
             }
 
+    def loadFields(self):
+        readText = None
+        fields_file_path = os.getenv("MY_CONFIG_FILE", f"/run/config/")
+        fields_file_path = f'{fields_file_path}fields.json'
+        with open(fields_file_path, 'r') as fields_file:
+            readText = fields_file.read().strip()
+            fields = json.loads(readText)
+        self.fields = fields
+    
     async def readPortalReviews(self, page):
         result = None
         try:
@@ -343,6 +355,12 @@ class RefPortalApp():
             self.logger.error(f'parseText: {e}')
             return None
 
+    async def postParseGames(self, objType, referee):
+        for game in referee[objType]["currentList"]:
+            fieldTitle = game['מגרש']
+            if fieldTitle in self.fields:
+                game['wazeLink'] = self.fields[fieldTitle]['wazeLink']
+
     async def compareList(self, objType, referee):
         try:
             prevList = referee[objType][f'prevList']
@@ -354,8 +372,11 @@ class RefPortalApp():
             referee[objType]["addedText"] = ''
             for item in referee[objType]["added"]:
                 referee[objType]["addedText"] += f'{item["objText"]}\n'
-                item["1stReminder"] = False
-                item["2ndReminder"] = False
+                if 'reminders' in referee:
+                    if 'reminders' not in item:
+                        item['reminders'] = []
+                    for i in range(2):
+                        item['reminders'].append({'reminderInHrs':referee['reminders'][i], "sent":False})
 
             #Removed
             if "removeFilter" in self.dataDic[objType]:
@@ -378,10 +399,8 @@ class RefPortalApp():
             for prevListItem in prevList:
                 for currentListItem in currentList:
                     if prevListItem[self.dataDic["pk"]] == currentListItem[self.dataDic["pk"]] and prevListItem[self.dataDic["objText"]] != currentListItem[self.dataDic["objText"]]:
-                        if "1stReminder" in prevListItem:
-                            currentListItem["1stReminder"] = prevListItem["1stReminder"]
-                        if "2ndReminder" in prevListItem:
-                            currentListItem["2ndReminder"] = prevListItem["2ndReminder"]
+                        if 'reminders' in prevListItem:
+                            currentListItem['reminders'] = prevListItem['reminders']
                         changedList.append(currentListItem)
 
             referee[objType]["changed"] = changedList
@@ -394,10 +413,8 @@ class RefPortalApp():
             for prevListItem in prevList:
                 for currentListItem in currentList:
                     if prevListItem[self.dataDic["pk"]] == currentListItem[self.dataDic["pk"]] and prevListItem[self.dataDic["objText"]] == currentListItem[self.dataDic["objText"]]:
-                        if "1stReminder" in prevListItem:
-                            currentListItem["1stReminder"] = prevListItem["1stReminder"]
-                        if "2ndReminder" in prevListItem:
-                            currentListItem["2ndReminder"] = prevListItem["2ndReminder"]
+                        if 'reminders' in prevListItem:
+                            currentListItem['reminders'] = prevListItem['reminders']
                         nonChangedList.append(currentListItem)
 
         except Exception as e:
@@ -405,24 +422,37 @@ class RefPortalApp():
     
     async def gamesActions(self, objType, referee):
         try:
-            self.logger.debug(self.colorText(referee, f'reminders'))
-            if "reminders" in referee and referee["reminders"] == "True":
+            self.logger.debug(self.colorText(referee, 'reminders'))
+            if 'reminders' in referee:
                 games = referee[objType][f'currentList']
                 
                 for game in games:
                     gameDate = datetime.strptime(game["תאריך"], "%d/%m/%y %H:%M")
-                    self.logger.debug(self.colorText(referee, f'reminders1 {gameDate}'))
+                    self.logger.debug(self.colorText(referee, 'reminders1 {gameDate}'))
 
-                    if "1stReminder" not in game or game["1stReminder"] == False:
-                        game["1stReminder"] = await self.reminder(referee, gameDate, 24, 5, 
-                            f'תזכורת ראשונה למשחק {game["מסגרת משחקים"]}:',
-                            f"מחר יש לך משחק {game["משחק"]} נא לתאם עם הצוות")
-                    
-                    if "2ndReminder" not in game or game["2ndReminder"] == False:
-                        game["2ndReminder"] = await self.reminder(referee, gameDate, 3, 5, 
-                            f'תזכורת אחרונה למשחק {game["מסגרת משחקים"]}:',
-                            f'בעוד שלוש שעות מתחיל המשחק {game["משחק"]} נא להערך בהתאם')
-                
+                    if 'reminders' not in game:
+                        game['reminders'] = []
+                    i = 0
+                    for reminder in game['reminders']:
+                        reminderInHrs = reminder['reminderInHrs']
+                        if reminderInHrs == -1:
+                            continue
+                        title = None
+                        message = None
+
+                        if i == 0:
+                            title = f'תזכורת ראשונה למשחק {game["מסגרת משחקים"]}:'
+                            message = f"מחר יש לך משחק {game["משחק"]} נא לתאם עם הצוות"
+                        elif i == 1:
+                            title = f'תזכורת אחרונה למשחק {game["מסגרת משחקים"]}:'
+                            message = f'בעוד {reminderInHrs} שעות מתחיל המשחק {game["משחק"]} נא להערך בהתאם'
+                            message += f'\nקישור למגרש: {game["wazeLink"]}'
+
+                        if title and message and reminder['sent'] == False:
+                            reminder['sent'] = await self.reminder(referee, gameDate, reminderInHrs, 5, title, message)
+                        
+                        i += 1
+
                 referee[objType][f'currentList'] = games
 
         except Exception as e:
@@ -451,7 +481,7 @@ class RefPortalApp():
         reminderInAdvance = hoursInAdvance*60*60
         offset = reminderOffsetInMins*60
     
-        if dueDate - timedelta(seconds=reminderInAdvance + offset) < datetime.now() < dueDate - timedelta(seconds=reminderInAdvance):
+        if False or dueDate - timedelta(seconds=reminderInAdvance + offset) < datetime.now() < dueDate - timedelta(seconds=reminderInAdvance):
             await self.send_notification(title, message, referee["id"], referee["mobile"], referee["name"])
             self.logger.debug(self.colorText(referee, f'reminders {dueDate}'))
 
@@ -538,7 +568,7 @@ class RefPortalApp():
     def getRefereeFilePath(self, objType, referee):
         try:
             referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
-            referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{objType}_{self.fileVersion}'
+            referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{objType}_{self.fileVersion}.json'
 
             return referee_file_path
         except Exception as e:
@@ -593,18 +623,15 @@ class RefPortalApp():
     async def checkRefereeTask(self, manager, referee):
         semaphore, page = await manager.acquire_page()
         self.logger.debug(self.colorText(referee, f'seq={referee["seq"]}'))
-        referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
         try:
             await self.sendGeneralReminders(referee)
 
             await self.login(referee, page)
             self.logger.debug(self.colorText(referee, f'after login'))
 
-            if self.checkGames:
-                await self.checkRefereeData("games", referee, page)
- 
-            if self.checkReviews:
-                await self.checkRefereeData("reviews", referee, page)
+            if 'objTypes' in referee:
+                for objType in referee['objTypes']:
+                    await self.checkRefereeData(objType, referee, page)
 
         except Exception as ex:
             self.logger.error(f'CheckRefereeTask error: {ex}')
@@ -684,11 +711,12 @@ class RefPortalApp():
                     break
 
             if hText:
+                if "postParse" in self.dataDic[objType] and self.dataDic[objType]["postParse"]:
+                    await self.dataDic[objType]["postParse"](objType, referee)
+
                 if "compare" in self.dataDic[objType] and self.dataDic[objType]["compare"]:
                     await self.dataDic[objType]["compare"](objType, referee)
-                    
-                    await self.writeRefereeFile(objType, referee)
-                    
+                                        
                     if len(referee[objType]["added"]) > 0 or len(referee[objType]["removed"]) > 0 or len(referee[objType]["changed"]) > 0 or f"forceSend" in referee[objType] and referee[objType][f"forceSend"] == True:
                         self.logger.info(self.colorText(referee, f'{objType} A:{len(referee[objType]["added"])} R:{len(referee[objType]["removed"])} C:{len(referee[objType]["changed"])} #{cnt}/{t}'))
 
@@ -700,7 +728,9 @@ class RefPortalApp():
                 if f'currentList' in referee[objType] and referee[objType][f'currentList'] \
                         and "actions" in self.dataDic[objType] and self.dataDic[objType]["actions"]:
                     await self.dataDic[objType]["actions"](objType, referee)
-                
+
+                await self.writeRefereeFile(objType, referee)
+
             helpers.stopwatch_stop(self, f'{swName}', level=self.swLevel)
         except Exception as ex:
             self.logger.error(f'CheckRefereeData error: {ex}')
