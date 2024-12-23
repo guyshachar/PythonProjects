@@ -10,8 +10,8 @@ class TwilioClient:
             self.logger = logging.getLogger(__name__)
 
         try:
-            account_sid = helpers.get_secret(parent, 'twilio_account_sid')#refPortalSecret and refPortalSecret.get("twilio_account_sid", None)
-            auth_token = helpers.get_secret(parent, 'twilio_auth_token')#refPortalSecret and refPortalSecret.get("twilio_auth_token", None)
+            account_sid = helpers.get_secret('twilio_account_sid')#refPortalSecret and refPortalSecret.get("twilio_account_sid", None)
+            auth_token = helpers.get_secret('twilio_auth_token')#refPortalSecret and refPortalSecret.get("twilio_auth_token", None)
             logging.getLogger("twilio").setLevel(logging.WARNING)
             self.twilioClient = TwilioRestClient(account_sid, auth_token)
             self.twilioFromMobile = fromMobile

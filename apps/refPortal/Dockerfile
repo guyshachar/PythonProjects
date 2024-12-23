@@ -29,8 +29,9 @@ COPY config/* .
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-ENV BUILD_DATE=202412230326
+ENV BUILD_DATE=202412232309
 ENV logLevel=INFO
+ENV fileVersion=v4
 ENV loadInterval=30000
 ENV loadUrl=https://ref.football.org.il/login
 ENV loadUrl2=https://www.google.com/

@@ -8,6 +8,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
+                "fileVersion": "v4",
                 "MY_REFEREE_FILE": "./referees/",
                 "MY_CONFIG_FILE": "./config/",
                 "MY_SECRET_FILE": "./secret/"

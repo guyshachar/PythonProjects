@@ -1,1 +1,266 @@
-[{"name": "גיא שחר","refId": "43679","id": "025092271","mobile": "+972547799979","objTypes":["games","reviews"],"reminders": [24,3],"color":"LIGHTRED_EX", "status" : "active"}]
+[
+    {
+        "name": "גיא שחר",
+        "refId": "43679",
+        "id": "025092271",
+        "mobile": "+972547799979",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "LIGHTRED_EX",
+        "status": "active",
+        "addressDetails": {
+            "address": "אהרון גולדשטיין 2, גבעתיים",
+            "coordinates": {
+                "lat": 32.0771918,
+                "lng": 34.8101153
+            },
+            "formattedAddress": "Aharon Goldstein St 2, Giv'atayim, Israel"
+        }
+    },
+    {
+        "name": "ארז מטרני",
+        "refId": "26054",
+        "id": "031869779",
+        "mobile": "+972547961875",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "RED",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דבורה עומר 4 יבנה",
+            "coordinates": {
+                "lat": 31.858459,
+                "lng": 34.72079
+            },
+            "formattedAddress": "Dvora Omer St 4, Yavne, Israel"
+        }
+    },
+    {
+        "name": "אחמד סוואד",
+        "refId": "43671",
+        "id": "319114484",
+        "mobile": "+972525253248",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "MAGENTA",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "הראה 29 רמת גן",
+            "coordinates": {
+                "lat": 32.0842243,
+                "lng": 34.818971
+            },
+            "formattedAddress": "Haroe St 29, Ramat Gan, Israel"
+        }
+    },
+    {
+        "name": "ירדן אלקבץ",
+        "refId": "43060",
+        "id": "214244766",
+        "mobile": "+972585528889",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            2
+        ],
+        "color": "GREEN",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דוד צדוק 5 חולון",
+            "coordinates": {
+                "lat": 31.9949434,
+                "lng": 34.775409
+            },
+            "formattedAddress": "David Tsadok St 5, Holon, Israel"
+        }
+    },
+    {
+        "name": "אלעד כהן",
+        "refId": "40897",
+        "id": "305463986",
+        "mobile": "+972527493903",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "LIGHTBLUE_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דרך ארץ 4 אשקלון",
+            "coordinates": {
+                "lat": 31.6796053,
+                "lng": 34.5958027
+            },
+            "formattedAddress": "דרך ארץ 4, Ashkelon, Israel"
+        }
+    },
+    {
+        "name": "בר חטמי",
+        "refId": "43667",
+        "id": "208469601",
+        "mobile": "+972525054313",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "LIGHTMAGENTA_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "עוזי נרקיס 10 חולון",
+            "coordinates": {
+                "lat": 32.0036279,
+                "lng": 34.7698322
+            },
+            "formattedAddress": "Uzi Narkis St 10, Holon, Israel"
+        }
+    },
+    {
+        "name": "לביא גלעד",
+        "refId": "43683",
+        "id": "217463751",
+        "mobile": "+972545760675",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "YELLOW",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "אל גינת אגוז 81 נווה אילן",
+            "coordinates": {
+                "lat": 31.8069435,
+                "lng": 35.0812325
+            },
+            "formattedAddress": "El Ginat Egoz St 81, Neve Ilan, Israel"
+        }
+    },
+    {
+        "name": "אייל אור",
+        "refId": "43269",
+        "id": "301328415",
+        "mobile": "+972526995799",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "LIGHTCYAN_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "חובבי ציון 17 תל אביב",
+            "coordinates": {
+                "lat": 32.0756706,
+                "lng": 34.768788
+            },
+            "formattedAddress": "Hovevei Tsiyon St 17, Tel Aviv-Yafo, Israel"
+        }
+    },
+    {
+        "name": "איתי ביטון",
+        "refId": "43465",
+        "id": "214498727",
+        "mobile": "+972532323520",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "LIGHTYELLOW_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "חולתה 6 חדרה",
+            "coordinates": {
+                "lat": 32.4444271,
+                "lng": 34.9016733
+            },
+            "formattedAddress": "Hulata St 6, Hadera, Israel"
+        }
+    },
+    {
+        "name": "סער אראטו",
+        "refId": "43062",
+        "id": "326965845",
+        "mobile": "+972548184547",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "GREEN",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "תרפב 17 רמת גן",
+            "coordinates": {
+                "lat": 32.0804039,
+                "lng": 34.8042777
+            },
+            "formattedAddress": "Tarpav St 17, Ramat Gan, Israel"
+        }
+    },
+    {
+        "name": "סולומון אבוטבול",
+        "refId": "42594",
+        "id": "067560383",
+        "mobile": "+972527035566",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "color": "LIGHTWHITE_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "הנביאים 53 בת ים",
+            "coordinates": {
+                "lat": 32.0099322,
+                "lng": 34.7444701
+            },
+            "formattedAddress": "Ha-Nevi'im St 53, Bat Yam, Israel"
+        }
+    }
+]

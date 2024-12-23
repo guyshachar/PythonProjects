@@ -3,6 +3,10 @@ import boto3
 from botocore.exceptions import ClientError
 import json
 import time
+from playwright.async_api import async_playwright
+import asyncio
+import urllib
+import requests
 
 def split_text(text, size_limit):
     """
@@ -32,7 +36,7 @@ def split_text(text, size_limit):
 
     return chunks
 
-def get_secret(self, secretName):
+def get_secret(secretName):
     secret_file_path = os.getenv("MY_SECRET_FILE", f"/run/secrets/")
     secret_file_path = secret_file_path + secretName
 
@@ -41,14 +45,14 @@ def get_secret(self, secretName):
             secret = secret_file.read().strip()
         return secret
     except FileNotFoundError:
-        self.logger.error(f"Secret: file not found: {secret_file_path}")
+        print(f'Error Secret: file not found: {secret_file_path}')
         return None
     except Exception as e:
-        self.logger.error(f'secret: {e}')
+        print(f'Error secret: {e}')
 
 def get_secret1(self, secretName):
     self.logger.debug(f'secret: {secretName}')
-    region_name = "il-central-1"
+    region_name = 'il-central-1'
     secret = None
 
     # Create a Secrets Manager client
@@ -92,3 +96,118 @@ def stopwatch_stop(self, name, level=None):
     else:
         self.logger.debug(f'sw {name}={elapsedTime}')
     return elapsedTime
+
+async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng):
+    duration = None
+    
+    try:
+        waze_url = f'https://www.waze.com/ul?ll={to_lat},{to_lng}&navigate=yes&from={from_lat},{from_lng}'
+
+        async with async_playwright() as p:                
+            browser = await p.firefox.launch(headless=True, args=['--disable-dev-shm-usage','--disable-extensions','--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--disable-software-rasterizer','--verbose'])
+            context = await browser.new_context()
+            page = await context.new_page()  # Create a new page
+
+            # Navigate to the URL
+            await page.goto(waze_url)
+
+            # Wait for the elements with class 'field-item' to load
+            await page.wait_for_selector(selector=".is-fastest", timeout=3000)
+
+            # Extract all articles with class 'field-item'
+            route_element_div = None
+            is_fastest_element_div = await page.query_selector_all("div.wm-routes-item-desktop__header:has(ul li.is-fastest)")
+            if is_fastest_element_div and len(is_fastest_element_div) == 1:
+                route_element_div = is_fastest_element_div[0]
+            else:
+                elements = await page.query_selector_all("div.wm-routes-item-desktop__header")
+                if elements and len(elements) > 0:
+                    route_element = elements[0]
+            if route_element_div:
+                span = await route_element_div.query_selector("span[title]")
+                if span:
+                    title_secs = await span.get_attribute("title")
+                    duration = seconds_to_hms(title_secs) 
+
+            await browser.close()
+
+    except Exception as e:
+        print(f"getWazeRouteDuration: Error extracting route time: {e}")
+
+    return duration
+
+def get_coordinates_google_maps(address):
+    """
+    Get precise coordinates for an address using Google Maps API.
+    """
+    try:
+        api_key = get_secret('google_cloud_apikey')
+        geocode_url = 'https://maps.googleapis.com/maps/api/geocode/json'
+        params = {
+            "address": address,
+            "key": api_key,
+        }
+        response = requests.get(geocode_url, params=params)
+        if response.status_code != 200:
+            return None, None, 'Error: Failed to connect to Google Maps API.'
+        
+        results = response.json().get("results", [])
+        if not results:
+            return None, None, 'Error: No matching location found.'
+        
+        location = results[0]["geometry"]["location"]
+        formatted_address = results[0]["formatted_address"]
+        return (location["lat"], location["lng"]), formatted_address, None
+    
+    except Exception as e:
+        return None, None, f'Error: {e}.'
+    
+def generate_waze_link(lat, lon):
+    """
+    Generate a Waze link using latitude and longitude.
+    """
+    base_url = "https://www.waze.com/ul"
+    return f"{base_url}?ll={lat},{lon}&navigate=yes"
+
+def get_accurate_waze_link(address):
+    """
+    Get the most accurate Waze link by geocoding the address with Google Maps.
+    """
+    coordinates, formatted_address, error = get_coordinates_google_maps(address)
+    if coordinates:
+        lat, lon = coordinates
+        return generate_waze_link(lat, lon), formatted_address
+    else:
+        return error, None
+
+def get_waze_link(address):
+    """
+    Generate a Waze link for a given address.
+    
+    Parameters:
+        address (str): The address to navigate to.
+        
+    Returns:
+        str: A Waze link.
+    """
+    base_url = "https://www.waze.com/ul"
+    params = {
+        "q": address,
+        "navigate": "yes"
+    }
+    return f"{base_url}?{urllib.parse.urlencode(params)}"
+
+def seconds_to_hms(duration):
+    # Remove the 's' and commas from the input
+    total_seconds = int(duration.replace(",", "").replace("s", ""))
+    
+    # Calculate hours, minutes, and seconds
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    
+    # Format as hh:mm:ss
+    duration_str = f'{minutes:02}:{seconds:02}'
+    if hours >= 0:
+        duration_str = f'{hours:02}:{duration_str}'
+    return duration_str

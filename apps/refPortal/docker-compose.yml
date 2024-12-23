@@ -3,6 +3,7 @@ services:
   app:
     image: guyshacharacc/refportal:latest
     environment:
+      - fileVersion=v4
       - TZ=Asia/Jerusalem
       - logLevel=DEBUG
       - twilioSend=True
@@ -44,4 +45,6 @@ secrets:
   mqtt_username:
     external: true
   mqtt_password:
+    external: true
+  google_cloud_apikey:
     external: true

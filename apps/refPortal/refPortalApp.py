@@ -22,6 +22,7 @@ import twilioClient
 from playwright.async_api import async_playwright
 from enum import Enum
 from colorama import Fore, Style
+import copy
 
 class RefPortalApp():
     def __init__(self):
@@ -31,7 +32,7 @@ class RefPortalApp():
         logging.basicConfig(level=logLevel, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
-        self.fileVersion = 'v3'
+        self.fileVersion = os.environ.get('fileVersion') or 'v'
         self.openText=f'Ref Portal {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} build#{os.environ.get("BUILD_DATE")} host={socket.gethostname()}'
         self.logger.info(self.openText)
 
@@ -52,13 +53,13 @@ class RefPortalApp():
                 "actions": self.gamesActions,
                 "notify": self.notifyUpdate,
                 "notifyTitle" : "שיבוצים:",
-                "tags" : [ "תאריך", "יום", "מסגרת משחקים", "משחק", "סבב", "מחזור", "מגרש", "סטטוס",
+                "tags" : [ 'תאריך', "יום", "מסגרת משחקים", "משחק", "סבב", "מחזור", "מגרש", "סטטוס",
                            "תפקיד", "* שם", "* דרג", "* טלפון", "* כתובת" ],
-                "initTag" : "תאריך",
+                "initTag" : 'תאריך',
                 "סטטוסTagDic": [("15.svg", "מאושר"), ("16.svg", "מחכה לאישור"), ("17.svg", "לא מאושר")],
                 "* שםTagDic": [('class="approved"', "מאשר"), ('class="reject"', "לא מאשר"), ('', "טרם אושר")],
                 "pkTags": ["מסגרת משחקים", "משחק"],
-                "removeFilter": "תאריך"
+                'removeFilter': 'תאריך'
            },
             "reviews": {
                 "url" : "https://ref.football.org.il/referee/reviews",
@@ -68,7 +69,7 @@ class RefPortalApp():
                 "compare": self.compareList,
                 "notify": self.notifyUpdate,
                 "notifyTitle" : "ביקורות:",
-                "tags" : [ "מס.", "תאריך", "שעה", "מסגרת משחקים", "משחק", "מגרש", "מחזור", "תפקיד במגרש", "מבקר", "ציון" ],
+                "tags" : [ "מס.", 'תאריך', "שעה", "מסגרת משחקים", "משחק", "מגרש", "מחזור", "תפקיד במגרש", "מבקר", "ציון" ],
                 "initTag" : "מס.",
                 "excludeCompareTags" : [ "מס." ],
                 "pkTags": ["מסגרת משחקים", "משחק"]
@@ -82,7 +83,7 @@ class RefPortalApp():
 
         self.swLevel = os.environ.get('swLevel') or 'debug'
 
-        self.loadReferees()
+        self.readRefereeDetails()
 
         self.loadFields()
 
@@ -123,7 +124,18 @@ class RefPortalApp():
             self.logger.debug(f'after readPortalGames')
             return result
 
-    def loadReferees(self):
+    def updateRefereeAddress(self, referee, address = None):
+        if 'addressDetails' not in referee or address and address != referee['addressDetails']['address']:
+            referee['addressDetails'] = { 'address': address, 'coordinates': None}
+
+        if not referee['addressDetails']['coordinates']:
+            coordinates, formattedAddress, error = helpers.get_coordinates_google_maps(referee['addressDetails']['address'])
+            lat, lng = coordinates
+            referee['addressDetails']['coordinates'] = { "lat": lat, "lng": lng}
+            referee['addressDetails']['formattedAddress'] = formattedAddress
+            self.writeReferees() 
+
+    def readRefereeDetails(self):
         self.refereeDetails = []
         try:
             readText = None
@@ -133,10 +145,13 @@ class RefPortalApp():
                 readText = refereeDetails_file.read().strip()
             self.refereeDetails = json.loads(readText)
 
-        except Exception as ex:
-            self.logger.error(f'loadReferees error: {ex}')
+            for referee in self.refereeDetails:
+                self.updateRefereeAddress(referee)
 
-        refereeSecretsKey = helpers.get_secret(self, 'refPortal_referees')#None#refPortalSecret and refPortalSecret.get("refPortal_referees", None)
+        except Exception as ex:
+            self.logger.error(f'readReferees error: {ex}')
+
+        refereeSecretsKey = helpers.get_secret('refPortal_referees')#None#refPortalSecret and refPortalSecret.get("refPortal_referees", None)
         #refereeSecretsKey = None
         if refereeSecretsKey:
             self.refereeSecrets = json.loads(refereeSecretsKey)
@@ -144,6 +159,17 @@ class RefPortalApp():
             self.refereeSecrets = {
                 "refId43679" : "S073XdLR"
             }
+
+    def writeReferees(self):
+        try:
+            readText = None
+            referee_file_path = os.getenv("MY_CONFIG_FILE", f"/run/config/")
+            referee_file_path = f'{referee_file_path}refereesDetails.json'
+            with open(referee_file_path, 'w') as refereeDetails_file:
+                writeText = json.dumps(self.refereeDetails, ensure_ascii=False, indent=4)
+                refereeDetails_file.write(writeText)
+        except Exception as ex:
+            self.logger.error(f'writeReferees error: {ex}')
 
     def loadFields(self):
         readText = None
@@ -326,16 +352,9 @@ class RefPortalApp():
                                         objText = ''
                                     obj = {}
                                 obj[tag] = tagValue
-                            elif "refereeSubTags" in data and tag in data["refereeSubTags"]:
-                                obj[refereeTag][tag] = tagValue
 
                             if "excludeCompareTags" not in self.dataDic[objType] or tag not in self.dataDic[objType]["excludeCompareTags"]:
                                 objText += f'{line}\n'
-
-                        elif "refereesTags" in data and line and line in data["refereesTags"]:
-                            refereeTag = line
-                            obj[refereeTag] = {}
-                            objText += f'{line}\n'
                         
                 if obj:
                     obj["objText"] = objText
@@ -358,8 +377,8 @@ class RefPortalApp():
     async def postParseGames(self, objType, referee):
         for game in referee[objType]["currentList"]:
             fieldTitle = game['מגרש']
-            if fieldTitle in self.fields:
-                game['wazeLink'] = self.fields[fieldTitle]['wazeLink']
+            addressDetails = self.fields[fieldTitle]['addressDetails']
+            game['addressDetails'] = addressDetails
 
     async def compareList(self, objType, referee):
         try:
@@ -368,21 +387,21 @@ class RefPortalApp():
 
             #Added
             prevListIds = {d[self.dataDic["pk"]] for d in prevList}
-            referee[objType]["added"] = [d for d in currentList if d[self.dataDic["pk"]] not in prevListIds]
-            referee[objType]["addedText"] = ''
-            for item in referee[objType]["added"]:
-                referee[objType]["addedText"] += f'{item["objText"]}\n'
+            referee[objType]['added'] = [d for d in currentList if d[self.dataDic["pk"]] not in prevListIds]
+            referee[objType]['addedText'] = ''
+            for item in referee[objType]['added']:
+                referee[objType]['addedText'] += f'{item["objText"]}\n'
                 if 'reminders' in referee:
                     if 'reminders' not in item:
                         item['reminders'] = []
                     for i in range(2):
-                        item['reminders'].append({'reminderInHrs':referee['reminders'][i], "sent":False})
+                        item['reminders'].append({'reminderInHrs':referee['reminders'][i], 'sent':False})
 
             #Removed
-            if "removeFilter" in self.dataDic[objType]:
+            if 'removeFilter' in self.dataDic[objType]:
                 filteredprevList = []
                 for prevListItem in prevList:          
-                    gameDate = datetime.strptime(prevListItem["תאריך"], "%d/%m/%y %H:%M")
+                    gameDate = datetime.strptime(prevListItem['תאריך'], "%d/%m/%y %H:%M")
                     if gameDate >= datetime.now():
                         filteredprevList.append(prevListItem)
             else:
@@ -400,7 +419,7 @@ class RefPortalApp():
                 for currentListItem in currentList:
                     if prevListItem[self.dataDic["pk"]] == currentListItem[self.dataDic["pk"]] and prevListItem[self.dataDic["objText"]] != currentListItem[self.dataDic["objText"]]:
                         if 'reminders' in prevListItem:
-                            currentListItem['reminders'] = prevListItem['reminders']
+                            currentListItem['reminders'] = copy.deepcopy(prevListItem['reminders'])
                         changedList.append(currentListItem)
 
             referee[objType]["changed"] = changedList
@@ -414,7 +433,7 @@ class RefPortalApp():
                 for currentListItem in currentList:
                     if prevListItem[self.dataDic["pk"]] == currentListItem[self.dataDic["pk"]] and prevListItem[self.dataDic["objText"]] == currentListItem[self.dataDic["objText"]]:
                         if 'reminders' in prevListItem:
-                            currentListItem['reminders'] = prevListItem['reminders']
+                            currentListItem['reminders'] = copy.deepcopy(prevListItem['reminders'])
                         nonChangedList.append(currentListItem)
 
         except Exception as e:
@@ -427,7 +446,8 @@ class RefPortalApp():
                 games = referee[objType][f'currentList']
                 
                 for game in games:
-                    gameDate = datetime.strptime(game["תאריך"], "%d/%m/%y %H:%M")
+                    gameDate = datetime.strptime(game['תאריך'], "%d/%m/%y %H:%M")
+                    addressDetails = game['addressDetails']
                     self.logger.debug(self.colorText(referee, 'reminders1 {gameDate}'))
 
                     if 'reminders' not in game:
@@ -437,23 +457,38 @@ class RefPortalApp():
                         reminderInHrs = reminder['reminderInHrs']
                         if reminderInHrs == -1:
                             continue
-                        title = None
-                        message = None
 
-                        if i == 0:
-                            title = f'תזכורת ראשונה למשחק {game["מסגרת משחקים"]}:'
-                            message = f"מחר יש לך משחק {game["משחק"]} נא לתאם עם הצוות"
-                        elif i == 1:
-                            title = f'תזכורת אחרונה למשחק {game["מסגרת משחקים"]}:'
-                            message = f'בעוד {reminderInHrs} שעות מתחיל המשחק {game["משחק"]} נא להערך בהתאם'
-                            message += f'\nקישור למגרש: {game["wazeLink"]}'
+                        if reminder['sent'] == False:
+                            checkReminderTime = await self.checkReminderTime(gameDate, reminderInHrs, 5)
+                            if checkReminderTime:
+                                title = None
+                                message = None
 
-                        if title and message and reminder['sent'] == False:
-                            reminder['sent'] = await self.reminder(referee, gameDate, reminderInHrs, 5, title, message)
-                        
+                                if i == 0:
+                                    title = f'תזכורת ראשונה למשחק {game["מסגרת משחקים"]}:'
+                                    message = f"מחר יש לך משחק {game["משחק"]} נא לתאם עם הצוות"
+                                elif i == 1:
+                                    title = f'תזכורת אחרונה למשחק {game["מסגרת משחקים"]}:'
+                                    message = f'בעוד {reminderInHrs} שעות מתחיל המשחק {game["משחק"]} נא להערך בהתאם'
+                                    message += f'\nכתובת המגרש: {addressDetails["address"]}'
+
+                                    if 'addressDetails' in referee and 'coordinates' in referee['addressDetails']:
+                                        from_coordinates_lat = referee['addressDetails']['coordinates']['lat']
+                                        from_coordinates_lng = referee['addressDetails']['coordinates']['lng']
+                                        to_coordinates_lat = addressDetails['coordinates']['lat']
+                                        to_coordinates_lng = addressDetails['coordinates']['lng']
+                                        duration_str = await helpers.getWazeRouteDuration(from_coordinates_lat, from_coordinates_lng, to_coordinates_lat, to_coordinates_lng)
+                                        if duration_str:
+                                            message += f'\nזמן נסיעה: {duration_str}'
+
+                                    message += f'\nקישור למגרש: {addressDetails["wazeLink"]}'
+
+                                if title and message:
+                                    await self.reminder(referee, gameDate, title, message)
+                                    reminder['sent'] = True
                         i += 1
 
-                referee[objType][f'currentList'] = games
+                #referee[objType][f'currentList'] = games
 
         except Exception as e:
             self.logger.error(f'actions: {len(games)} {e}')
@@ -465,29 +500,35 @@ class RefPortalApp():
         if now >= next_10am:
             next_10am += timedelta(days=1)
 
-        await self.reminder(referee, next_10am, 0, 5, 
-                            f'תזכורת חידוש רישום',
-                            f'https://api.whatsapp.com/send/?phone=%2B14155238886&text=join+of-wheel&type=phone_number&app_absent=0')
+        checkReminderTime = await self.checkReminderTime(next_10am, 0, 2)
+        if checkReminderTime:
+            await self.reminder(referee, next_10am, 
+                                f'תזכורת חידוש רישום',
+                                f'https://api.whatsapp.com/send/?phone=%2B14155238886&text=join+of-wheel&type=phone_number&app_absent=0')
 
         next_10pm = now.replace(hour=22, minute=0, second=0, microsecond=0)
         if now >= next_10pm:
             next_10pm += timedelta(days=1)
 
-        await self.reminder(referee, next_10pm, 0, 2, 
-                            f'תזכורת חידוש רישום',
-                            f'https://api.whatsapp.com/send/?phone=%2B14155238886&text=join+of-wheel&type=phone_number&app_absent=0')
 
-    async def reminder(self, referee, dueDate, hoursInAdvance, reminderOffsetInMins, title, message):
+        checkReminderTime = await self.checkReminderTime(next_10pm, 0, 2)
+        if checkReminderTime:
+            await self.reminder(referee, next_10pm, 
+                                f'תזכורת חידוש רישום',
+                                f'https://api.whatsapp.com/send/?phone=%2B14155238886&text=join+of-wheel&type=phone_number&app_absent=0')
+
+    async def checkReminderTime(self, dueDate, hoursInAdvance, reminderOffsetInMins):
         reminderInAdvance = hoursInAdvance*60*60
         offset = reminderOffsetInMins*60
     
-        if False or dueDate - timedelta(seconds=reminderInAdvance + offset) < datetime.now() < dueDate - timedelta(seconds=reminderInAdvance):
-            await self.send_notification(title, message, referee["id"], referee["mobile"], referee["name"])
-            self.logger.debug(self.colorText(referee, f'reminders {dueDate}'))
-
+        if False or dueDate - timedelta(seconds=reminderInAdvance + offset) < datetime.now() < dueDate:# - timedelta(seconds=reminderInAdvance):
             return True
-        else:
-            return False
+        
+        return False
+
+    async def reminder(self, referee, dueDate, title, message):
+        await self.send_notification(title, message, referee["id"], referee["mobile"], referee["name"])
+        self.logger.debug(self.colorText(referee, f'reminders {dueDate}'))
 
     async def send_push_notification(self, deviceToken, title, body):
         message = messaging.Message(
@@ -543,9 +584,9 @@ class RefPortalApp():
             if f"forceSend" in referee[objType] and referee[objType][f"forceSend"] == True:
                 message = referee[objType][f'currentList']
             else:
-                if len(referee[objType]["added"]) > 0:
-                    message += f'*חדש*\n{referee[objType]["addedText"]}\n'
-                    self.logger.debug(self.colorText(referee, f'{objType} added list#{len(referee[objType]["added"])}={referee[objType]["added"]}')) 
+                if len(referee[objType]['added']) > 0:
+                    message += f'*חדש*\n{referee[objType]['addedText']}\n'
+                    self.logger.debug(self.colorText(referee, f'{objType} added list#{len(referee[objType]['added'])}={referee[objType]['added']}')) 
 
                 if len(referee[objType]["removed"]) > 0:
                     message += f'*נמחק*\n~{referee[objType]["removedText"]}~\n'
@@ -555,7 +596,7 @@ class RefPortalApp():
                     message += f'*עדכון*\n{referee[objType]["changedText"]}\n'
                     self.logger.debug(self.colorText(referee, f'{objType} changed list#{len(referee[objType]["changed"])}={referee[objType]["changed"]}'))
 
-            if len(referee[objType]["added"]) > 0:
+            if len(referee[objType]['added']) > 0:
                 message += f'{self.loginUrl}'
 
             self.logger.info(self.colorText(referee, f'notify: {objType}: {message}'))
@@ -568,7 +609,7 @@ class RefPortalApp():
     def getRefereeFilePath(self, objType, referee):
         try:
             referee_file_path = os.getenv("MY_REFEREE_FILE", f"/run/referees/")
-            referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{objType}_{self.fileVersion}.json'
+            referee_file_path = f'{referee_file_path}refId{referee["refId"]}_{objType}_{self.fileVersion}'
 
             return referee_file_path
         except Exception as e:
@@ -579,7 +620,7 @@ class RefPortalApp():
         file_datetime = None
         
         try:
-            referee_file_path = self.getRefereeFilePath(objType, referee)
+            referee_file_path = f'{self.getRefereeFilePath(objType, referee)}.json'
             self.logger.debug(f'file: {referee_file_path}')
             if objType not in referee:
                 referee[objType] = {}
@@ -600,9 +641,10 @@ class RefPortalApp():
 
     async def writeRefereeFile(self, objType, referee):
         try:
-            prevListText = json.dumps(referee[objType]['prevList'], ensure_ascii=False)
-            currentListText = json.dumps(referee[objType]['currentList'], ensure_ascii=False)
-            referee_file_path = self.getRefereeFilePath(objType, referee)
+            prevListText = json.dumps(referee[objType]['prevList'], ensure_ascii=False, indent=4)
+            currentListText = json.dumps(referee[objType]['currentList'], ensure_ascii=False, indent=4)
+            pref_referee_file_path = self.getRefereeFilePath(objType, referee)
+            referee_file_path = f'{pref_referee_file_path}.json' 
             dir = os.path.dirname(referee_file_path)
             self.logger.debug(f'file: {dir} {referee_file_path}')
             if dir and not os.path.exists(dir):
@@ -612,9 +654,9 @@ class RefPortalApp():
                 self.logger.debug(f'prev:{prevListText}')
                 self.logger.debug(f'current:{currentListText}')
                 if os.path.exists(referee_file_path):
-                    fileDateTime = datetime.fromtimestamp(os.path.getmtime(referee_file_path))
-                    shutil.copy(referee_file_path, f'{referee_file_path}_{fileDateTime}')
-                refereeDumps = json.dumps(referee[objType]['currentList'], ensure_ascii=False)
+                    fileDateTime = datetime.fromtimestamp(os.path.getmtime(referee_file_path)).strftime("%Y%m%d%H%M%S")
+                    shutil.copy(referee_file_path, f'{pref_referee_file_path}_{fileDateTime}.json')
+                refereeDumps = json.dumps(referee[objType]['currentList'], ensure_ascii=False, indent=4)
                 with open(referee_file_path, 'w') as referee_file:
                     referee_file.write(refereeDumps.strip())
         except Exception as e:
@@ -717,8 +759,8 @@ class RefPortalApp():
                 if "compare" in self.dataDic[objType] and self.dataDic[objType]["compare"]:
                     await self.dataDic[objType]["compare"](objType, referee)
                                         
-                    if len(referee[objType]["added"]) > 0 or len(referee[objType]["removed"]) > 0 or len(referee[objType]["changed"]) > 0 or f"forceSend" in referee[objType] and referee[objType][f"forceSend"] == True:
-                        self.logger.info(self.colorText(referee, f'{objType} A:{len(referee[objType]["added"])} R:{len(referee[objType]["removed"])} C:{len(referee[objType]["changed"])} #{cnt}/{t}'))
+                    if len(referee[objType]['added']) > 0 or len(referee[objType]["removed"]) > 0 or len(referee[objType]["changed"]) > 0 or f"forceSend" in referee[objType] and referee[objType][f"forceSend"] == True:
+                        self.logger.info(self.colorText(referee, f'{objType} A:{len(referee[objType]['added'])} R:{len(referee[objType]["removed"])} C:{len(referee[objType]["changed"])} #{cnt}/{t}'))
 
                         await self.dataDic[objType]["notify"](objType, referee)
                     else:
