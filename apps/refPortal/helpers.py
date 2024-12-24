@@ -98,7 +98,7 @@ def stopwatch_stop(self, name, level=None):
     return elapsedTime
 
 async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng, arriveAt=None):
-    duration = None
+    duration_seconds = None
     
     try:
         waze_url = f'https://www.waze.com/ul?ll={to_lat},{to_lng}&navigate=yes&from={from_lat},{from_lng}'
@@ -129,15 +129,15 @@ async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng, arriveAt=None
             if route_element_div:
                 span = await route_element_div.query_selector("span[title]")
                 if span:
-                    title_secs = await span.get_attribute("title")
-                    duration = seconds_to_hms(title_secs) 
+                    title_secs = await span.get_attribute("title")    
+                    total_seconds = int(title_secs.replace(",", "").replace("s", ""))
 
             await browser.close()
 
     except Exception as e:
         print(f"getWazeRouteDuration: Error extracting route time: {e}")
 
-    return duration
+    return total_seconds
 
 def get_coordinates_google_maps(address):
     """
@@ -200,10 +200,8 @@ def get_waze_link(address):
     }
     return f"{base_url}?{urllib.parse.urlencode(params)}"
 
-def seconds_to_hms(duration):
-    # Remove the 's' and commas from the input
-    total_seconds = int(duration.replace(",", "").replace("s", ""))
-    
+def seconds_to_hms(total_seconds):
+    # Remove the 's' and commas from the input    
     # Calculate hours, minutes, and seconds
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60

@@ -470,9 +470,14 @@ class RefPortalApp():
                                         to_coordinates_lat = addressDetails['coordinates']['lat']
                                         to_coordinates_lng = addressDetails['coordinates']['lng']
                                         arriveAt = gameDate + timedelta(seconds=-10*60*60)
-                                        duration_str = await helpers.getWazeRouteDuration(from_coordinates_lat, from_coordinates_lng, to_coordinates_lat, to_coordinates_lng, arriveAt)
-                                        if duration_str:
-                                            message += f'\nזמן נסיעה: {duration_str}'
+                                        duration_secs = await helpers.getWazeRouteDuration(from_coordinates_lat, from_coordinates_lng, to_coordinates_lat, to_coordinates_lng, arriveAt)
+                                        if duration_secs:
+                                            durationStr = helpers.seconds_to_hms(duration_secs)
+                                            departDateTime = gameDate + timedelta(seconds=-1*60*60-duration_secs)
+                                            departTimeStr = departDateTime.strftime("%H:%M")
+                                            if departTimeStr:
+                                                message += f'\nמשך הנסיעה כדי להגיע שעה לפני המשחק הוא {durationStr},'
+                                                message += f' כדאי לצאת בשעה {departTimeStr}'
 
                                     message += f'\nקישור למגרש: {addressDetails["wazeLink"]}'
 
