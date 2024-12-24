@@ -34,7 +34,7 @@ services:
       - WATCHTOWER_POLL_INTERVAL=30 # Check every 30 seconds
 
 secrets:
-  refPortal_referees:
+  password_key:
     external: true
   twilio_account_sid:
     external: true

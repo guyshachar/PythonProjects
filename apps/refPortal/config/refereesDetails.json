@@ -21,7 +21,8 @@
                 "lng": 34.8101153
             },
             "formattedAddress": "Aharon Goldstein St 2, Giv'atayim, Israel"
-        }
+        },
+        "password": "gAAAAABnarX9MfgKOi6QLDvKQAHcrphgcZMPCCxhPUcIalA_CTgJJhWZeK8mggYZB_dOM4hn66MhE37TX0ZyxHJkOByYvYa07w=="
     },
     {
         "name": "ארז מטרני",
@@ -45,7 +46,8 @@
                 "lng": 34.72079
             },
             "formattedAddress": "Dvora Omer St 4, Yavne, Israel"
-        }
+        },
+        "password": "gAAAAABnarYu3RlYvmI1tBhJaCnBVKB3KAxtbWuqOLEIHaRsw6mzTjKmU8NVEzAdkOAAO_DaatlPPyD-HFXtrZvQb_Mrdb6WLw=="
     },
     {
         "name": "אחמד סוואד",
@@ -69,7 +71,8 @@
                 "lng": 34.818971
             },
             "formattedAddress": "Haroe St 29, Ramat Gan, Israel"
-        }
+        },
+        "password": "gAAAAABnarYuIB3OsLV7kgk2h1DxhpA1_FZE5SY3EWuV4aMBZVYo_bzzkKDSWvCDgrdsMTCAoEBk7fVsgFD5hooJUUvXaAx6Ug=="
     },
     {
         "name": "ירדן אלקבץ",
@@ -93,7 +96,8 @@
                 "lng": 34.775409
             },
             "formattedAddress": "David Tsadok St 5, Holon, Israel"
-        }
+        },
+        "password": "gAAAAABnarYupisrGbRM_rr8Yd3DXl-TiR8R3tPxDO9EkBS6bYAgmBhEYzXNcC3d9oJDS-aOeek3icQw3R4RjCL0N1bSDY5FMQ=="
     },
     {
         "name": "אלעד כהן",
@@ -109,7 +113,7 @@
             3
         ],
         "color": "LIGHTBLUE_EX",
-        "status": "inactive",
+        "status": "active",
         "addressDetails": {
             "address": "דרך ארץ 4 אשקלון",
             "coordinates": {
@@ -117,7 +121,8 @@
                 "lng": 34.5958027
             },
             "formattedAddress": "דרך ארץ 4, Ashkelon, Israel"
-        }
+        },
+        "password": "gAAAAABnarYu62yI0pY11NUub5HbbahGoYRHlQP5LlwGx_2iBoGBfZRnysGXKpw6jXAFg0NbKHL6oKdEjYfKvY9MngmtKdOFrA=="
     },
     {
         "name": "בר חטמי",
@@ -141,7 +146,8 @@
                 "lng": 34.7698322
             },
             "formattedAddress": "Uzi Narkis St 10, Holon, Israel"
-        }
+        },
+        "password": "gAAAAABnarYuEiSyEsYBUDHfcVge2E6Md7RBw2Kzr_4t7lfhMMpyUd5JpJ_9Rs6vv8ildfSFv4mkywfmKIYJmVjW9hLc-Dg9zQ=="
     },
     {
         "name": "לביא גלעד",
@@ -165,7 +171,8 @@
                 "lng": 35.0812325
             },
             "formattedAddress": "El Ginat Egoz St 81, Neve Ilan, Israel"
-        }
+        },
+        "password": "gAAAAABnarYuSwqyLk6pJ_9gdlUzmIFEt_You6np1irCrFXGJKHwli68tzKim7nq8v3Fask7fR5c-ioDXZiG5euSmFSnKBpaig=="
     },
     {
         "name": "אייל אור",
@@ -189,7 +196,8 @@
                 "lng": 34.768788
             },
             "formattedAddress": "Hovevei Tsiyon St 17, Tel Aviv-Yafo, Israel"
-        }
+        },
+        "password": "gAAAAABnarYu81BxEbPCNAj7OUPcgVvlFjfrV147HQoWnTuvDjcu2JHbDd1ZpiG65nlDBFP5ymzUqlhtKOY2B-a8puNuM4pOeQ=="
     },
     {
         "name": "איתי ביטון",
@@ -213,7 +221,8 @@
                 "lng": 34.9016733
             },
             "formattedAddress": "Hulata St 6, Hadera, Israel"
-        }
+        },
+        "password": "gAAAAABnarYuS5cdQevk5_9upadNzGJMUePVe6umzQI31beCXwl8i2GxfnklcX6BNsMf1gFm2RVmrvEFeSiBRJb6KZMHGOvnaw=="
     },
     {
         "name": "סער אראטו",
@@ -237,7 +246,8 @@
                 "lng": 34.8042777
             },
             "formattedAddress": "Tarpav St 17, Ramat Gan, Israel"
-        }
+        },
+        "password": "gAAAAABnarYuWbNZ6_RNgvuLIFzXOIH8fFoG8TydYX4UQUtWTS548N1XwfyCUsAOSThqlE4zQ31F91FYvjf-qVcvS2WKhc3Zzg=="
     },
     {
         "name": "סולומון אבוטבול",
@@ -261,6 +271,7 @@
                 "lng": 34.7444701
             },
             "formattedAddress": "Ha-Nevi'im St 53, Bat Yam, Israel"
-        }
+        },
+        "password": "gAAAAABnarYuLbVN-RlIYSeGaDpGjKfr97qrdLYCWEK8BOjxT780zaDzu5DDsJRFcVRppA__BHTJp7HCE1lPgPu703jbkfHjtQ=="
     }
 ]

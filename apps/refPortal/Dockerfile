@@ -29,7 +29,7 @@ COPY config/* .
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-ENV BUILD_DATE=202412232309
+ENV BUILD_DATE=202412241638
 ENV logLevel=INFO
 ENV fileVersion=v4
 ENV loadInterval=30000

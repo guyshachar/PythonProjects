@@ -16,6 +16,7 @@ import re
 import firebase_admin
 from firebase_admin import credentials, messaging
 import helpers
+import handlePasswords
 import pageManager
 import mqttClient
 import twilioClient
@@ -149,16 +150,7 @@ class RefPortalApp():
                 self.updateRefereeAddress(referee)
 
         except Exception as ex:
-            self.logger.error(f'readReferees error: {ex}')
-
-        refereeSecretsKey = helpers.get_secret('refPortal_referees')#None#refPortalSecret and refPortalSecret.get("refPortal_referees", None)
-        #refereeSecretsKey = None
-        if refereeSecretsKey:
-            self.refereeSecrets = json.loads(refereeSecretsKey)
-        else:
-            self.refereeSecrets = {
-                "refId43679" : "S073XdLR"
-            }
+            self.logger.error(f'readRefereeDetails error: {ex}')
 
     def writeReferees(self):
         try:
@@ -477,7 +469,8 @@ class RefPortalApp():
                                         from_coordinates_lng = referee['addressDetails']['coordinates']['lng']
                                         to_coordinates_lat = addressDetails['coordinates']['lat']
                                         to_coordinates_lng = addressDetails['coordinates']['lng']
-                                        duration_str = await helpers.getWazeRouteDuration(from_coordinates_lat, from_coordinates_lng, to_coordinates_lat, to_coordinates_lng)
+                                        arriveAt = gameDate + timedelta(seconds=-10*60*60)
+                                        duration_str = await helpers.getWazeRouteDuration(from_coordinates_lat, from_coordinates_lng, to_coordinates_lat, to_coordinates_lng, arriveAt)
                                         if duration_str:
                                             message += f'\nזמן נסיעה: {duration_str}'
 
@@ -668,17 +661,20 @@ class RefPortalApp():
         try:
             await self.sendGeneralReminders(referee)
 
-            await self.login(referee, page)
-            self.logger.debug(self.colorText(referee, f'after login'))
+            loginSuccesful = await self.login(referee, page)
+            self.logger.debug(self.colorText(referee, f'after login = {loginSuccesful}'))
 
+            if loginSuccesful == False:
+                return
+        
             if 'objTypes' in referee:
                 for objType in referee['objTypes']:
                     await self.checkRefereeData(objType, referee, page)
 
         except Exception as ex:
-            self.logger.error(f'CheckRefereeTask error: {ex}')
+            self.logger.error(f'CheckRefereeTask login error: {ex}')
 
-        finally:
+        try:
             loggedoutSuccessfully = await self.logout(referee, page)
             self.logger.debug(self.colorText(referee, f'loggedoutSuccessfully={loggedoutSuccessfully}'))
             if loggedoutSuccessfully == True:
@@ -686,6 +682,8 @@ class RefPortalApp():
             else:
                 manager.renew_page(semaphore, page)
             #await manager.context.tracing.stop(path=f"{referee_file_path}traceFinally{datetime.now().strftime("%Y%m%d%H%M%S")}}.zip")
+        except Exception as ex:
+            self.logger.error(f'CheckRefereeTask logout error: {ex}')
 
     async def checkRefereeData(self, objType, referee, page):
         try:
@@ -793,7 +791,6 @@ class RefPortalApp():
                 t+=1
                 self.logger.debug(self.colorText(referee, f'login#{t}'))
                 await page.goto(self.loginUrl)
-                #await page.wait_for_load_state(state='load', timeout=2000)
                 await asyncio.sleep(1000*t / 1000)
 
                 input_elements = await page.query_selector_all('input')
@@ -802,7 +799,7 @@ class RefPortalApp():
                     await usernameField.fill(referee["refId"])
 
                     passwordField = input_elements[1]
-                    await passwordField.fill(self.refereeSecrets[f'refId{referee["refId"]}'])
+                    await passwordField.fill(handlePasswords.decryptPassword(referee['password']))
 
                     idField = input_elements[2]
                     await idField.fill(referee["id"])
@@ -819,10 +816,13 @@ class RefPortalApp():
                 self.logger.error(self.colorText(referee, f'Login failed#{t}'))
             else:
                 self.logger.debug(self.colorText(referee, f'Login successfull#{t}'))
+                return True
 
         except Exception as ex:
             self.logger.error(f'Login error: {ex}')
 
+        return False
+    
     async def logout(self, referee, page):
         try:
             t=0
@@ -836,7 +836,6 @@ class RefPortalApp():
                 if len(logoutButtons) == 1:
                     logoutButton = button_elements[0]
                     await logoutButton.click()
-                    #await page.wait_for_load_state(state='load', timeout=5000)
                 await asyncio.sleep(1000*t / 1000)
 
             if page.url != self.loginUrl:

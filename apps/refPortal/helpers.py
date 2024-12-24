@@ -97,12 +97,15 @@ def stopwatch_stop(self, name, level=None):
         self.logger.debug(f'sw {name}={elapsedTime}')
     return elapsedTime
 
-async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng):
+async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng, arriveAt=None):
     duration = None
     
     try:
         waze_url = f'https://www.waze.com/ul?ll={to_lat},{to_lng}&navigate=yes&from={from_lat},{from_lng}'
-
+        if arriveAt:
+            arriveAtTs = int(arriveAt.timestamp()) * 1000
+            waze_url = f'{waze_url}&time={arriveAtTs}&reverse=yes'
+                    #https://www.waze.com/en-GB/live-map/directions?navigate=yes&to=ll.32.0429027%2C34.7937824&from=ll.32.0771918%2C34.8101153&time=1735084800000&reverse=yes
         async with async_playwright() as p:                
             browser = await p.firefox.launch(headless=True, args=['--disable-dev-shm-usage','--disable-extensions','--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--disable-software-rasterizer','--verbose'])
             context = await browser.new_context()
@@ -112,7 +115,7 @@ async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng):
             await page.goto(waze_url)
 
             # Wait for the elements with class 'field-item' to load
-            await page.wait_for_selector(selector=".is-fastest", timeout=3000)
+            await page.wait_for_selector(selector=".is-fastest", timeout=10000)
 
             # Extract all articles with class 'field-item'
             route_element_div = None
