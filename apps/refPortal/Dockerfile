@@ -19,7 +19,7 @@ RUN playwright install-deps
 # Copy the script into the container
 #RUN mkdir -p /Shared
 COPY *.py .
-COPY config/* .
+#COPY config/* .
 
 # Install any necessary dependencies (if needed)
 #RUN pip install --upgrade pip
@@ -29,7 +29,7 @@ COPY config/* .
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-ENV BUILD_DATE=202412250130
+ENV BUILD_DATE=202412272336
 ENV logLevel=INFO
 ENV fileVersion=v4
 ENV loadInterval=30000

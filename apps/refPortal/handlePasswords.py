@@ -55,6 +55,13 @@ def encrypt(referees):
         referees[referee] = encryptedPassword
         print(f'{password} {encryptedPassword}')
 
+def encryptPassword(password):
+    key = helpers.get_secret('password_key')
+    fernet = Fernet(key)
+    encodedPassword = password.encode()
+    encryptedPassword = fernet.encrypt(encodedPassword).decode("utf-8")
+    return encryptedPassword
+
 def decryptPassword(password):
     key = helpers.get_secret('password_key')
     fernet = Fernet(key)
@@ -71,12 +78,14 @@ def readRefereesPasswords():
         refereesPassword[referee] = decryptedPassword
 
 if __name__ == "__main__":
-    referees = readReferees()
-    passwords = readPasswords()
-    mergeReferees(referees, passwords)
-    writeReferees(referees)
+#    referees = readReferees()
+#    passwords = readPasswords()
+#    mergeReferees(referees, passwords)
+#    writeReferees(referees)
     #encrypt(referees)
     #writePasswords(referees)
 #    for referee in referees:
 #        decryptedPassword = decryptPassword(referees[referee])
 #        print(decryptedPassword)
+    encryptedPassword = encryptPassword('aaaaaaaaaaa')
+    print(encryptedPassword)

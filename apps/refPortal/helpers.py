@@ -97,8 +97,8 @@ def stopwatch_stop(self, name, level=None):
         self.logger.debug(f'sw {name}={elapsedTime}')
     return elapsedTime
 
-async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng, arriveAt=None):
-    duration_seconds = None
+async def getWazeRouteDuration(page, from_lat, from_lng, to_lat, to_lng, arriveAt=None):
+    total_seconds = None
     
     try:
         waze_url = f'https://www.waze.com/ul?ll={to_lat},{to_lng}&navigate=yes&from={from_lat},{from_lng}'
@@ -106,33 +106,27 @@ async def getWazeRouteDuration(from_lat, from_lng, to_lat, to_lng, arriveAt=None
             arriveAtTs = int(arriveAt.timestamp()) * 1000
             waze_url = f'{waze_url}&time={arriveAtTs}&reverse=yes'
                     #https://www.waze.com/en-GB/live-map/directions?navigate=yes&to=ll.32.0429027%2C34.7937824&from=ll.32.0771918%2C34.8101153&time=1735084800000&reverse=yes
-        async with async_playwright() as p:                
-            browser = await p.firefox.launch(headless=True, args=['--disable-dev-shm-usage','--disable-extensions','--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--disable-software-rasterizer','--verbose'])
-            context = await browser.new_context()
-            page = await context.new_page()  # Create a new page
 
-            # Navigate to the URL
-            await page.goto(waze_url)
+        # Navigate to the URL
+        await page.goto(waze_url)
 
-            # Wait for the elements with class 'field-item' to load
-            await page.wait_for_selector(selector=".is-fastest", timeout=10000)
+        # Wait for the elements with class 'field-item' to load
+        await page.wait_for_selector(selector=".is-fastest", timeout=20000)
 
-            # Extract all articles with class 'field-item'
-            route_element_div = None
-            is_fastest_element_div = await page.query_selector_all("div.wm-routes-item-desktop__header:has(ul li.is-fastest)")
-            if is_fastest_element_div and len(is_fastest_element_div) == 1:
-                route_element_div = is_fastest_element_div[0]
-            else:
-                elements = await page.query_selector_all("div.wm-routes-item-desktop__header")
-                if elements and len(elements) > 0:
-                    route_element = elements[0]
-            if route_element_div:
-                span = await route_element_div.query_selector("span[title]")
-                if span:
-                    title_secs = await span.get_attribute("title")    
-                    total_seconds = int(title_secs.replace(",", "").replace("s", ""))
-
-            await browser.close()
+        # Extract all articles with class 'field-item'
+        route_element_div = None
+        is_fastest_element_div = await page.query_selector_all("div.wm-routes-item-desktop__header:has(ul li.is-fastest)")
+        if is_fastest_element_div and len(is_fastest_element_div) == 1:
+            route_element_div = is_fastest_element_div[0]
+        else:
+            elements = await page.query_selector_all("div.wm-routes-item-desktop__header")
+            if elements and len(elements) > 0:
+                route_element = elements[0]
+        if route_element_div:
+            span = await route_element_div.query_selector("span[title]")
+            if span:
+                title_secs = await span.get_attribute("title")    
+                total_seconds = int(title_secs.replace(",", "").replace("s", ""))
 
     except Exception as e:
         print(f"getWazeRouteDuration: Error extracting route time: {e}")
@@ -212,3 +206,14 @@ def seconds_to_hms(total_seconds):
     if hours >= 0:
         duration_str = f'{hours:02}:{duration_str}'
     return duration_str
+
+def save_to_json(fields, filename):
+    with open(filename, 'w') as fields_file:
+        data = json.dumps(fields, ensure_ascii=False, indent=4)
+        fields_file.write(data.strip())
+
+def load_from_json(filename):
+    with open(filename, 'r') as fields_file:
+        data = fields_file.read().strip()
+        fields = json.loads(data)
+        return fields

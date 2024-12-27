@@ -51,17 +51,6 @@ def save_to_csv(data, filename="./config/fields.csv"):
         writer.writeheader()
         writer.writerows(data)
 
-def save_to_json(fields, filename="./config/fields.json"):
-    with open(filename, 'w') as fields_file:
-        data = json.dumps(fields, ensure_ascii=False)
-        fields_file.write(data.strip())
-
-def load_from_json(filename="./config/fields.json"):
-    with open(filename, 'r') as fields_file:
-        data = fields_file.read().strip()
-        fields = json.loads(data)
-        return fields
-
 def convertList2Dic(fields):
     newFields = {}
     for field in fields:
@@ -88,8 +77,8 @@ if __name__ == "__main__":
     #field_details = scrape_field_details()
     #save_to_csv(field_details)
     #save_to_json(field_details)
-    field_details = load_from_json()
+    field_details = helpers.load_from_json('./data/fields/fields.json')
     new_field_details = addCoordinates(field_details)
-    save_to_json(new_field_details, "./config/newFields.json")
+    helpers.save_to_json(new_field_details, "./data/fields/newFields.json")
     for field in field_details:
         print(field)

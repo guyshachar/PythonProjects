@@ -1,7 +1,8 @@
 apps/refPortal/CheerAppMaui.code-workspace
 apps/refPortal/secret/
-apps/refPortal/referees/
-.DS_Store
+apps/refPortal/data/referees/games/
+apps/refPortal/data/referees/reviews/
 .DS_Store
 apps/refPortal/.DS_Store
 apps/.DS_Store
+apps/refPortal/__pycache__/
