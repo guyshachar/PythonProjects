@@ -1,0 +1,40 @@
+# Use the official Python image from the Docker Hub
+FROM python:3.13-slim
+VOLUME ["/run/data"]
+VOLUME ["/run/ssl"]
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY rpApi/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt 
+
+# Install Playwright and browsers
+RUN playwright install
+RUN playwright install-deps  
+
+# Copy the script into the container
+RUN mkdir -p /shared
+RUN mkdir -p /rpApi
+WORKDIR /app/rpApi
+RUN mkdir -p /templates
+COPY /rpApi/*.py .
+COPY /rpApi/templates/* templates/.
+WORKDIR /app/shared
+COPY /shared/*.py .
+WORKDIR /app
+
+# Define entrypoint to start Tailscale and your app
+# Start Tailscale and your Python script
+ENV BUILD_DATE=202501171709
+ENV logLevel=INFO
+ENV fileVersion=v5
+
+EXPOSE 5001
+
+# Command to run the script
+#CMD ["python", "test.py"]
+CMD ["python", "rpApi/refPortalApi.py"]

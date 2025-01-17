@@ -1,7 +1,7 @@
 import types
 import sys
 sys.path.append("..")
-from Shared.logger import Logger
+from shared.logger import Logger
 
 def validateNotifications(redAlerts, citiesToValidate, logger):
     if redAlerts:
@@ -29,4 +29,5 @@ def validateNotifications(redAlerts, citiesToValidate, logger):
         
         return result
     
-    return types.SimpleNamespace(foundAny=False)
+    text = types.SimpleNamespace(foundAny=False)
+    return text

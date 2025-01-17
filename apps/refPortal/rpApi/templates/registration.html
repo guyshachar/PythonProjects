@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="assets/favicon.png" type="image/png">
+    <title>הרשמה למערכת התראות מהפורטל</title>
+</head>
+<body r>
+    <h1>הכנס פרטים</h1>
+    <form action="/registrationSubmit" method="POST">
+        <label for="refId">קוד שופט:</label>
+        <input type="number" id="refId" name="refId"><br><br>
+
+        <label for="refName">שם השופט כפי שרשום בפורטל:</label>
+        <input type="text" id="refName" name="refName"><br><br>
+
+        <label for="id">תעודת זהות:</label>
+        <input type="number" id="id" name="id"><br><br>
+
+        <label for="refPassword">סיסמא:</label>
+        <input type="password" id="refPassword" name="refPassword"><br><br>
+
+        <label for="originAddress">כתובת מוצא עיקרית למשחקים (הכתובת ממנה את/ה יוצא/ת למשחקים בד״כ):</label>
+        <input type="text" id="originAddress" name="originAddress"><br><br>
+
+        <label for="reminderInHours">תזכורת אחרונה (בשעות):</label>
+        <input type="number" id="reminderInHours" name="reminderInHours" value="3"><br><br>
+
+        <label for="timeArrivalInMins">זמן הגעה למגרש לפני המשחק (בדקות):</label>
+        <input type="number" id="timeArrivalInMins" name="timeArrivalInMins" value="45"><br><br>
+
+        <button type="submit">שלח</button>
+    </form>
+</body>
+</html>

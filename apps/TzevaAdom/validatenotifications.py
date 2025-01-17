@@ -1,7 +1,7 @@
 import types
 import sys
 sys.path.append("..")
-from Shared.logger import Logger
+from shared.logger import Logger
 
 class ValidateNotifications:
     def __init__(self):

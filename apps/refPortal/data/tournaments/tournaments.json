@@ -1,0 +1,1631 @@
+{
+    "ליגת WINNER": {
+        "text": "ליגת WINNER",
+        "section": "בוגרים",
+        "leagueId": 40,
+        "rules": "גברים על, לאומית וא׳",
+        "href": "/leagues/league/?league_id=40&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה לאומית": {
+        "text": "ליגה לאומית",
+        "section": "בוגרים",
+        "leagueId": 45,
+        "rules": "גברים על, לאומית וא׳",
+        "href": "/leagues/league/?league_id=45&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה א' דרום": {
+        "text": "ליגה א' דרום",
+        "section": "בוגרים",
+        "leagueId": 62,
+        "rules": "גברים על, לאומית וא׳",
+        "href": "/leagues/league/?league_id=62&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה א' צפון": {
+        "text": "ליגה א' צפון",
+        "section": "בוגרים",
+        "leagueId": 61,
+        "rules": "גברים על, לאומית וא׳",
+        "href": "/leagues/league/?league_id=61&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ב' דרום א'": {
+        "text": "ליגה ב' דרום א'",
+        "section": "בוגרים",
+        "leagueId": 73,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=73&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ב' דרום ב'": {
+        "text": "ליגה ב' דרום ב'",
+        "section": "בוגרים",
+        "leagueId": 74,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=74&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ב' צפון א'": {
+        "text": "ליגה ב' צפון א'",
+        "section": "בוגרים",
+        "leagueId": 71,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=71&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ב' צפון ב'": {
+        "text": "ליגה ב' צפון ב'",
+        "section": "בוגרים",
+        "leagueId": 72,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=72&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' גליל": {
+        "text": "ליגה ג' גליל",
+        "section": "בוגרים",
+        "leagueId": 81,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=81&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' דרום": {
+        "text": "ליגה ג' דרום",
+        "section": "בוגרים",
+        "leagueId": 684,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=684&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' יזרעאל": {
+        "text": "ליגה ג' יזרעאל",
+        "section": "בוגרים",
+        "leagueId": 83,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=83&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' מפרץ": {
+        "text": "ליגה ג' מפרץ",
+        "section": "בוגרים",
+        "leagueId": 854,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=854&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' מרכז": {
+        "text": "ליגה ג' מרכז",
+        "section": "בוגרים",
+        "leagueId": 89,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=89&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' צפון": {
+        "text": "ליגה ג' צפון",
+        "section": "בוגרים",
+        "leagueId": 853,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=853&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג' שרון": {
+        "text": "ליגה ג' שרון",
+        "section": "בוגרים",
+        "leagueId": 86,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=86&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ג דן": {
+        "text": "ליגה ג דן",
+        "section": "בוגרים",
+        "leagueId": 88,
+        "rules": "ב׳ וג׳",
+        "href": "/leagues/league/?league_id=88&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת כדורגל באולמות הראשונה": {
+        "text": "ליגת כדורגל באולמות הראשונה",
+        "section": "בוגרים",
+        "leagueId": 636,
+        "rules": "אולמות",
+        "href": "/leagues/league/?league_id=636&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת כדורגל באולמות השנייה": {
+        "text": "ליגת כדורגל באולמות השנייה",
+        "section": "בוגרים",
+        "leagueId": 772,
+        "rules": "אולמות",
+        "href": "/leagues/league/?league_id=772&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ותיקים": {
+        "text": "ליגת ותיקים",
+        "section": "בוגרים",
+        "leagueId": 781,
+        "rules": "ותיקים",
+        "href": "/leagues/league/?league_id=781&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת על נשים": {
+        "text": "ליגת על נשים",
+        "section": "נשים",
+        "leagueId": 637,
+        "rules": "נשים על ולאומית",
+        "href": "/leagues/league/?league_id=637&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה לאומית נשים": {
+        "text": "ליגה לאומית נשים",
+        "section": "נשים",
+        "leagueId": 639,
+        "rules": "נשים על ולאומית",
+        "href": "/leagues/league/?league_id=639&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ארצית נשים": {
+        "text": "ליגה ארצית נשים",
+        "section": "נשים",
+        "leagueId": 741,
+        "rules": "נשים ארצית",
+        "href": "/leagues/league/?league_id=741&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות דרום": {
+        "text": "ליגת נערות דרום",
+        "section": "נערות",
+        "leagueId": 651,
+        "rules": "נערות",
+        "href": "/leagues/league/?league_id=651&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות מרכז": {
+        "text": "ליגת נערות מרכז",
+        "section": "נערות",
+        "leagueId": 857,
+        "rules": "נערות",
+        "href": "/leagues/league/?league_id=857&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות צפון": {
+        "text": "ליגת נערות צפון",
+        "section": "נערות",
+        "leagueId": 641,
+        "rules": "נערות",
+        "href": "/leagues/league/?league_id=641&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות א' מפרץ": {
+        "text": "ליגת נערות א' מפרץ",
+        "section": "נערות א",
+        "leagueId": 860,
+        "rules": "נערות א׳",
+        "href": "/leagues/league/?league_id=860&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות א' מרכז": {
+        "text": "ליגת נערות א' מרכז",
+        "section": "נערות א",
+        "leagueId": 823,
+        "rules": "נערות א׳",
+        "href": "/leagues/league/?league_id=823&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות א' צפון": {
+        "text": "ליגת נערות א' צפון",
+        "section": "נערות א",
+        "leagueId": 809,
+        "rules": "נערות א׳",
+        "href": "/leagues/league/?league_id=809&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות א' שפלה": {
+        "text": "ליגת נערות א' שפלה",
+        "section": "נערות א",
+        "leagueId": 808,
+        "rules": "נערות א׳",
+        "href": "/leagues/league/?league_id=808&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערות א' שרון": {
+        "text": "ליגת נערות א' שרון",
+        "section": "נערות א",
+        "leagueId": 859,
+        "rules": "נערות א׳",
+        "href": "/leagues/league/?league_id=859&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' דן": {
+        "text": "ליגת ילדות א' דן",
+        "section": "ילדות א",
+        "leagueId": 848,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=848&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' דרום": {
+        "text": "ליגת ילדות א' דרום",
+        "section": "ילדות א",
+        "leagueId": 705,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=705&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' יזרעאל": {
+        "text": "ליגת ילדות א' יזרעאל",
+        "section": "ילדות א",
+        "leagueId": 850,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=850&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' מפרץ": {
+        "text": "ליגת ילדות א' מפרץ",
+        "section": "ילדות א",
+        "leagueId": 815,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=815&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' מרכז": {
+        "text": "ליגת ילדות א' מרכז",
+        "section": "ילדות א",
+        "leagueId": 749,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=749&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' צפון": {
+        "text": "ליגת ילדות א' צפון",
+        "section": "ילדות א",
+        "leagueId": 717,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=717&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' צפון 2": {
+        "text": "ליגת ילדות א' צפון 2",
+        "section": "ילדות א",
+        "leagueId": 900,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=900&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות א' שרון": {
+        "text": "ליגת ילדות א' שרון",
+        "section": "ילדות א",
+        "leagueId": 810,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=810&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות ב' דן": {
+        "text": "ליגת ילדות ב' דן",
+        "section": "ילדות ב",
+        "leagueId": 910,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=910&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות ב' דרום": {
+        "text": "ליגת ילדות ב' דרום",
+        "section": "ילדות ב",
+        "leagueId": 901,
+        "rules": "ילדות׳",
+        "href": "/leagues/league/?league_id=901&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות ב' מרכז": {
+        "text": "ליגת ילדות ב' מרכז",
+        "section": "ילדות ב",
+        "leagueId": 903,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=903&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדות ב' צפון": {
+        "text": "ליגת ילדות ב' צפון",
+        "section": "ילדות ב",
+        "leagueId": 902,
+        "rules": "ילדות",
+        "href": "/leagues/league/?league_id=902&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת העל לנוער": {
+        "text": "ליגת העל לנוער",
+        "section": "נוער",
+        "leagueId": 101,
+        "rules": "נוער על ולאומית",
+        "href": "/leagues/league/?league_id=101&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה לאומית לנוער דרום": {
+        "text": "ליגה לאומית לנוער דרום",
+        "section": "נוער",
+        "leagueId": 103,
+        "rules": "נוער על ולאומית",
+        "href": "/leagues/league/?league_id=103&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה לאומית לנוער צפון": {
+        "text": "ליגה לאומית לנוער צפון",
+        "section": "נוער",
+        "leagueId": 102,
+        "rules": "נוער על ולאומית",
+        "href": "/leagues/league/?league_id=102&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ארצית לנוער דרום": {
+        "text": "ליגה ארצית לנוער דרום",
+        "section": "נוער",
+        "leagueId": 105,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=105&season_id=26",
+        "tournament": "league"
+    },
+    "ליגה ארצית לנוער צפון": {
+        "text": "ליגה ארצית לנוער צפון",
+        "section": "נוער",
+        "leagueId": 104,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=104&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נוער יזרעאל": {
+        "text": "ליגת נוער יזרעאל",
+        "section": "נוער",
+        "leagueId": 112,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=112&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נוער מפרץ": {
+        "text": "ליגת נוער מפרץ",
+        "section": "נוער",
+        "leagueId": 787,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=787&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נוער מרכז": {
+        "text": "ליגת נוער מרכז",
+        "section": "נוער",
+        "leagueId": 666,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=666&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נוער צפון": {
+        "text": "ליגת נוער צפון",
+        "section": "נוער",
+        "leagueId": 110,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=110&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נוער שפלה": {
+        "text": "ליגת נוער שפלה",
+        "section": "נוער",
+        "leagueId": 115,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=115&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נוער שרון": {
+        "text": "ליגת נוער שרון",
+        "section": "נוער",
+        "leagueId": 114,
+        "rules": "נוער ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=114&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' על": {
+        "text": "ליגת נערים א' על",
+        "section": "נערים א",
+        "leagueId": 726,
+        "rules": "נערים א׳ על",
+        "href": "/leagues/league/?league_id=726&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' ארצית דרום": {
+        "text": "ליגת נערים א' ארצית דרום",
+        "section": "נערים א",
+        "leagueId": 121,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=121&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' ארצית צפון": {
+        "text": "ליגת נערים א' ארצית צפון",
+        "section": "נערים א",
+        "leagueId": 120,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=120&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' דן": {
+        "text": "ליגת נערים א' דן",
+        "section": "נערים א",
+        "leagueId": 646,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=646&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' יזרעאל": {
+        "text": "ליגת נערים א' יזרעאל",
+        "section": "נערים א",
+        "leagueId": 755,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=755&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' מרכז": {
+        "text": "ליגת נערים א' מרכז",
+        "section": "נערים א",
+        "leagueId": 123,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=123&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' צפון": {
+        "text": "ליגת נערים א' צפון",
+        "section": "נערים א",
+        "leagueId": 122,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=122&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' שפלה": {
+        "text": "ליגת נערים א' שפלה",
+        "section": "נערים א",
+        "leagueId": 665,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=665&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים א' שרון": {
+        "text": "ליגת נערים א' שרון",
+        "section": "נערים א",
+        "leagueId": 664,
+        "rules": "נערים א׳ ארצית ומחוזית",
+        "href": "/leagues/league/?league_id=664&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' על": {
+        "text": "ליגת נערים ב' על",
+        "section": "נערים ב",
+        "leagueId": 773,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=773&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' ארצית דרום": {
+        "text": "ליגת נערים ב' ארצית דרום",
+        "section": "נערים ב",
+        "leagueId": 719,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=719&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' ארצית צפון": {
+        "text": "ליגת נערים ב' ארצית צפון",
+        "section": "נערים ב",
+        "leagueId": 720,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=720&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' דן": {
+        "text": "ליגת נערים ב' דן",
+        "section": "נערים ב",
+        "leagueId": 135,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=135&season_id=26",
+        "tournament": "league"
+    },
+    "נערים ב' דרום": {
+        "text": "ליגת נערים ב' דרום",
+        "section": "נערים ב",
+        "leagueId": 139,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=139&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' יזרעאל": {
+        "text": "ליגת נערים ב' יזרעאל",
+        "section": "נערים ב",
+        "leagueId": 706,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=706&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' מפרץ": {
+        "text": "ליגת נערים ב' מפרץ",
+        "section": "נערים ב",
+        "leagueId": 131,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=131&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' מרכז": {
+        "text": "ליגת נערים ב' מרכז",
+        "section": "נערים ב",
+        "leagueId": 137,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=137&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' צפון": {
+        "text": "ליגת נערים ב' צפון",
+        "section": "נערים ב",
+        "leagueId": 130,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=130&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' שפלה": {
+        "text": "ליגת נערים ב' שפלה",
+        "section": "נערים ב",
+        "leagueId": 658,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=658&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ב' שרון": {
+        "text": "ליגת נערים ב' שרון",
+        "section": "נערים ב",
+        "leagueId": 134,
+        "rules": "נערים ב׳ ",
+        "href": "/leagues/league/?league_id=134&season_id=26",
+        "tournament": "league"
+    },
+    "נערים ג' על": {
+        "text": "נערים ג' על",
+        "section": "נערים ג",
+        "leagueId": 824,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=824&season_id=26",
+        "tournament": "league"
+    },
+    "נערים ג' ארצית דרום": {
+        "text": "נערים ג' ארצית דרום",
+        "section": "נערים ג",
+        "leagueId": 845,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=845&season_id=26",
+        "tournament": "league"
+    },
+    "נערים ג' ארצית צפון": {
+        "text": "נערים ג' ארצית צפון",
+        "section": "נערים ג",
+        "leagueId": 826,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=826&season_id=26",
+        "tournament": "league"
+    },
+    "נערים ג' דן": {
+        "text": "ליגת נערים ג' דן",
+        "section": "נערים ג",
+        "leagueId": 736,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=736&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' דרום": {
+        "text": "ליגת נערים ג' דרום",
+        "section": "נערים ג",
+        "leagueId": 663,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=663&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' יזרעאל": {
+        "text": "ליגת נערים ג' יזרעאל",
+        "section": "נערים ג",
+        "leagueId": 758,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=758&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' מפרץ": {
+        "text": "ליגת נערים ג' מפרץ",
+        "section": "נערים ג",
+        "leagueId": 759,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=759&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' מרכז": {
+        "text": "ליגת נערים ג' מרכז",
+        "section": "נערים ג",
+        "leagueId": 146,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=146&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' צפון": {
+        "text": "ליגת נערים ג' צפון",
+        "section": "נערים ג",
+        "leagueId": 816,
+        "href": "/leagues/league/?league_id=816&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' שפלה": {
+        "text": "ליגת נערים ג' שפלה",
+        "section": "נערים ג",
+        "leagueId": 707,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=707&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת נערים ג' שרון": {
+        "text": "ליגת נערים ג' שרון",
+        "section": "נערים ג",
+        "leagueId": 144,
+        "rules": "נערים ג׳",
+        "href": "/leagues/league/?league_id=144&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים א' גליל עליון": {
+        "text": "ליגת ילדים א' גליל עליון",
+        "section": "ילדים א",
+        "leagueId": 871,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=871&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1231"
+    },
+    "ליגת ילדים א' גליל תחתון": {
+        "text": "ליגת ילדים א' גליל תחתון",
+        "section": "ילדים א",
+        "leagueId": 870,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=870&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1232"
+    },
+    "ליגת ילדים א' דן": {
+        "text": "ליגת ילדים א' דן",
+        "section": "ילדים א",
+        "leagueId": 155,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=155&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1155"
+    },
+    "ליגת ילדים א' דן 1": {
+        "text": "ליגת ילדים א' דן 1",
+        "section": "ילדים א",
+        "leagueId": 734,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=734&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1156"
+    },
+    "ליגת ילדים א' דרום": {
+        "text": "ליגת ילדים א' דרום",
+        "section": "ילדים א",
+        "leagueId": 648,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=648&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1158"
+    },
+    "ליגת ילדים א' דרום 2": {
+        "text": "ליגת ילדים א' דרום 2",
+        "section": "ילדים א",
+        "leagueId": 865,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=865&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1233"
+    },
+    "ליגת ילדים א' חוף": {
+        "text": "ליגת ילדים א' חוף",
+        "section": "ילדים א",
+        "leagueId": 764,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=764&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1159"
+    },
+    "ליגת ילדים א' חוף 1": {
+        "text": "ליגת ילדים א' חוף 1",
+        "section": "ילדים א",
+        "leagueId": 875,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=875&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1234"
+    },
+    "ליגת ילדים א' חוף 2": {
+        "text": "ליגת ילדים א' חוף 2",
+        "section": "ילדים א",
+        "leagueId": 876,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=876&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1235"
+    },
+    "ליגת ילדים א' מזרח": {
+        "text": "ליגת ילדים א' מזרח",
+        "section": "ילדים א",
+        "leagueId": 862,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=862&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1236"
+    },
+    "ליגת ילדים א' מפרץ": {
+        "text": "ליגת ילדים א' מפרץ",
+        "section": "ילדים א",
+        "leagueId": 152,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=152&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1161"
+    },
+    "ליגת ילדים א' מרכז": {
+        "text": "ליגת ילדים א' מרכז",
+        "section": "ילדים א",
+        "leagueId": 156,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=156&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1163"
+    },
+    "ליגת ילדים א' מרכז 1": {
+        "text": "ליגת ילדים א' מרכז 1",
+        "section": "ילדים א",
+        "leagueId": 788,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=788&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1164"
+    },
+    "ליגת ילדים א' צפון": {
+        "text": "ליגת ילדים א' צפון",
+        "section": "ילדים א",
+        "leagueId": 150,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=150&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1166"
+    },
+    "ליגת ילדים א' צפון 1": {
+        "text": "ליגת ילדים א' צפון 1",
+        "section": "ילדים א",
+        "leagueId": 712,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=712&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1167"
+    },
+    "ליגת ילדים א' צפון 2": {
+        "text": "ליגת ילדים א' צפון 2",
+        "section": "ילדים א",
+        "leagueId": 872,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=872&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1237"
+    },
+    "ליגת ילדים א' צפון השרון": {
+        "text": "ליגת ילדים א' צפון השרון",
+        "section": "ילדים א",
+        "leagueId": 863,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=863&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1239"
+    },
+    "ליגת ילדים א' שפלה": {
+        "text": "ליגת ילדים א' שפלה",
+        "section": "ילדים א",
+        "leagueId": 158,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=158&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1168"
+    },
+    "ליגת ילדים א' שרון": {
+        "text": "ליגת ילדים א' שרון",
+        "section": "ילדים א",
+        "leagueId": 154,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=154&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1169"
+    },
+    "ליגת ילדים א' שרון 1": {
+        "text": "ליגת ילדים א' שרון 1",
+        "section": "ילדים א",
+        "leagueId": 861,
+        "rules": "ילדים א׳",
+        "href": "/leagues/league/?league_id=861&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1238"
+    },
+    "ליגת ילדים ב' גליל עליון": {
+        "text": "ליגת ילדים ב' גליל עליון",
+        "section": "ילדים ב",
+        "leagueId": 879,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=879&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1240"
+    },
+    "ליגת ילדים ב' גליל תחתון": {
+        "text": "ליגת ילדים ב' גליל תחתון",
+        "section": "ילדים ב",
+        "leagueId": 880,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=880&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1241"
+    },
+    "ליגת ילדים ב' דן": {
+        "text": "ליגת ילדים ב' דן",
+        "section": "ילדים ב",
+        "leagueId": 739,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=739&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1263"
+    },
+    "ליגת ילדים ב' דן 1": {
+        "text": "ליגת ילדים ב' דן 1",
+        "section": "ילדים ב",
+        "leagueId": 748,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=748&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1257"
+    },
+    "ליגת ילדים ב' דן 2": {
+        "text": "ליגת ילדים ב' דן 2",
+        "section": "ילדים ב",
+        "rules": "ילדים ב׳",
+        "leagueId": 689,
+        "href": "/leagues/league/?league_id=689&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1261"
+    },
+    "ליגת ילדים ב' דרום": {
+        "text": "ליגת ילדים ב' דרום",
+        "section": "ילדים ב",
+        "leagueId": 852,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=852&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1243"
+    },
+    "ליגת ילדים ב' דרום 2": {
+        "text": "ליגת ילדים ב' דרום 2",
+        "section": "ילדים ב",
+        "leagueId": 868,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=868&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1242"
+    },
+    "ליגת ילדים ב' חוף": {
+        "text": "ליגת ילדים ב' חוף",
+        "section": "ילדים ב",
+        "leagueId": 804,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=804&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1259"
+    },
+    "ליגת ילדים ב' חוף 1": {
+        "text": "ליגת ילדים ב' חוף 1",
+        "section": "ילדים ב",
+        "leagueId": 881,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=881&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1244"
+    },
+    "ליגת ילדים ב' חוף 2": {
+        "text": "ליגת ילדים ב' חוף 2",
+        "section": "ילדים ב",
+        "leagueId": 882,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=882&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1245"
+    },
+    "ליגת ילדים ב' חוף 3": {
+        "text": "ליגת ילדים ב' חוף 3",
+        "section": "ילדים ב",
+        "leagueId": 897,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=897&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1258"
+    },
+    "ליגת ילדים ב' מזרח": {
+        "text": "ליגת ילדים ב' מזרח",
+        "section": "ילדים ב",
+        "leagueId": 867,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=867&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1246"
+    },
+    "ליגת ילדים ב' מפרץ": {
+        "text": "ליגת ילדים ב' מפרץ",
+        "section": "ילדים ב",
+        "leagueId": 161,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=161&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1247"
+    },
+    "ליגת ילדים ב' מרכז": {
+        "text": "ליגת ילדים ב' מרכז",
+        "section": "ילדים ב",
+        "leagueId": 165,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=165&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1248"
+    },
+    "ליגת ילדים ב' מרכז 1": {
+        "text": "ליגת ילדים ב' מרכז 1",
+        "section": "ילדים ב",
+        "leagueId": 792,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=792&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1249"
+    },
+    "ליגת ילדים ב' צפון": {
+        "text": "ליגת ילדים ב' צפון",
+        "section": "ילדים ב",
+        "leagueId": 160,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=160&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1251"
+    },
+    "ליגת ילדים ב' צפון 1": {
+        "text": "ליגת ילדים ב' צפון 1",
+        "section": "ילדים ב",
+        "leagueId": 747,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=747&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים ב' צפון 2": {
+        "text": "ליגת ילדים ב' צפון 2",
+        "section": "ילדים ב",
+        "leagueId": 767,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=767&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1252"
+    },
+    "ליגת ילדים ב' צפון השרון": {
+        "text": "ליגת ילדים ב' צפון השרון",
+        "section": "ילדים ב",
+        "leagueId": 878,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=878&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1262"
+    },
+    "ליגת ילדים ב' שפלה": {
+        "text": "ליגת ילדים ב' שפלה",
+        "section": "ילדים ב",
+        "leagueId": 167,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=167&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1253"
+    },
+    "ליגת ילדים ב' שרון": {
+        "text": "ליגת ילדים ב' שרון",
+        "section": "ילדים ב",
+        "leagueId": 163,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=163&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1254"
+    },
+    "ליגת ילדים ב' שרון 1": {
+        "text": "ליגת ילדים ב' שרון 1",
+        "section": "ילדים ב",
+        "leagueId": 877,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=877&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1255"
+    },
+    "ליגת ילדים ב' שרון 2": {
+        "text": "ליגת ילדים ב' שרון 2",
+        "section": "ילדים ב",
+        "leagueId": 765,
+        "rules": "ילדים ב׳",
+        "href": "/leagues/league/?league_id=765&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1256"
+    },
+    "ליגת ילדים ג' גליל עליון": {
+        "text": "ליגת ילדים ג' גליל עליון",
+        "section": "ילדים ג",
+        "leagueId": 886,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=886&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1264"
+    },
+    "ליגת ילדים ג' גליל תחתון": {
+        "text": "ליגת ילדים ג' גליל תחתון",
+        "section": "ילדים ג",
+        "leagueId": 887,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=887&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1265"
+    },
+    "ליגת ילדים ג' דן": {
+        "text": "ליגת ילדים ג' דן",
+        "section": "ילדים ג",
+        "leagueId": 175,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=175&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1266"
+    },
+    "ליגת ילדים ג' דן 1": {
+        "text": "ליגת ילדים ג' דן 1",
+        "section": "ילדים ג",
+        "leagueId": 713,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=713&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1267"
+    },
+    "ליגת ילדים ג' דן 2": {
+        "text": "ליגת ילדים ג' דן 2",
+        "section": "ילדים ג",
+        "leagueId": 769,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=769&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1268"
+    },
+    "ליגת ילדים ג' דרום": {
+        "text": "ליגת ילדים ג' דרום",
+        "section": "ילדים ג",
+        "leagueId": 890,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=890&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1289"
+    },
+    "ליגת ילדים ג' דרום 2": {
+        "text": "ליגת ילדים ג' דרום 2",
+        "section": "ילדים ג",
+        "leagueId": 888,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=888&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1269"
+    },
+    "ליגת ילדים ג' חוף": {
+        "text": "ליגת ילדים ג' חוף",
+        "section": "ילדים ג",
+        "leagueId": 770,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=770&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1270"
+    },
+    "ליגת ילדים ג' חוף 2": {
+        "text": "ליגת ילדים ג' חוף 2",
+        "section": "ילדים ג",
+        "leagueId": 884,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=884&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1272"
+    },
+    "ליגת ילדים ג' מזרח": {
+        "text": "ליגת ילדים ג' מזרח",
+        "section": "ילדים ג",
+        "leagueId": 889,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=889&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1275"
+    },
+    "ליגת ילדים ג' מרכז": {
+        "text": "ליגת ילדים ג' מרכז",
+        "section": "ילדים ג",
+        "leagueId": 173,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=173&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1277"
+    },
+    "ליגת ילדים ג' מרכז 1": {
+        "text": "ליגת ילדים ג' מרכז 1",
+        "section": "ילדים ג",
+        "leagueId": 793,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=793&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1278"
+    },
+    "ליגת ילדים ג' מרכז 2": {
+        "text": "ליגת ילדים ג' מרכז 2",
+        "section": "ילדים ג",
+        "leagueId": 744,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=744&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1288"
+    },
+    "ליגת ילדים ג' צפון": {
+        "text": "ליגת ילדים ג' צפון",
+        "section": "ילדים ג",
+        "leagueId": 170,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=170&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1283"
+    },
+    "ליגת ילדים ג' צפון 1": {
+        "text": "ליגת ילדים ג' צפון 1",
+        "section": "ילדים ג",
+        "leagueId": 172,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=172&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1279"
+    },
+    "ליגת ילדים ג' צפון 2": {
+        "text": "ליגת ילדים ג' צפון 2",
+        "section": "ילדים ג",
+        "leagueId": 885,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=885&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1280"
+    },
+    "ליגת ילדים ג' צפון השרון": {
+        "text": "ליגת ילדים ג' צפון השרון",
+        "section": "ילדים ג",
+        "leagueId": 891,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=891&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1281"
+    },
+    "ליגת ילדים ג' צפון השרון 2": {
+        "text": "ליגת ילדים ג' צפון השרון 2",
+        "section": "ילדים ג",
+        "leagueId": 894,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=894&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1282"
+    },
+    "ליגת ילדים ג' שפלה": {
+        "text": "ליגת ילדים ג' שפלה",
+        "section": "ילדים ג",
+        "leagueId": 174,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=174&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1284"
+    },
+    "ליגת ילדים ג' שפלה 2": {
+        "text": "ליגת ילדים ג' שפלה 2",
+        "section": "ילדים ג",
+        "leagueId": 892,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=892&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1285"
+    },
+    "ליגת ילדים ג' שרון": {
+        "text": "ליגת ילדים ג' שרון",
+        "section": "ילדים ג",
+        "leagueId": 661,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=661&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1286"
+    },
+    "ליגת ילדים ג' שרון 1": {
+        "text": "ליגת ילדים ג' שרון 1",
+        "section": "ילדים ג",
+        "leagueId": 780,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=780&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1287"
+    },
+    "ליגת ילדים ג מפרץ": {
+        "text": "ליגת ילדים ג מפרץ",
+        "section": "ילדים ג",
+        "leagueId": 649,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=649&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום א' דן": {
+        "text": "ליגת ילדים טרום א' דן",
+        "section": "טרום ילדים א",
+        "leagueId": 182,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=182&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1290"
+    },
+    "ליגת ילדים טרום א' דן 1": {
+        "text": "ליגת ילדים טרום א' דן 1",
+        "section": "טרום ילדים א",
+        "leagueId": 631,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=631&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1295"
+    },
+    "ליגת ילדים טרום א' דרום": {
+        "text": "ליגת ילדים טרום א' דרום",
+        "section": "טרום ילדים א",
+        "leagueId": 838,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=838&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1302"
+    },
+    "ליגת ילדים טרום א' יזרעאל": {
+        "text": "ליגת ילדים טרום א' יזרעאל",
+        "section": "טרום ילדים א",
+        "leagueId": 819,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=819&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1294"
+    },
+    "ליגת ילדים טרום א' מפרץ": {
+        "text": "ליגת ילדים טרום א' מפרץ",
+        "section": "טרום ילדים א",
+        "leagueId": 180,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=180&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1292"
+    },
+    "ליגת ילדים טרום א' מפרץ 1": {
+        "text": "ליגת ילדים טרום א' מפרץ 1",
+        "section": "טרום ילדים א",
+        "leagueId": 710,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=710&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1297"
+    },
+    "ליגת ילדים טרום א' מרכז": {
+        "text": "ליגת ילדים טרום א' מרכז",
+        "section": "טרום ילדים א",
+        "leagueId": 183,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=183&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1298"
+    },
+    "ליגת ילדים טרום א' מרכז 1": {
+        "text": "ליגת ילדים טרום א' מרכז 1",
+        "section": "טרום ילדים א",
+        "leagueId": 801,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=801&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1296"
+    },
+    "ליגת ילדים טרום א' צפון": {
+        "text": "ליגת ילדים טרום א' צפון",
+        "section": "טרום ילדים א",
+        "leagueId": 840,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=840&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1293"
+    },
+    "ליגת ילדים טרום א' צפון 1": {
+        "text": "ליגת ילדים טרום א' צפון 1",
+        "section": "טרום ילדים א",
+        "leagueId": 800,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=800&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1301"
+    },
+    "ליגת ילדים טרום א' שפלה": {
+        "text": "ליגת ילדים טרום א' שפלה",
+        "section": "טרום ילדים א",
+        "leagueId": 839,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=839&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1299"
+    },
+    "ליגת ילדים טרום א' שרון": {
+        "text": "ליגת ילדים טרום א' שרון",
+        "section": "טרום ילדים א",
+        "leagueId": 181,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=181&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1303"
+    },
+    "ליגת ילדים טרום א' שרון 1": {
+        "text": "ליגת ילדים טרום א' שרון 1",
+        "section": "טרום ילדים א",
+        "leagueId": 806,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=806&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1291"
+    },
+    "ליגת ילדים טרום א' שרון 2": {
+        "text": "ליגת ילדים טרום א' שרון 2",
+        "section": "טרום ילדים א",
+        "leagueId": 752,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/leagues/league/?league_id=752&season_id=26",
+        "tournament": "league",
+        "voleHref": "/league/1300"
+    },
+    "ליגת ילדים טרום ב' דן": {
+        "text": "ליגת ילדים טרום ב' דן",
+        "section": "טרום ילדים ב",
+        "leagueId": 640,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=640&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' יזרעאל": {
+        "text": "ליגת ילדים טרום ב' יזרעאל",
+        "section": "טרום ילדים ב",
+        "leagueId": 843,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=843&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' מפרץ": {
+        "text": "ליגת ילדים טרום ב' מפרץ",
+        "section": "טרום ילדים ב",
+        "leagueId": 798,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=798&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' מרכז": {
+        "text": "ליגת ילדים טרום ב' מרכז",
+        "section": "טרום ילדים ב",
+        "leagueId": 659,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=659&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' מרכז 1": {
+        "text": "ליגת ילדים טרום ב' מרכז 1",
+        "section": "טרום ילדים ב",
+        "leagueId": 851,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=851&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' צפון": {
+        "text": "ליגת ילדים טרום ב' צפון",
+        "section": "טרום ילדים ב",
+        "leagueId": 657,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=657&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' צפון 1": {
+        "text": "ליגת ילדים טרום ב' צפון 1",
+        "section": "טרום ילדים ב",
+        "leagueId": 844,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=844&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' שפלה": {
+        "text": "ליגת ילדים טרום ב' שפלה",
+        "section": "טרום ילדים ב",
+        "leagueId": 842,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=842&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' שרון": {
+        "text": "ליגת ילדים טרום ב' שרון",
+        "section": "טרום ילדים ב",
+        "leagueId": 186,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=186&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ב' שרון 1": {
+        "text": "ליגת ילדים טרום ב' שרון 1",
+        "section": "טרום ילדים ב",
+        "leagueId": 918,
+        "rules": "טרום ב׳",
+        "href": "/leagues/league/?league_id=918&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ג' מרכז": {
+        "text": "ליגת ילדים טרום ג' מרכז",
+        "section": "טרום ילדים ג",
+        "leagueId": 795,
+        "rules": "טרום ג׳",
+        "href": "/leagues/league/?league_id=795&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ג' צפון": {
+        "text": "ליגת ילדים טרום ג' צפון",
+        "section": "טרום ילדים ג",
+        "leagueId": 652,
+        "rules": "טרום ג׳",
+        "href": "/leagues/league/?league_id=652&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת ילדים טרום ג' צפון 1": {
+        "text": "ליגת ילדים טרום ג' צפון 1",
+        "section": "טרום ילדים ג",
+        "leagueId": 916,
+        "rules": "טרום ג׳",
+        "href": "/leagues/league/?league_id=916&season_id=26",
+        "tournament": "league"
+    },
+    "גביע המדינה ווינר": {
+        "text": "גביע המדינה ווינר",
+        "section": "בוגרים",
+        "nationalCupId": 618,
+        "rules": "גברים על, לאומית וא׳",
+        "href": "/national-cup/?national_cup_id=618&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע המדינה נשים": {
+        "text": "גביע המדינה נשים",
+        "section": "נשים",
+        "nationalCupId": 617,
+        "rules": "נשים על ולאומית",
+        "href": "/national-cup/?national_cup_id=617&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע אתנה": {
+        "text": "גביע אתנה",
+        "section": "נשים",
+        "nationalCupId": 790,
+        "rules": "נשים על ולאומית",
+        "href": "/national-cup/?national_cup_id=790&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע לנוער ע\"ש אבי רן ז\"ל": {
+        "text": "גביע לנוער ע\"ש אבי רן ז\"ל",
+        "section": "נוער",
+        "nationalCupId": 586,
+        "rules": "נוער על ולאומית",
+        "href": "/national-cup/?national_cup_id=586&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע נערות": {
+        "text": "גביע נערות",
+        "section": "נערות",
+        "nationalCupId": 692,
+        "rules": "נערות",
+        "href": "/national-cup/?national_cup_id=692&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע נערים א' ע\"ש חיים הברפלד ז\"ל": {
+        "text": "גביע נערים א' ע\"ש חיים הברפלד ז\"ל",
+        "section": "נערים א",
+        "nationalCupId": 587,
+        "rules": "נערים א׳ על",
+        "href": "/national-cup/?national_cup_id=587&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע המדינה לנערות א'": {
+        "text": "גביע המדינה לנערות א'",
+        "section": "נערות א",
+        "nationalCupId": 813,
+        "rules": "נערות א׳",
+        "href": "/national-cup/?national_cup_id=813&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע נערים ב' ע\"ש ברוך מנדלבליט ז\"ל": {
+        "text": "גביע נערים ב' ע\"ש ברוך מנדלבליט ז\"ל",
+        "section": "נערים ב",
+        "nationalCupId": 588,
+        "rules": "נערים ב׳",
+        "href": "/national-cup/?national_cup_id=588&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע נערים ג ע\"ש ז.קליאוט ז\"ל": {
+        "text": "גביע נערים ג ע\"ש ז.קליאוט ז\"ל",
+        "section": "נערים ג",
+        "nationalCupId": 589,
+        "rules": "נערים ג׳",
+        "href": "/national-cup/?national_cup_id=589&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע ילדים א' ע\"ש דוד שוויצר ז\"ל": {
+        "text": "גביע ילדים א' ע\"ש דוד שוויצר ז\"ל",
+        "section": "ילדים א",
+        "nationalCupId": 590,
+        "rules": "ילדים א׳",
+        "href": "/national-cup/?national_cup_id=590&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע המדינה לילדות א'": {
+        "text": "גביע המדינה לילדות א'",
+        "section": "ילדות א",
+        "nationalCupId": 718,
+        "rules": "ילדות",
+        "href": "/national-cup/?national_cup_id=718&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע ילדים ב' ע\"ש שמואל סוחר ז\"ל": {
+        "text": "גביע ילדים ב' ע\"ש שמואל סוחר ז\"ל",
+        "section": "ילדים ב",
+        "nationalCupId": 591,
+        "rules": "ילדים ב׳",
+        "href": "/national-cup/?national_cup_id=591&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע המדינה לילדות ב'": {
+        "text": "גביע המדינה לילדות ב'",
+        "section": "ילדות ב",
+        "nationalCupId": 919,
+        "rules": "ילדות",
+        "href": "/national-cup/?national_cup_id=919&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע ילדים ג' ע\"ש יעקב גרונדמן ז\"ל": {
+        "text": "גביע ילדים ג' ע\"ש יעקב גרונדמן ז\"ל",
+        "section": "ילדים ג",
+        "nationalCupId": 592,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/national-cup/?national_cup_id=592&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע ילדים טרום א'": {
+        "text": "גביע ילדים טרום א'",
+        "section": "טרום ילדים א",
+        "nationalCupId": 593,
+        "rules": "טרום א׳/ילדים ג׳",
+        "href": "/national-cup/?national_cup_id=593&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע אזורים": {
+        "text": "גביע אזורים",
+        "section": null,
+        "nationalCupId": 782,
+        "rules": "",
+        "href": "/national-cup/?national_cup_id=782&season_id=26",
+        "tournament": "cup"
+    },
+    "גביע ותיקים": {
+        "text": "גביע ותיקים",
+        "section": "בוגרים",
+        "nationalCupId": 784,
+        "rules": "ותיקים",
+        "href": "/national-cup/?national_cup_id=784&season_id=26",
+        "tournament": "cup"
+    }
+}

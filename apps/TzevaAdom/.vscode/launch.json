@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "logLevel": "INFO",
+                "twilioSend": "False",
+                "fileVersion": "v4",
+                "MY_REFEREE_FILE": "./referees/",
+                "MY_CONFIG_FILE": "./config/",
+                "MY_DATA_FILE" : "./data/",
+                "MY_SECRET_FILE": "./secret/",
+                "url": "https://api.tzevaadom.co.il/notifications",
+                "polling_interval": "1000",
+                "live_logging_interval": "2",
+                "raw_topic": "my/mqtt/tzevaAdom/raw",
+                "error_topic": "my/mqtt/tzevaAdom/error",
+                "url_sensor_alerts": "sensor.pikud_haoref_alerts",
+                "notify_criteria_file": "notifyCriteria.json",
+                "MY_HISTORY_FILE" : "./history/"
+            }
+        }
+    ]
+}

@@ -8,12 +8,16 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "env": {
+                "logLevel": "INFO",
                 "twilioSend": "False",
-                "fileVersion": "v4",
+                "fileVersion": "v6",
+                "loadInterval": "500",
+                "twilioServiceId": "MG7ec40f0e4baff9a172ad9e78cbc3d269",
                 "MY_REFEREE_FILE": "./referees/",
                 "MY_CONFIG_FILE": "./config/",
                 "MY_DATA_FILE" : "./data/",
-                "MY_SECRET_FILE": "./secret/"
+                "MY_SECRET_FILE": "./secret/",
+                "MY_SSL_FILE": "./ssl/"
               }
        }
     ]

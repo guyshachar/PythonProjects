@@ -1,0 +1,40 @@
+# Use the official Python image from the Docker Hub
+FROM python:3.13-slim
+VOLUME ["/run/data"]
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY rpService/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright and browsers
+RUN playwright install
+RUN playwright install-deps    
+
+# Copy the script into the container
+RUN mkdir -p /rpService
+RUN mkdir -p /shared
+COPY rpService/*.py rpService/.
+COPY shared/*.py shared/.
+
+# Define entrypoint to start Tailscale and your app
+# Start Tailscale and your Python script
+ENV BUILD_DATE=202501161313
+ENV logLevel=INFO
+ENV fileVersion=v5
+ENV loadInterval=30000
+ENV loadUrl=https://ref.football.org.il/login
+ENV loadUrl2=https://www.google.com/
+ENV refPortalSM=refPortal/referees2
+ENV twilioSend=True
+ENV alwaysClosePage=False
+ENV mqttPublish=True
+ENV concurrentPages=4
+
+# Command to run the script
+#CMD ["python", "test.py"]
+CMD ["python", "rpService/refPortalService.py"]

@@ -1,0 +1,47 @@
+[
+    {
+        "name": "home",
+        "topic": "my/mqtt/tzevaAdom/notify/validated",
+        "sensor": "",
+        "notifiedMobiles": [
+            "mobile_app_guy_iphone"
+        ],
+        "toggleLights": true,
+        "cities": [
+            [
+                "גבעתיים",
+                "רמת גן - מערב"
+            ],
+            [
+                "תל אביב",
+                "רמת גן - מזרח"
+            ],
+            [
+                "ALL"
+            ]
+        ]
+    },
+    {
+        "name": "family",
+        "topic": "my/mqtt/tzevaAdom/notify/family",
+        "sensor": "",
+        "notifiedMobiles": [
+            "mobile_app_shimiphone",
+            "mobile_app_h_iphone_shl_nvh"
+        ],
+        "toggleLights": false,
+        "cities": [
+            [
+                "רמת גן - מערב"
+            ],
+            [
+                "גבעתיים",
+                "תל אביב",
+                "רמת גן - מזרח"
+            ],
+            [
+                "ALL"
+            ]
+        ]
+    }
+]

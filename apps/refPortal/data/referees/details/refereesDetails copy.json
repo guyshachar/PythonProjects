@@ -1,0 +1,497 @@
+[
+    {
+        "name": "שחר גיא",
+        "refId": "43679",
+        "id": "025092271",
+        "mobile": "+972547799979",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTRED_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "אהרון גולדשטיין 2, גבעתיים",
+            "coordinates": {
+                "lat": 32.0771918,
+                "lng": 34.8101153
+            },
+            "formattedAddress": "Aharon Goldstein St 2, Giv'atayim, Israel"
+        },
+        "password": "gAAAAABnarX9MfgKOi6QLDvKQAHcrphgcZMPCCxhPUcIalA_CTgJJhWZeK8mggYZB_dOM4hn66MhE37TX0ZyxHJkOByYvYa07w=="
+    },
+    {
+        "name": "מטרני ארז",
+        "refId": "26054",
+        "id": "031869779",
+        "mobile": "+972547961875",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "RED",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דבורה עומר 4 יבנה",
+            "coordinates": {
+                "lat": 31.858459,
+                "lng": 34.72079
+            },
+            "formattedAddress": "Dvora Omer St 4, Yavne, Israel"
+        },
+        "password": "gAAAAABnarYu3RlYvmI1tBhJaCnBVKB3KAxtbWuqOLEIHaRsw6mzTjKmU8NVEzAdkOAAO_DaatlPPyD-HFXtrZvQb_Mrdb6WLw=="
+    },
+    {
+        "name": "סוואד אחמד",
+        "refId": "43671",
+        "id": "319114484",
+        "mobile": "+972525253248",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 60,
+        "color": "MAGENTA",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "הראה 29 רמת גן",
+            "coordinates": {
+                "lat": 32.0842243,
+                "lng": 34.818971
+            },
+            "formattedAddress": "Haroe St 29, Ramat Gan, Israel"
+        },
+        "password": "gAAAAABnarYuIB3OsLV7kgk2h1DxhpA1_FZE5SY3EWuV4aMBZVYo_bzzkKDSWvCDgrdsMTCAoEBk7fVsgFD5hooJUUvXaAx6Ug=="
+    },
+    {
+        "name": "אלקבץ ירדן",
+        "refId": "43060",
+        "id": "214244766",
+        "mobile": "+972585528889",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            2
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "GREEN",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דוד צדוק 5 חולון",
+            "coordinates": {
+                "lat": 31.9949434,
+                "lng": 34.775409
+            },
+            "formattedAddress": "David Tsadok St 5, Holon, Israel"
+        },
+        "password": "gAAAAABnarYupisrGbRM_rr8Yd3DXl-TiR8R3tPxDO9EkBS6bYAgmBhEYzXNcC3d9oJDS-aOeek3icQw3R4RjCL0N1bSDY5FMQ=="
+    },
+    {
+        "name": "כהן אלעד",
+        "refId": "40897",
+        "id": "305463986",
+        "mobile": "+972527493903",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTBLUE_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דרך ארץ 4 אשקלון",
+            "coordinates": {
+                "lat": 31.6796053,
+                "lng": 34.5958027
+            },
+            "formattedAddress": "דרך ארץ 4, Ashkelon, Israel"
+        },
+        "password": "gAAAAABnarYu62yI0pY11NUub5HbbahGoYRHlQP5LlwGx_2iBoGBfZRnysGXKpw6jXAFg0NbKHL6oKdEjYfKvY9MngmtKdOFrA=="
+    },
+    {
+        "name": "חטמי בר",
+        "refId": "43667",
+        "id": "208469601",
+        "mobile": "+972525054313",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTMAGENTA_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "עוזי נרקיס 10 חולון",
+            "coordinates": {
+                "lat": 32.0036279,
+                "lng": 34.7698322
+            },
+            "formattedAddress": "Uzi Narkis St 10, Holon, Israel"
+        },
+        "password": "gAAAAABnarYuEiSyEsYBUDHfcVge2E6Md7RBw2Kzr_4t7lfhMMpyUd5JpJ_9Rs6vv8ildfSFv4mkywfmKIYJmVjW9hLc-Dg9zQ=="
+    },
+    {
+        "name": "גלעד לביא",
+        "refId": "43683",
+        "id": "217463751",
+        "mobile": "+972545760675",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "YELLOW",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "אל גינת אגוז 81 נווה אילן",
+            "coordinates": {
+                "lat": 31.8069435,
+                "lng": 35.0812325
+            },
+            "formattedAddress": "El Ginat Egoz St 81, Neve Ilan, Israel"
+        },
+        "password": "gAAAAABnarYuSwqyLk6pJ_9gdlUzmIFEt_You6np1irCrFXGJKHwli68tzKim7nq8v3Fask7fR5c-ioDXZiG5euSmFSnKBpaig=="
+    },
+    {
+        "name": "אור אייל",
+        "refId": "43269",
+        "id": "301328415",
+        "mobile": "+972526995799",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTCYAN_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "חובבי ציון 17 תל אביב",
+            "coordinates": {
+                "lat": 32.0756706,
+                "lng": 34.768788
+            },
+            "formattedAddress": "Hovevei Tsiyon St 17, Tel Aviv-Yafo, Israel"
+        },
+        "password": "gAAAAABnarYu81BxEbPCNAj7OUPcgVvlFjfrV147HQoWnTuvDjcu2JHbDd1ZpiG65nlDBFP5ymzUqlhtKOY2B-a8puNuM4pOeQ=="
+    },
+    {
+        "name": "ביטון איתי",
+        "refId": "43465",
+        "id": "214498727",
+        "mobile": "+972532323520",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 60,
+        "color": "LIGHTYELLOW_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "חולתה 6 חדרה",
+            "coordinates": {
+                "lat": 32.4444271,
+                "lng": 34.9016733
+            },
+            "formattedAddress": "Hulata St 6, Hadera, Israel"
+        },
+        "password": "gAAAAABnarYuS5cdQevk5_9upadNzGJMUePVe6umzQI31beCXwl8i2GxfnklcX6BNsMf1gFm2RVmrvEFeSiBRJb6KZMHGOvnaw=="
+    },
+    {
+        "name": "ארטו סער אדוארד",
+        "refId": "43062",
+        "id": "326965845",
+        "mobile": "+972548184547",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 60,
+        "color": "GREEN",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "תרפב 17 רמת גן",
+            "coordinates": {
+                "lat": 32.0804039,
+                "lng": 34.8042777
+            },
+            "formattedAddress": "Tarpav St 17, Ramat Gan, Israel"
+        },
+        "password": "gAAAAABnarYuWbNZ6_RNgvuLIFzXOIH8fFoG8TydYX4UQUtWTS548N1XwfyCUsAOSThqlE4zQ31F91FYvjf-qVcvS2WKhc3Zzg=="
+    },
+    {
+        "name": "אבוטבול סולומון",
+        "refId": "42594",
+        "id": "067560383",
+        "mobile": "+972527035566",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTWHITE_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "הנביאים 53 בת ים",
+            "coordinates": {
+                "lat": 32.0099322,
+                "lng": 34.7444701
+            },
+            "formattedAddress": "Ha-Nevi'im St 53, Bat Yam, Israel"
+        },
+        "password": "gAAAAABnarYuLbVN-RlIYSeGaDpGjKfr97qrdLYCWEK8BOjxT780zaDzu5DDsJRFcVRppA__BHTJp7HCE1lPgPu703jbkfHjtQ=="
+    },
+    {
+        "name": "בנגלס דניאל",
+        "refId": "43067",
+        "id": "213745581",
+        "mobile": "+972506809242",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            4
+        ],
+        "timeArrivalInAdvance": 90,
+        "color": "LIGHTBLUE_EX",
+        "status": "inactive",
+        "extendedStatistics": true,
+        "addressDetails": {
+            "address": "השר משה 34 רמת גן",
+            "coordinates": {
+                "lat": 32.0666581,
+                "lng": 34.8247712
+            },
+            "formattedAddress": "Ha-Sar Moshe St 34, Ramat Gan, Israel"
+        },
+        "password": "gAAAAABna8A0TOcwit3z8Aimaa6ljBgN4NUkvBH358_ile11WJMvJutV1ExAk1xPJKe4IorBGHX8q9jbsy-fg9TgbYj-Kkk9vA=="
+    },
+    {
+        "name": "שימונוב ישראל",
+        "refId": "38638",
+        "id": "037620127",
+        "mobile": "+972506440002",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            4
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTBLUE_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "ישראל גורי 5, תל אביב",
+            "coordinates": {
+                "lat": 32.0413592,
+                "lng": 34.7763881
+            },
+            "formattedAddress": "Sderot Israel Guri 5, Tel Aviv-Jaffa, Israel"
+        },
+        "password": "gAAAAABnbHjN3gFNJx4oJAjzrBaC2-XXk_2GRFabFwOqTDi8Ur9HeBLLuwQ9tjrCM5n4HdPWvN5Ss0y4Q6guIaXcJpwEubPmsw=="
+    },
+    {
+        "name": "איאש ארז",
+        "refId": "43302",
+        "id": "033765801",
+        "mobile": "+972504000403",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            4
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "LIGHTGREEN_EX",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "תמוז 1 ראשל׳צ",
+            "coordinates": {
+                "lat": 31.95908129999999,
+                "lng": 34.8020886
+            },
+            "formattedAddress": "Rishon LeTsiyon, Israel"
+        },
+        "password": "gAAAAABnbHipehBKYTkHYwh2UHIUdU1e7VV4UrYIb7Bg6tjxgfBh1cpQDF87vw308UEgC-DVLsr2BLc99eHk3Cd6QYh7xfIXMw=="
+    },
+    {
+        "name": "פרוסט כרמית",
+        "refId": "43273",
+        "id": "031847973",
+        "mobile": "+972523893181",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            4
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "MAGENTA",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דוד ילין 10, תל אביב",
+            "coordinates": {
+                "lat": 32.0881657,
+                "lng": 34.7845009
+            },
+            "formattedAddress": "David Yellin St 10, Tel Aviv-Yafo, 6296409, Israel"
+        },
+        "password": "gAAAAABnbsZ5YYcYC4HRvzd9jZSX7DZ4NBja_ZkhrtM50oyk1XH_gnmeVhRlbE6jPwIgR-XxRL2JaolN6AQueEcS0wW-0rnPfA=="
+    },
+    {
+        "name": "מוגרבי איתי",
+        "refId": "42845",
+        "id": "212287494",
+        "mobile": "+972525521016",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 60,
+        "color": "GREEN",
+        "status": "active",
+        "addressDetails": {
+            "address": "משגב עם 12 תל אביב יפו",
+            "coordinates": {
+                "lat": 32.0416892,
+                "lng": 34.774224
+            },
+            "formattedAddress": "Misgav Am St 12, Tel Aviv-Yafo, Israel"
+        },
+        "password": "gAAAAABndD-f-RE2Z9Hwk5XAvhguSNo5fy_FEQw_2FBX2-2UaG5eyqcbYGHaXeERDW7MH0idd986z9K6LpIaHgVaJchQdGi8yQ=="
+    },
+    {
+        "name": "מיטרני איתי",
+        "refId": "43312",
+        "id": "217143312",
+        "mobile": "+972527979411",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "WHITE",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "דבורה עומר 4 יבנה",
+            "coordinates": {
+                "lat": 31.858459,
+                "lng": 34.72079
+            },
+            "formattedAddress": "Dvora Omer St 4, Yavne, Israel"
+        },
+        "password": "gAAAAABndyOlE2oDdDFDdRSI5sJQqlBdKzJxbfTP6sPvWCpLe08KSQ0KlC-cWgZbz00Ws3jLDHWi8NK163YpvLiVwkKVZ3pXcA=="
+    },
+    {
+        "name": "לוי רון",
+        "refId": "42018",
+        "id": "207083007",
+        "mobile": "+972525109595",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 60,
+        "color": "YELLOW",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "המבדיל 4 רמת גן",
+            "coordinates": {
+                "lat": 32.0896722,
+                "lng": 34.8170622
+            },
+            "formattedAddress": "Ha-Mavdil St 4, Ramat Gan, Israel"
+        },
+        "password": "gAAAAABnecHiy6Hz7fZWM9vuX35euvn2xo05VnKMrY25axQAlXj_Pax0zk-lmEzQZA33fparmtSK9MkwEQu6O8j4tOvKKkfkIA=="
+    },
+    {
+        "name": "לוי שמעון",
+        "refId": "43182",
+        "id": "052681491",
+        "mobile": "+972527047676",
+        "objTypes": [
+            "games",
+            "reviews"
+        ],
+        "reminders": [
+            24,
+            3
+        ],
+        "timeArrivalInAdvance": 45,
+        "color": "GREEN",
+        "status": "inactive",
+        "addressDetails": {
+            "address": "רוגזין 34 אשדוד",
+            "coordinates": {
+                "lat": 31.8059347,
+                "lng": 34.6433282
+            },
+            "formattedAddress": "Rogozin St 34, Ashdod, Israel"
+        },
+        "password": "gAAAAABnecKGi7D0bSwZP9goVsqZkf50rVoY0iqANWg2Mjz1iapCy5AU3gA6yN1l8ceGXAz1LGV4CgnB2o8ytpOecvBfTpt_Ag=="
+    }
+]

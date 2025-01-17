@@ -1,0 +1,10 @@
+playwright
+twilio
+bs4
+html2text
+boto3
+firebase_admin
+paho-mqtt
+colorama
+watchdog
+descope

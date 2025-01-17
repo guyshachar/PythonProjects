@@ -1,0 +1,78 @@
+{
+    "id": "133801560290000000",
+    "cat": "1",
+    "title": "\u05d9\u05e8\u05d9 \u05e8\u05e7\u05d8\u05d5\u05ea \u05d5\u05d8\u05d9\u05dc\u05d9\u05dd",
+    "data": [
+        "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+        "\u05e9\u05d9\u05d1\u05d5\u05dc\u05d9\u05dd"
+    ],
+    "desc": "\u05d4\u05d9\u05db\u05e0\u05e1\u05d5 \u05dc\u05de\u05e8\u05d7\u05d1 \u05d4\u05de\u05d5\u05d2\u05df \u05d5\u05e9\u05d4\u05d5 \u05d1\u05d5 10 \u05d3\u05e7\u05d5\u05ea",
+    "timestamp": 1735682441.7163794,
+    "cities_labels": [
+        {
+            "label": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+            "value": "6C0D7DEB957864C8F1AC348A094880B7",
+            "areaid": 16,
+            "areaname": "\u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+            "label_he": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+            "migun_time": 30,
+            "city_data": {
+                "label": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "rashut": "\u05de\u05d5\u05e2\u05e6\u05d4 \u05d0\u05d6\u05d5\u05e8\u05d9\u05ea: \u05e9\u05d3\u05d5\u05ea \u05e0\u05d2\u05d1",
+                "value": "0",
+                "areaid": 16,
+                "mixname": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1 | \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "color": "O"
+            }
+        },
+        {
+            "label": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+            "value": "F196E1DEEBAD43C9B69B30EE87B0ED53",
+            "areaid": 16,
+            "areaname": "\u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+            "label_he": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+            "migun_time": 30,
+            "city_data": {
+                "label": "\u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "rashut": "\u05de\u05d5\u05e2\u05e6\u05d4 \u05d0\u05d6\u05d5\u05e8\u05d9\u05ea: \u05e9\u05d3\u05d5\u05ea \u05e0\u05d2\u05d1",
+                "value": "0",
+                "areaid": 16,
+                "mixname": "\u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1 | \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "color": "O"
+            }
+        },
+        {
+            "label": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+            "value": "375B9B4012E960032FC9C023396A458B",
+            "areaid": 16,
+            "areaname": "\u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+            "label_he": "\u05de\u05e2\u05d2\u05dc\u05d9\u05dd, \u05d2\u05d1\u05e2\u05d5\u05dc\u05d9\u05dd, \u05de\u05dc\u05d9\u05dc\u05d5\u05ea",
+            "migun_time": 30,
+            "city_data": {
+                "label": "\u05de\u05dc\u05d9\u05dc\u05d5\u05ea I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "rashut": "\u05de\u05d5\u05e2\u05e6\u05d4 \u05d0\u05d6\u05d5\u05e8\u05d9\u05ea: \u05e9\u05d3\u05d5\u05ea \u05e0\u05d2\u05d1",
+                "value": "0",
+                "areaid": 16,
+                "mixname": "\u05de\u05dc\u05d9\u05dc\u05d5\u05ea I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1 | \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "color": "O"
+            }
+        },
+        {
+            "label": "\u05e9\u05d9\u05d1\u05d5\u05dc\u05d9\u05dd",
+            "value": "D87CDCB95F0B873CF2B8817EFAE1D57E",
+            "areaid": 16,
+            "areaname": "\u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+            "label_he": "\u05e9\u05d9\u05d1\u05d5\u05dc\u05d9\u05dd",
+            "migun_time": 30,
+            "city_data": {
+                "label": "\u05e9\u05d9\u05d1\u05d5\u05dc\u05d9\u05dd I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "rashut": "\u05de\u05d5\u05e2\u05e6\u05d4 \u05d0\u05d6\u05d5\u05e8\u05d9\u05ea: \u05e9\u05d3\u05d5\u05ea \u05e0\u05d2\u05d1",
+                "value": "0",
+                "areaid": 16,
+                "mixname": "\u05e9\u05d9\u05d1\u05d5\u05dc\u05d9\u05dd I \u05d0\u05d6\u05d5\u05e8 \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1 | \u05de\u05e2\u05e8\u05d1 \u05d4\u05e0\u05d2\u05d1",
+                "color": "O"
+            }
+        }
+    ],
+    "time_to_run": 30
+}

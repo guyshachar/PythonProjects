@@ -1,0 +1,21 @@
+# Use the official Python image from the Docker Hub
+FROM python:3.13-slim
+VOLUME ["/run/data"]
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY web/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt 
+
+# Copy the script into the container
+COPY web*.py .
+
+EXPOSE 5001
+
+# Command to run the script
+#CMD ["python", "test.py"]
+CMD ["python", "webTest.py"]

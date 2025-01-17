@@ -1,0 +1,66 @@
+{
+    "בוגרים": {
+        "tableResult": "IFA",
+        "gender": "גברים"
+    },
+    "נשים": {
+        "tableResult": "IFA",
+        "gender": "נשים"
+    },
+    "נערות": {
+        "tableResult": "IFA",
+        "gender": "נשים"
+    },
+    "נערות א": {
+        "tableResult": "IFA",
+        "gender": "נשים"
+    },
+    "ילדות א": {
+        "tableResult": "",
+        "gender": "נשים"
+    },
+    "ילדות ב": {
+        "tableResult": "",
+        "gender": "נשים"
+    },
+    "נוער": {
+        "tableResult": "IFA",
+        "gender": "גברים"
+    },
+    "נערים א": {
+        "tableResult": "IFA",
+        "gender": "גברים"
+    },
+    "נערים ב": {
+        "tableResult": "IFA",
+        "gender": "גברים"
+    },
+    "נערים ג": {
+        "tableResult": "IFA",
+        "gender": "גברים"
+    },
+    "ילדים א": {
+        "tableResult": "Vole",
+        "gender": "גברים"
+    },
+    "ילדים ב": {
+        "tableResult": "Vole",
+        "gender": "גברים"
+    },
+    "ילדים ג": {
+        "tableResult": "Vole",
+        "gender": "גברים"
+    },
+    "טרום ילדים א": {
+        "tableResult": "Vole",
+        "gender": "גברים"
+    },
+    "טרום ילדים ב": {
+        "tableResult": "",
+        "gender": "גברים"
+    },
+    "טרום ילדים ג": {
+        "tableResult": "",
+        "gender": "גברים"
+    }
+}

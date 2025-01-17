@@ -1,0 +1,9 @@
+watchdog
+cryptography
+boto3
+requests
+flask[async]
+twilio
+paho-mqtt
+playwright
+descope
