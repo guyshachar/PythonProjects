@@ -1,6 +1,4 @@
 from twilio.rest import Client as TwilioRestClient
-from twilio import request_validator
-from twilio.rest.content.v2 import content
 from datetime import datetime
 import os
 import sys
@@ -159,30 +157,8 @@ class TwilioClient:
 
         print(f"Message sent! SID: {message.sid}")
 
-    def validate_twilio_request(f):
-        """Validates that incoming requests genuinely originated from Twilio"""
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            # Create an instance of the RequestValidator class
-            validator = RequestValidator(os.environ.get('TWILIO_AUTH_TOKEN'))
-
-            # Validate the request using its URL, POST data,
-            # and X-TWILIO-SIGNATURE header
-            request_valid = validator.validate(
-                request.url,
-                request.form,
-                request.headers.get('X-TWILIO-SIGNATURE', ''))
-
-            # Continue processing the request if it's valid, return a 403 error if
-            # it's not
-            if request_valid:
-                return f(*args, **kwargs)
-            else:
-                return abort(403)
-        return decorated_function
-
 if __name__ == '__main__':
-    client = TwilioClient(fromMobile='+14155238886')#os.environ.get('twilioServiceId'))
+    client = TwilioClient(fromMobile=os.environ.get('twilioFromMobile'),twilioServiceId=os.environ.get('twilioServiceId'))
     client.testSend('+972547799979', 'a', 'b', 'c')
     #result = client.lookups('+972547799979')
     pass

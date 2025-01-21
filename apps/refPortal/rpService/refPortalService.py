@@ -1665,8 +1665,8 @@ if __name__ == "__main__":
         print("Hello RefPortalllll")
         refPortalService = RefPortalService()
         refPortalService.logger.info(f'Main run')
-        #asyncio.run(refPortalService.start())
-        asyncio.run(refPortalService.testTwillio('43679', '+972547799979', 'This is a title', 'יואב שחר', 'HX5b361717a06dc26fa2ad8f3a75545efe'))
+        asyncio.run(refPortalService.start())
+        #asyncio.run(refPortalService.testTwillio('43679', '+972547799979', 'This is a title', 'יואב שחר', 'HX5b361717a06dc26fa2ad8f3a75545efe'))
         pass
     except Exception as ex:
         print(f'Main Error: {ex}')
