@@ -9,3 +9,6 @@ apps/refPortal/__pycache__/
 apps/.DS_Store
 apps/tzevaAdom/secret/
 
+.DS_Store
+apps/.DS_Store
+apps/refPortal/.DS_Store
