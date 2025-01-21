@@ -3,6 +3,7 @@ import asyncio
 from urllib.parse import urlparse, parse_qs
 import os
 import sys
+import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -30,7 +31,7 @@ async def scrapVoleLeagues(page):
         section = sections[league['section']]
         if section['tableResult'] != 'Vole':
             continue
-        leagueVoleUrl = await leagueRow.get_attribute("href")
+        leagueVoleUrl = await leagueRow.get_attribute('href')
         league['voleHref'] = f'{leagueVoleUrl}'
     
     helpers.save_to_file(tournaments ,'./data/tournaments/tournaments.json')
@@ -163,8 +164,8 @@ async def fix_women_leagues(leagueSection, leagueText):
 
 async def getLeagueName(page, tournamentUrl):
     if page.url != f'{baseIFAUrl}{tournamentUrl}':
-        await page.goto(f'{baseIFAUrl}{tournamentUrl}')
-    await scroll_to_bottom(page)
+        await page.goto(f'{baseIFAUrl}{tournamentUrl}', timeout=5000)
+    await helpers.scroll_to_bottom(page)
     tableTitle = await page.query_selector_all('span.big')
     if tableTitle and len(tableTitle) == 1: 
         return (await tableTitle[0].inner_text()).strip()
@@ -241,24 +242,15 @@ async def getIFATableData(page):
 
     return table_data
 
-async def scroll_to_bottom(page):
-    try:
-        for i in range(0, 10):
-            await page.evaluate(f"""() => {{window.scrollTo(0, {i*20} );}}""")
-            await asyncio.sleep(25/1000)
-    except Exception as e:
-        pass
-
 async def getVoleLeagueData(page, voleUrl):
     table_data = {}
     t = 0
     while table_data == {} and t < 2:
         try:
             if page.url != f'{baseVoleUrl}{voleUrl}':
-                await page.goto(f'{baseVoleUrl}{voleUrl}', timeout=10000)
-            await page.wait_for_load_state(state='load', timeout=5000)
+                await page.goto(f'{baseVoleUrl}{voleUrl}', timeout=5000)
             await asyncio.sleep(50/1000)
-            await scroll_to_bottom(page)
+            await helpers.scroll_to_bottom(page)
             table_data = await getVoleTableData(page)
         except Exception as e:
             pass
@@ -279,7 +271,7 @@ async def getIFALeagueData(page, tournamentUrl):
                 await page.goto(f'{baseIFAUrl}{tournamentUrl}', timeout=10000)
             await page.wait_for_load_state(state='load', timeout=5000)
             await asyncio.sleep(50/1000)
-            await scroll_to_bottom(page)
+            await helpers.scroll_to_bottom(page)
             table_data = await getIFATableData(page)
         except Exception as e:
             pass
@@ -322,7 +314,7 @@ async def refreshLeagueTable(page, tournament, section):
 async def refreshLeaguesTables(forceLoad = True, leagueName = None):
     sections = helpers.load_from_file(f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/sections.json')
     tournaments = helpers.load_from_file(f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/tournaments.json')
-
+    found = False
     async with async_playwright() as p:                
         browser = await p.firefox.launch(headless=True)
         context = await browser.new_context()
@@ -333,29 +325,28 @@ async def refreshLeaguesTables(forceLoad = True, leagueName = None):
             if leagueName and leagueName != tournamentName:
                 continue
             if sections.get(tournament.get('section')):
+                found = True
                 await refreshLeagueTable(page, tournament, sections[tournament.get('section')])
 
         await browser.close()
 
-    return True
+    return found
 
 async def getGameUrl(page, tournament, homeTeamId, guestTeamId, homeTeamName, guestTeamName):
     try:
         aRow = None
         divRow = None
-        await page.goto(f"{baseIFAUrl}{tournament['href']}")        
-        await scroll_to_bottom(page)
+        await page.goto(f"{baseIFAUrl}{tournament['href']}", )        
+        await helpers.scroll_to_bottom(page)
         
         if homeTeamId:
             selector = f".table_row[data-team1='{homeTeamId}'][data-team2='{guestTeamId}']"
-            aRows = await page.query_selector_all(f"a{selector}")
-            if aRows and len(aRows) == 1:
-                aRow = aRows[0]
+            aRowsLocator = page.locator(f"a{selector}")
+            if aRowsLocator and await aRowsLocator.count() == 1:
+                aRow = aRowsLocator.nth(0)
 
         else:
             div = page.locator(f"div.results-grid")
-
-            # Ensure the div exists before continuing
             if await div.count() == 0:
                 return None
 
@@ -498,16 +489,30 @@ def sort():
     sorted_players_desc = sorted(players, key=lambda x: x['score'], reverse=True)
     print("Sorted by score (descending):", sorted_players_desc)
 
-async def askToApproveGame(game):
-    game['askToApproveGame'] = True
+async def approveGame(refereeDetail, game, statusCell, page):
+    try:
+        logging.info(f'approveGame refId={refereeDetail["refId"]} gameId={game["id"]}')
+        if statusCell:
+            await statusCell.click()
+            inputsLocators = page.locator("input.circle[name='confirm']")
+            if await inputsLocators.count() == 2:
+                await inputsLocators.nth(0).click()
+                noteInputLocator = page.locator("input.custom-input[name='note']")
+                if await noteInputLocator.count() == 1:
+                    await noteInputLocator.nth(0).fill(f'אושר')
+                confirmButtonLocator = page.locator("button.btn").filter(has_text="אישור")                
+                if await confirmButtonLocator.count() == 1:
+                    await confirmButtonLocator.nth(0).click()
+                    return True
 
-async def approveGame(self, page, refId, gameId):
-    pass
+        return False
+    except Exception as ex:
+        logging.error(f'logout error: {ex}')
 
 async def openBrowser():
     async with async_playwright() as p:                
         browser = await p.firefox.launch(headless=True)
-        page = await browser.new_page()
+        page = await browser.new_page
         players = await scrapGameDetails(page, 'https://vole.one.co.il')
         await scrapVoleLeagues(page)
         pass

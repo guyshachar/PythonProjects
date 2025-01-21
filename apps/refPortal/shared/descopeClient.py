@@ -104,6 +104,7 @@ class MyDescopeClient():
         referees = helpers.load_from_file(referee_file_path)
         for referee in referees:
             refereeDetail = referees[referee]
+            refereeDetail['windowStartDatetime'] = None
             self.updateReferee(refereeDetail=refereeDetail)
 
     def getRefereeDetail(self, refId):
@@ -128,7 +129,7 @@ if __name__ == "__main__":
         descopeClient = MyDescopeClient('P2rMfchUiS31ARASEQsuEuf08UME')
         #descopeClient.updateReferees() 
         #ref = descopeClient.searcRefereeDetail()
-        descopeClient.updatePassword('33333','abc123')
+        descopeClient.updateReferees()
         pass
     except Exception as error:
         # handle the error

@@ -106,6 +106,14 @@ class HandleUsers():
             referesDetails[refereeDetail['refId']] = refereeDetail
         return referesDetails
 
+    def getAllReferesByMobile(self):
+        refereesDetails = self.getAllRefereesDetails()
+        refereesByMobile = {}
+        for refId in refereesDetails:
+            refereeDetail=refereesDetails[refId]
+            refereesByMobile[refereeDetail['mobile']]=refereeDetail
+        return (refereesDetails, refereesByMobile)
+    
     async def addPendingReferee(self, refId, mobileNo, baseUrl):
         refereeDetail = self.getRefereeDetail(refId)
         if refereeDetail:
@@ -226,17 +234,32 @@ class HandleUsers():
         
         return text
 
-    async def start24HoursWindow(self, refId, windowStartDatetime):
+    async def start24HoursWindow(self, refId, windowStartDatetimeStr):
         refereeDetail = self.getRefereeDetail(refId)
         if not refereeDetail:
             return False
 
-        refereeDetail['windowStartDatetime'] = windowStartDatetime
+        try:
+            windowStartDatetime = helpers.str_to_datetime(windowStartDatetimeStr)
+            currentWindowStartDatetime = helpers.str_to_datetime(refereeDetail['windowStartDatetime'])
+            
+            refereeDetail['windowStartDatetime'] = windowStartDatetimeStr
+            self.descopeClient.updateReferee(refereeDetail)
+            self.writeReferees()
+            
+            return True
+        except Exception as ex:
+            return True
+        
+    async def requestStart24HoursWindow(self, refId):
+        refereeDetail = self.getRefereeDetail(refId)
+        if not refereeDetail:
+            return
+
+        refereeDetail['reqWindowStartDate'] = helpers.datetime_to_str(datetime.now())
         self.descopeClient.updateReferee(refereeDetail)
         self.writeReferees()
-        
-        return True
-
+    
     def verifyMobile(self, mobileNo):
         client = TwilioClient('+14155238886')
 

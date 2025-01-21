@@ -29,7 +29,7 @@ WORKDIR /app
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-ENV BUILD_DATE=202501171709
+ENV BUILD_DATE=202501202323
 ENV logLevel=INFO
 ENV fileVersion=v5
 

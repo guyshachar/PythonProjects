@@ -23,7 +23,7 @@ COPY shared/*.py shared/.
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-ENV BUILD_DATE=202501161313
+ENV BUILD_DATE=202501220021
 ENV logLevel=INFO
 ENV fileVersion=v5
 ENV loadInterval=30000

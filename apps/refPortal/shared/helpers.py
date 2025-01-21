@@ -5,41 +5,61 @@ import json
 import time
 import urllib
 import requests
+import asyncio
 from datetime import date,datetime
 from difflib import get_close_matches
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()  # Convert to ISO 8601 string
-        return super().default(obj)
+        try:
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return super().default(obj)
+        except Exception as e:
+            pass
 
 class DateEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, date):
-            return obj.isoformat()  # Convert to ISO 8601 string
-        return super().default(obj)
+        try:
+            if isinstance(obj, date):
+                return obj.isoformat()
+            return super().default(obj)
+        except Exception as e:
+            pass
 
 def datetime_decoder(obj):
     for key, value in obj.items():
-        if isinstance(value, str):
-            try:
-                # Attempt to parse the string as an ISO 8601 datetime
-                obj[key] = datetime.fromisoformat(value)
-                #obj[key] = datetime.strptime(value, "%d/%m/%y %H:%M").date()
-            except ValueError:
-                pass  # If it's not a datetime, leave it as is
+        try:
+            if isinstance(value, str):
+                try:
+                    # Attempt to parse the string as an ISO 8601 datetime
+                    obj[key] = str_to_datetime(value)
+                except ValueError:
+                    obj[key] = datetime.fromisoformat(value)
+        except Exception as e:
+            pass
     return obj
 
 def date_decoder(obj):
     for key, value in obj.items():
-        if isinstance(value, str):
-            try:
-                obj[key] = date.fromisoformat(value)
-                #obj[key] = datetime.strptime(value, "%Y-%m-%d").date()
-            except ValueError:
-                pass
+        try:
+            if isinstance(value, str):
+                    obj[key] = str_to_date(value)
+        except ValueError:
+            obj[key] = date.fromisoformat(value)
     return obj
+
+datetime_format = '%Y-%m-%d%H:%M:%S'
+def datetime_to_str(dt):
+    return dt.strftime(datetime_format)
+def str_to_datetime(dt_str):
+    return datetime.strptime(dt_str, datetime_format)
+
+date_format = '%Y-%m-%d'
+def date_to_str(dt):
+    return dt.strftime(date_format)
+def str_to_date(dt_str):
+    return datetime.strptime(dt_str, date_format)
 
 def split_text(text, size_limit):
     """
@@ -251,20 +271,26 @@ def save_to_json(fields):
     return data
 
 def load_from_json(data):
-    obj = json.loads(data, object_hook=datetime_decoder)
-    return obj
+    if data:
+        obj = json.loads(data, object_hook=datetime_decoder)
+        return obj
+    else:
+        return {}
 
 def save_to_file(obj, filename):
     with open(filename, 'w') as file:
         data = save_to_json(obj)
         file.write(data.strip())
 
-def append_to_file(obj, filename):
-    with open(filename, 'a') as file:
-        data = save_to_json(obj)
-        file.write(data.strip()+ '\n')
+def append_obj_to_file(obj, filename):
+    data = load_from_file(filename)
+    for item in obj:
+        data[item] = obj[item]
+    save_to_file(data, filename)
 
 def load_from_file(filename):
+    if not os.path.exists(filename):
+        return {}
     with open(filename, 'r') as file:
         data = file.read().strip()
         obj = load_from_json(data)
@@ -302,5 +328,13 @@ def find_best_match(text, candidates):
     matches = get_close_matches(text, candidates, n=1, cutoff=0.4)
     return matches[0] if matches else None
 
+async def scroll_to_bottom(page):
+    try:
+        for i in range(0, 10):
+            await page.evaluate(f"""() => {{window.scrollTo(0, {i*20} );}}""")
+            await asyncio.sleep(25/1000)
+    except Exception as e:
+        pass
+
 if __name__ == "__main__":
-    append_to_file({'aaa':'bbb'}, f'{os.getenv("MY_DATA_FILE", f"/run/data/")}testFile.json')
+    append_obj_to_file({'aaa':'bbb'}, f'{os.getenv("MY_DATA_FILE", f"/run/data/")}testFile.json')
