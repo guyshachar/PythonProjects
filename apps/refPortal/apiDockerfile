@@ -16,20 +16,24 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install
 RUN playwright install-deps  
 
+RUN pip install ics pytz
+
 # Copy the script into the container
 RUN mkdir -p /shared
 RUN mkdir -p /rpApi
 WORKDIR /app/rpApi
 RUN mkdir -p /templates
+RUN mkdir -p /static
 COPY /rpApi/*.py .
-COPY /rpApi/templates/* templates/.
+COPY /rpApi/templates/ templates/
+COPY /rpApi/static/ static/
 WORKDIR /app/shared
 COPY /shared/*.py .
 WORKDIR /app
 
 # Define entrypoint to start Tailscale and your app
 # Start Tailscale and your Python script
-ENV BUILD_DATE=202501202323
+ENV BUILD_DATE=202502101537
 ENV logLevel=INFO
 ENV fileVersion=v5
 

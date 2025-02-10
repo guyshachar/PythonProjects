@@ -8,6 +8,11 @@ import requests
 import asyncio
 from datetime import date,datetime
 from difflib import get_close_matches
+import logging
+import socket
+import threading
+from ics import Calendar, Event
+import pytz
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -139,22 +144,38 @@ def get_secret1(self, secretName):
 
     return None
 
-def stopwatchStart(self, name):
-    self.swDic[name] = time.perf_counter()
+swDic = {}
 
-def stopwatchElapsed(self, name):
-    elapsedTime = int((time.perf_counter() - self.swDic[name])*1000)
+def stopwatchStart(name):
+    swDic[name] = time.perf_counter()
+
+def stopwatchElapsed(name):
+    elapsedTime = int((time.perf_counter() - swDic[name])*1000)
     elapsedTimeHHMMSS = seconds_to_hms(round(elapsedTime/1000))
     return elapsedTimeHHMMSS
 
-def stopwatchStop(self, name, level=None):
-    elapsedTime = int((time.perf_counter() - self.swDic[name])*1000)
+def stopwatchStop(name, level=None):
+    elapsedTime = int((time.perf_counter() - swDic[name])*1000)
     elapsedTimeHHMMSS = seconds_to_hms(round(elapsedTime/1000))
     if level:
-        eval(f'self.logger.{level}')(f'sw {name}={elapsedTimeHHMMSS} {elapsedTime}ms')
+        eval(f'logging.{level}')(f'sw {name}={elapsedTimeHHMMSS} {elapsedTime}ms')
     else:
-        self.logger.debug(f'sw {name}={elapsedTime}')
+        logging.debug(f'sw {name}={elapsedTime}')
     return elapsedTime
+
+async def gotoUrl(page, url, timeout = None, level = None):
+    stopwatchStart(f'{url}Url')
+    for i in range(3):
+        try:
+            if timeout:
+                await page.goto(url, timeout=timeout)
+            else:
+                await page.goto(url)#, wait_until='networkidle')
+            break
+        except Exception as ex:
+            logging.info(f'{url} {ex}')
+    await scroll_to_bottom(page)
+    stopwatchStop(f'{url}Url', level=level)
 
 async def getWazeRouteDuration(page, from_lat, from_lng, to_lat, to_lng, arriveAt=None):
     total_seconds = None
@@ -167,10 +188,10 @@ async def getWazeRouteDuration(page, from_lat, from_lng, to_lat, to_lng, arriveA
                     #https://www.waze.com/en-GB/live-map/directions?navigate=yes&to=ll.32.0429027%2C34.7937824&from=ll.32.0771918%2C34.8101153&time=1735084800000&reverse=yes
 
         # Navigate to the URL
-        await page.goto(waze_url)
+        await gotoUrl(page, waze_url)
 
         # Wait for the elements with class 'field-item' to load
-        await page.wait_for_selector(selector=".is-fastest", timeout=20000)
+        await page.wait_for_selector(selector=".is-fastest", timeout=7000)
 
         # Extract all articles with class 'field-item'
         route_element_div = None
@@ -277,12 +298,19 @@ def load_from_json(data):
     else:
         return {}
 
-def save_to_file(obj, filename):
-    with open(filename, 'w') as file:
-        data = save_to_json(obj)
-        file.write(data.strip())
+mainFileLock = threading.Lock()
+fileLocks = {}
 
-def append_obj_to_file(obj, filename):
+def save_to_file(obj, filename):
+    data = save_to_json(obj)
+    with mainFileLock:
+        if not fileLocks.get(filename):
+            fileLocks[filename] = threading.Lock()
+    with fileLocks[filename]:
+        with open(filename, 'w') as file:
+            file.write(data.strip())
+
+def append_to_file(obj, filename):
     data = load_from_file(filename)
     for item in obj:
         data[item] = obj[item]
@@ -291,10 +319,14 @@ def append_obj_to_file(obj, filename):
 def load_from_file(filename):
     if not os.path.exists(filename):
         return {}
-    with open(filename, 'r') as file:
-        data = file.read().strip()
-        obj = load_from_json(data)
-        return obj
+    with mainFileLock:
+        if not fileLocks.get(filename):
+            fileLocks[filename] = threading.Lock()
+    with fileLocks[filename]:
+        with open(filename, 'r') as file:
+            data = file.read().strip()
+            obj = load_from_json(data)
+            return obj
     
 def listToDictionary(list):
     dict = {}
@@ -336,5 +368,55 @@ async def scroll_to_bottom(page):
     except Exception as e:
         pass
 
+def getGameIcsFilename(refId, gameId):
+    fileId = f'{refId}_{gameId}'
+    icsFile = f'{os.getenv("MY_DATA_FILE", "/run/data/")}ics/{fileId}.ics'
+    return (fileId, icsFile)
+
+def createIcs(name, begin, duration, description, location, removal, fileName):
+    israel_tz = pytz.timezone(os.environ.get('timezone'))
+    gameCalendar = None
+    event = None
+
+    if os.path.exists(fileName):
+        with open(fileName, "r") as f:
+            gameCalendar = Calendar(f.read())
+
+        # Find the event to update (Example: Updating first event)
+        for ev in gameCalendar.events:
+            if ev.name == name:
+                event = ev
+                break
+
+    if not gameCalendar:
+        gameCalendar = Calendar()
+    
+    if not event:
+        event = Event()
+        event.name = name
+        gameCalendar.events.add(event)
+
+    event.begin = israel_tz.localize(begin)
+    event.duration = {"hours": duration}
+    event.description = description
+    event.location = location
+    if removal:
+        event.status = 'CANCELLED'
+    
+    with open(fileName, "w") as f:
+        f.writelines(gameCalendar)
+
+def testConnection(host="8.8.8.8", port=80):
+    try:
+        sock = socket.create_connection((host, port), timeout=5)
+        sock.close()
+        return None
+    except socket.timeout:
+        return "Connection timed out"
+    except socket.gaierror:
+        return "DNS resolution failed"
+    except socket.error as ex:
+        return f"Network error: {ex}"
+
 if __name__ == "__main__":
-    append_obj_to_file({'aaa':'bbb'}, f'{os.getenv("MY_DATA_FILE", f"/run/data/")}testFile.json')
+    append_to_file({'aaa':'bbb'}, f'{os.getenv("MY_DATA_FILE", f"/run/data/")}testFile.json')

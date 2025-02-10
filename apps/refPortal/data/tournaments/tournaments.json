@@ -3,7 +3,7 @@
         "text": "ליגת WINNER",
         "section": "בוגרים",
         "leagueId": 40,
-        "rules": "גברים על, לאומית וא׳",
+        "rules": "גברים על ולאומית",
         "href": "/leagues/league/?league_id=40&season_id=26",
         "tournament": "league"
     },
@@ -11,7 +11,7 @@
         "text": "ליגה לאומית",
         "section": "בוגרים",
         "leagueId": 45,
-        "rules": "גברים על, לאומית וא׳",
+        "rules": "גברים על ולאומית",
         "href": "/leagues/league/?league_id=45&season_id=26",
         "tournament": "league"
     },
@@ -19,7 +19,7 @@
         "text": "ליגה א' דרום",
         "section": "בוגרים",
         "leagueId": 62,
-        "rules": "גברים על, לאומית וא׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=62&season_id=26",
         "tournament": "league"
     },
@@ -27,7 +27,7 @@
         "text": "ליגה א' צפון",
         "section": "בוגרים",
         "leagueId": 61,
-        "rules": "גברים על, לאומית וא׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=61&season_id=26",
         "tournament": "league"
     },
@@ -35,7 +35,7 @@
         "text": "ליגה ב' דרום א'",
         "section": "בוגרים",
         "leagueId": 73,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=73&season_id=26",
         "tournament": "league"
     },
@@ -43,7 +43,7 @@
         "text": "ליגה ב' דרום ב'",
         "section": "בוגרים",
         "leagueId": 74,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=74&season_id=26",
         "tournament": "league"
     },
@@ -51,7 +51,7 @@
         "text": "ליגה ב' צפון א'",
         "section": "בוגרים",
         "leagueId": 71,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=71&season_id=26",
         "tournament": "league"
     },
@@ -59,7 +59,7 @@
         "text": "ליגה ב' צפון ב'",
         "section": "בוגרים",
         "leagueId": 72,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=72&season_id=26",
         "tournament": "league"
     },
@@ -67,7 +67,7 @@
         "text": "ליגה ג' גליל",
         "section": "בוגרים",
         "leagueId": 81,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=81&season_id=26",
         "tournament": "league"
     },
@@ -75,7 +75,7 @@
         "text": "ליגה ג' דרום",
         "section": "בוגרים",
         "leagueId": 684,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=684&season_id=26",
         "tournament": "league"
     },
@@ -83,7 +83,7 @@
         "text": "ליגה ג' יזרעאל",
         "section": "בוגרים",
         "leagueId": 83,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=83&season_id=26",
         "tournament": "league"
     },
@@ -91,7 +91,7 @@
         "text": "ליגה ג' מפרץ",
         "section": "בוגרים",
         "leagueId": 854,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=854&season_id=26",
         "tournament": "league"
     },
@@ -99,7 +99,7 @@
         "text": "ליגה ג' מרכז",
         "section": "בוגרים",
         "leagueId": 89,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=89&season_id=26",
         "tournament": "league"
     },
@@ -107,7 +107,7 @@
         "text": "ליגה ג' צפון",
         "section": "בוגרים",
         "leagueId": 853,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=853&season_id=26",
         "tournament": "league"
     },
@@ -115,7 +115,7 @@
         "text": "ליגה ג' שרון",
         "section": "בוגרים",
         "leagueId": 86,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=86&season_id=26",
         "tournament": "league"
     },
@@ -123,7 +123,7 @@
         "text": "ליגה ג דן",
         "section": "בוגרים",
         "leagueId": 88,
-        "rules": "ב׳ וג׳",
+        "rules": "א׳, ב׳ וג׳",
         "href": "/leagues/league/?league_id=88&season_id=26",
         "tournament": "league"
     },
@@ -335,6 +335,22 @@
         "href": "/leagues/league/?league_id=902&season_id=26",
         "tournament": "league"
     },
+    "ליגת טרומיות צפון": {
+        "text": "ליגת טרומיות צפון",
+        "section": "טרומיות",
+        "leagueId": 735,
+        "rules": "טרומיות",
+        "href": "/leagues/league/?league_id=735&season_id=26",
+        "tournament": "league"
+    },
+    "ליגת טרומיות דרום": {
+        "text": "ליגת טרומיות דרום",
+        "section": "טרומיות",
+        "leagueId": 803,
+        "rules": "טרומיות",
+        "href": "/leagues/league/?league_id=803&season_id=26",
+        "tournament": "league"
+    },
     "ליגת העל לנוער": {
         "text": "ליגת העל לנוער",
         "section": "נוער",
@@ -499,7 +515,7 @@
         "text": "ליגת נערים ב' על",
         "section": "נערים ב",
         "leagueId": 773,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=773&season_id=26",
         "tournament": "league"
     },
@@ -507,7 +523,7 @@
         "text": "ליגת נערים ב' ארצית דרום",
         "section": "נערים ב",
         "leagueId": 719,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=719&season_id=26",
         "tournament": "league"
     },
@@ -515,7 +531,7 @@
         "text": "ליגת נערים ב' ארצית צפון",
         "section": "נערים ב",
         "leagueId": 720,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=720&season_id=26",
         "tournament": "league"
     },
@@ -523,7 +539,7 @@
         "text": "ליגת נערים ב' דן",
         "section": "נערים ב",
         "leagueId": 135,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=135&season_id=26",
         "tournament": "league"
     },
@@ -531,7 +547,7 @@
         "text": "ליגת נערים ב' דרום",
         "section": "נערים ב",
         "leagueId": 139,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=139&season_id=26",
         "tournament": "league"
     },
@@ -539,7 +555,7 @@
         "text": "ליגת נערים ב' יזרעאל",
         "section": "נערים ב",
         "leagueId": 706,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=706&season_id=26",
         "tournament": "league"
     },
@@ -547,7 +563,7 @@
         "text": "ליגת נערים ב' מפרץ",
         "section": "נערים ב",
         "leagueId": 131,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=131&season_id=26",
         "tournament": "league"
     },
@@ -555,7 +571,7 @@
         "text": "ליגת נערים ב' מרכז",
         "section": "נערים ב",
         "leagueId": 137,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=137&season_id=26",
         "tournament": "league"
     },
@@ -563,7 +579,7 @@
         "text": "ליגת נערים ב' צפון",
         "section": "נערים ב",
         "leagueId": 130,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=130&season_id=26",
         "tournament": "league"
     },
@@ -571,7 +587,7 @@
         "text": "ליגת נערים ב' שפלה",
         "section": "נערים ב",
         "leagueId": 658,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=658&season_id=26",
         "tournament": "league"
     },
@@ -579,7 +595,7 @@
         "text": "ליגת נערים ב' שרון",
         "section": "נערים ב",
         "leagueId": 134,
-        "rules": "נערים ב׳ ",
+        "rules": "נערים ב׳",
         "href": "/leagues/league/?league_id=134&season_id=26",
         "tournament": "league"
     },

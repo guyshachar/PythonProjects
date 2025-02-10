@@ -1,388 +1,624 @@
 {
-    "MM5d224234ef3411b4c9ad066f3aa121a8": {
+    "MM02104b2026e80be11b3bb2613cda6520": {
         "refId": "43679",
-        "created": "20250120113143",
+        "created": "2025-01-29T20:49:52.195105",
         "mobile": "+972547799979",
-        "contentSid": "HX0437d9d37fdd254e8e5c73cc670f2fa1",
-        "msgId": "MM5d224234ef3411b4c9ad066f3aa121a8",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MM02104b2026e80be11b3bb2613cda6520",
+        "status": null,
         "additionalInfo": {
-            "gameId": "59da41cb"
+            "gameId": "c06f255a"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MMa008a34324d8fa7c53a2f58fc84e2ab1": {
+    "SM7fe397d7994592bc303e53af3ce5c3e6": {
         "refId": "43679",
-        "created": "20250120113455",
+        "created": "2025-01-29T20:49:52.549056",
         "mobile": "+972547799979",
-        "contentSid": "HX0437d9d37fdd254e8e5c73cc670f2fa1",
-        "msgId": "MMa008a34324d8fa7c53a2f58fc84e2ab1",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SM7fe397d7994592bc303e53af3ce5c3e6",
         "additionalInfo": {
-            "gameId": "cbd76176"
+            "gameId": "c06f255a"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM70582529cc923c849aa9ae0acba069c9": {
+    "MMadec7f8ea18571975b2102f4d2a5ed3f": {
         "refId": "43679",
-        "created": "20250120120319",
+        "created": "2025-01-29T20:54:21.095209",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM70582529cc923c849aa9ae0acba069c9",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MMadec7f8ea18571975b2102f4d2a5ed3f",
+        "status": null,
         "additionalInfo": {
-            "gameId": "69f5f1bd"
+            "gameId": "ef0cc0ee"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MMad9b8e7bfe05a83aeb9015ca1b04a931": {
+    "SM3ed289cc5963c80a3890455766f1523b": {
         "refId": "43679",
-        "created": "20250120120701",
+        "created": "2025-01-29T20:54:21.867443",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MMad9b8e7bfe05a83aeb9015ca1b04a931",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SM3ed289cc5963c80a3890455766f1523b",
         "additionalInfo": {
-            "gameId": "bc5b61a9"
+            "gameId": "ef0cc0ee"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MMfecc439d3269ed69bdce0d90a94b2898": {
+    "MM8076b463a3db423b044975d7afb6b18f": {
         "refId": "43679",
-        "created": "20250120120826",
+        "created": "2025-01-29T21:20:48.077451",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MMfecc439d3269ed69bdce0d90a94b2898",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MM8076b463a3db423b044975d7afb6b18f",
+        "status": null,
         "additionalInfo": {
-            "gameId": "48b123c4"
+            "gameId": "48c19940"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM907c35ea665ce31253ef158f1fb7a422": {
+    "SMf9dc50334ed4d724e2e318c2c5464eae": {
         "refId": "43679",
-        "created": "20250120121118",
+        "created": "2025-01-29T21:20:48.702608",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM907c35ea665ce31253ef158f1fb7a422",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SMf9dc50334ed4d724e2e318c2c5464eae",
         "additionalInfo": {
-            "gameId": "e7eac2b9"
+            "gameId": "48c19940"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MMf5b46b149dafa928d9b09fb4bf2916d6": {
+    "MM50202970ed82364c484db9720c5ba86e": {
         "refId": "43679",
-        "created": "20250120144635",
+        "created": "2025-01-29T21:27:39.801084",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MMf5b46b149dafa928d9b09fb4bf2916d6",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MM50202970ed82364c484db9720c5ba86e",
+        "status": null,
         "additionalInfo": {
-            "gameId": "adhdsfj"
+            "gameId": "7471e387"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM0684004117a9504083fbd5288b64d6f3": {
+    "SMd43e529bbaf7826954b438ed9952ecd2": {
         "refId": "43679",
-        "created": "20250120215656",
+        "created": "2025-01-29T21:27:40.346540",
         "mobile": "+972547799979",
-        "contentSid": "HXa1cd61496ac48341d85e801756c02fc1",
-        "msgId": "MM0684004117a9504083fbd5288b64d6f3",
-        "status": "queued",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SMd43e529bbaf7826954b438ed9952ecd2",
         "additionalInfo": {
-            "gameId": "adhdsfj"
+            "gameId": "7471e387"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MMab21108b66e998481a5691270a08de10": {
+    "MMfbbbb2c9b1ed0ae906fec1a83b7f9a23": {
         "refId": "43679",
-        "created": "20250120231300",
+        "created": "2025-01-29T21:37:28.210237",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MMab21108b66e998481a5691270a08de10",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MMfbbbb2c9b1ed0ae906fec1a83b7f9a23",
+        "status": null,
         "additionalInfo": {
-            "gameId": "f80a19d4"
+            "gameId": "e02c707f"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM0c5e8f6f635a01d2105bbe003ebc89f4": {
+    "SMb94f738c29a8b2825a8edceef8c17ecc": {
         "refId": "43679",
-        "created": "20250120232104",
+        "created": "2025-01-29T21:37:28.500344",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM0c5e8f6f635a01d2105bbe003ebc89f4",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SMb94f738c29a8b2825a8edceef8c17ecc",
         "additionalInfo": {
-            "gameId": "3918546c"
+            "gameId": "e02c707f"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM72a60fc9f1b21ad018e459f0b58ffb56": {
+    "MMc81b15f3388926c9f69df91842b07288": {
         "refId": "43679",
-        "created": "20250120232107",
+        "created": "2025-01-29T21:39:36.934277",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM72a60fc9f1b21ad018e459f0b58ffb56",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MMc81b15f3388926c9f69df91842b07288",
+        "status": null,
         "additionalInfo": {
-            "gameId": "0c7e3024"
+            "gameId": "4bd3ae1c"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM6c99bff1478e75565593978ab570c82a": {
+    "SM23e66aea0937ef2b7df3e279f5e9f22b": {
         "refId": "43679",
-        "created": "20250120234528",
+        "created": "2025-01-29T21:39:37.474278",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM6c99bff1478e75565593978ab570c82a",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SM23e66aea0937ef2b7df3e279f5e9f22b",
         "additionalInfo": {
-            "gameId": "144eb2db"
+            "gameId": "4bd3ae1c"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM7f75b6ee6297cc7a2848bb61eeae3a0a": {
+    "MMc299d82e96a6e62f8d98aae7585b5755": {
         "refId": "43679",
-        "created": "20250120234528",
+        "created": "2025-01-29T21:43:07.889196",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM7f75b6ee6297cc7a2848bb61eeae3a0a",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MMc299d82e96a6e62f8d98aae7585b5755",
+        "status": null,
         "additionalInfo": {
-            "gameId": "0c7e3024"
+            "gameId": "61623bac"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM381e5ccf589d2d56750fbe7ee98a9ebb": {
+    "SM44db9217d4c7ec6f4cf7b74b155bef4f": {
         "refId": "43679",
-        "created": "20250120234529",
+        "created": "2025-01-29T21:43:08.292701",
         "mobile": "+972547799979",
-        "contentSid": "HX8bf6eb04c51c92197b0da3362165f773",
-        "msgId": "MM381e5ccf589d2d56750fbe7ee98a9ebb",
-        "status": "accepted",
-        "additionalInfo": null,
-        "replyMessageSid": "",
-        "repliedAnswer": "",
-        "replyDate": null,
-        "action": ""
-    },
-    "MM39789db589627e17d618c7541bcce63e": {
-        "refId": "43679",
-        "created": "20250120234801",
-        "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM39789db589627e17d618c7541bcce63e",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SM44db9217d4c7ec6f4cf7b74b155bef4f",
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "61623bac"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM62e5df5c3faae96e03610302a48a64f1": {
+    "MM7604c98e5e2f8680238f1802a7a6ad3c": {
         "refId": "43679",
-        "created": "20250120234802",
+        "created": "2025-01-29T22:55:51.902557",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM62e5df5c3faae96e03610302a48a64f1",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MM7604c98e5e2f8680238f1802a7a6ad3c",
+        "status": null,
         "additionalInfo": {
-            "gameId": "0c7e3024"
+            "gameId": "036cfb74"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM15e3c373e45b6389498156b634aba2b8": {
+    "SM0bc0f487a31a4825c4cbf25f8ecd316b": {
         "refId": "43679",
-        "created": "20250120234802",
+        "created": "2025-01-29T22:55:52.217283",
         "mobile": "+972547799979",
-        "contentSid": "HX8bf6eb04c51c92197b0da3362165f773",
-        "msgId": "MM15e3c373e45b6389498156b634aba2b8",
-        "status": "accepted",
-        "additionalInfo": null,
-        "replyMessageSid": "",
-        "repliedAnswer": "",
-        "replyDate": null,
-        "action": ""
-    },
-    "MM69d00e707a8579bd01368e0125642eae": {
-        "refId": "43679",
-        "created": "20250120235100",
-        "mobile": "+972548199353",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM69d00e707a8579bd01368e0125642eae",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SM0bc0f487a31a4825c4cbf25f8ecd316b",
         "additionalInfo": {
-            "gameId": "adhdsfj"
+            "gameId": "036cfb74"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM7d30f466e52f93af12b69f1d06f494b9": {
+    "MMbd4f6fe5731b2f4c1cfc4a9b936938c6": {
         "refId": "43679",
-        "created": "20250121012259",
+        "created": "2025-01-29T23:52:48.418635",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM7d30f466e52f93af12b69f1d06f494b9",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MMbd4f6fe5731b2f4c1cfc4a9b936938c6",
+        "status": null,
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "bc570cac"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM61f3e2cc8b54a0bb3b12a2bb9306431c": {
+    "SM5505a231761cba60cc6a10763aba8981": {
         "refId": "43679",
-        "created": "20250121112705",
+        "created": "2025-01-29T23:52:48.704607",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM61f3e2cc8b54a0bb3b12a2bb9306431c",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SM5505a231761cba60cc6a10763aba8981",
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "bc570cac"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM4a5b1180f7c0550290259e7628ffda01": {
+    "65ca8b02": {
         "refId": "43679",
-        "created": "20250121114111",
+        "created": "2025-01-30T23:26:08.283622",
         "mobile": "+972547799979",
-        "contentSid": "HXaa2077776fafa777b2608ba56c87638f",
-        "msgId": "MM4a5b1180f7c0550290259e7628ffda01",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "65ca8b02",
+        "status": null,
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "cd22010e"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM5ac602c4f855378787288fe544e1d157": {
+    "be4b99db": {
         "refId": "43679",
-        "created": "20250121121402",
+        "created": "2025-01-30T23:26:08.286735",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM5ac602c4f855378787288fe544e1d157",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "be4b99db",
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "cd22010e"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM6444606f9f4b6dae7048cdc29693a0bf": {
+    "01c63892": {
         "refId": "43679",
-        "created": "20250121121534",
+        "created": "2025-01-31T22:04:45.282837",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM6444606f9f4b6dae7048cdc29693a0bf",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "01c63892",
+        "status": null,
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "e6238388"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM7765295cf88084ae5b2bf3a8bc587b2e": {
+    "1819c514": {
         "refId": "43679",
-        "created": "20250121144311",
+        "created": "2025-01-31T22:04:45.291473",
         "mobile": "+972547799979",
-        "contentSid": "HXa6a9fa2f31d408d1309c90d51f3e7223",
-        "msgId": "MM7765295cf88084ae5b2bf3a8bc587b2e",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "1819c514",
         "additionalInfo": {
-            "gameId": "d3cab835"
+            "gameId": "e6238388"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM937830bde3e3190f2c4b6599ade356f1": {
+    "af5ca920": {
         "refId": "43679",
-        "created": "20250121161611",
+        "created": "2025-02-01T00:39:04.439632",
         "mobile": "+972547799979",
-        "contentSid": "HX5a06c47d371eb14c1213cd848f24b9d5",
-        "msgId": "MM937830bde3e3190f2c4b6599ade356f1",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "af5ca920",
         "additionalInfo": {
-            "gameId": "bfa906d6"
+            "gameId": "31676512"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
     },
-    "MM21e13fff98ee77b38b43fa0ff90fe7d9": {
+    "45659555": {
         "refId": "43679",
-        "created": "20250122001702",
+        "created": "2025-02-01T00:39:04.445534",
         "mobile": "+972547799979",
-        "contentSid": "HXfdc62eb4cdf826bdf319aba859426def",
-        "msgId": "MM21e13fff98ee77b38b43fa0ff90fe7d9",
-        "status": "accepted",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "45659555",
+        "status": null,
         "additionalInfo": {
-            "gameId": "adhdsfj"
+            "gameId": "31676512"
         },
         "replyMessageSid": "",
         "repliedAnswer": "",
         "replyDate": null,
         "action": ""
+    },
+    "763247bb": {
+        "refId": "43679",
+        "created": "2025-02-01T00:40:10.560775",
+        "mobile": "+972547799979",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "763247bb",
+        "additionalInfo": {
+            "gameId": "4a57fae5"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "ad7b77b8": {
+        "refId": "43679",
+        "created": "2025-02-01T00:40:10.568739",
+        "mobile": "+972547799979",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "ad7b77b8",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "4a57fae5"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "SMcf11589250c29fc5706bab320f8e68e9": {
+        "refId": "43679",
+        "created": "2025-02-01T00:41:31.919781",
+        "mobile": "+972547799979",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "SMcf11589250c29fc5706bab320f8e68e9",
+        "additionalInfo": {
+            "gameId": "616c9e4a"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM09b28a3dee059a8dab4c9c1c4887c8ba": {
+        "refId": "43679",
+        "created": "2025-02-01T00:41:32.219491",
+        "mobile": "+972547799979",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MM09b28a3dee059a8dab4c9c1c4887c8ba",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "616c9e4a"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM61267436252c50b8962cf2daa0aca1d9": {
+        "refId": "43679",
+        "created": "2025-02-01T00:45:22.329465",
+        "mobile": "+972547799979",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "MM61267436252c50b8962cf2daa0aca1d9",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "9faf27de"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "77c34d6a": {
+        "refId": "43679",
+        "created": "2025-02-02T21:04:57.941499",
+        "mobile": "+972547799979",
+        "contentSid": "HX8506091f5d4ec798b3fa6f645f57d348",
+        "msgId": "77c34d6a",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "4efc6209"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM2c5fb15f0c4e00865c2a0cc531ee0a2f": {
+        "refId": "43679",
+        "created": "2025-02-02T23:38:34.960092",
+        "mobile": "+972547799979",
+        "contentSid": "HX51a24a2e8a75560a048f949b630c1130",
+        "msgId": "MM2c5fb15f0c4e00865c2a0cc531ee0a2f",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "4b71b0b5"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM9201f57d52bb452471c54332d4078401": {
+        "refId": "43679",
+        "created": "2025-02-02T23:49:45.477734",
+        "mobile": "+972547799979",
+        "contentSid": "HX51a24a2e8a75560a048f949b630c1130",
+        "msgId": "MM9201f57d52bb452471c54332d4078401",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "d7b46012"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MMa89884645651e1a3780e08752c810c1d": {
+        "refId": "43679",
+        "created": "2025-02-02T23:53:51.849484",
+        "mobile": "+972547799979",
+        "contentSid": "HX51a24a2e8a75560a048f949b630c1130",
+        "msgId": "MMa89884645651e1a3780e08752c810c1d",
+        "status": null,
+        "additionalInfo": {
+            "gameId": "31c6200a"
+        },
+        "replyMessageSid": "",
+        "repliedAnswer": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM447a4dbd2ce614e6e2deb2dca1e06948": {
+        "refId": "43679",
+        "created": "2025-02-04T03:01:41.409441",
+        "mobile": "++972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "MM447a4dbd2ce614e6e2deb2dca1e06948",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM2dd44341f51aca91993abf821a1a303a": {
+        "refId": "43679",
+        "created": "2025-02-04T03:01:41.971904",
+        "mobile": "++972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "MM2dd44341f51aca91993abf821a1a303a",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM997a0c1a573a00d7f23b1013a25b4918": {
+        "refId": "43679",
+        "created": "2025-02-04T03:01:42.578366",
+        "mobile": "++972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "MM997a0c1a573a00d7f23b1013a25b4918",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MMd57c5959d6080e7db6a8da1cf7bbdc6e": {
+        "refId": "43679",
+        "created": "2025-02-04T03:05:04.475403",
+        "mobile": "++972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "MMd57c5959d6080e7db6a8da1cf7bbdc6e",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MMbf8b959fd1555bbf488973938ded22ad": {
+        "refId": "43679",
+        "created": "2025-02-04T03:06:56.263588",
+        "mobile": "++972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "MMbf8b959fd1555bbf488973938ded22ad",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "MM7377a8a535f2b74c6c152e339613375d": {
+        "refId": "43679",
+        "created": "2025-02-04T03:10:41.414040",
+        "mobile": "++972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "MM7377a8a535f2b74c6c152e339613375d",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "9962d7a0": {
+        "refId": "43679",
+        "created": "2025-02-05T04:31:52.978005",
+        "mobile": "+972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "9962d7a0",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "e53dd7be": {
+        "refId": "43679",
+        "created": "2025-02-05T23:49:42.566870",
+        "mobile": "+972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "e53dd7be",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "77b3988d": {
+        "refId": "43679",
+        "created": "2025-02-06T17:23:54.866522",
+        "mobile": "+972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "77b3988d",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "8764dcfe": {
+        "refId": "43679",
+        "created": "2025-02-06T22:25:00.983602",
+        "mobile": "+972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "8764dcfe",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "e5c0c697": {
+        "refId": "43679",
+        "created": "2025-02-06T22:29:15.189204",
+        "mobile": "+972547799979",
+        "contentSid": "HXc45dc864a7296ca47986bc55fc01b372",
+        "msgId": "e5c0c697",
+        "status": null,
+        "replyMessageSid": "",
+        "repliedButtonId": "",
+        "replyDate": null,
+        "action": ""
+    },
+    "ABC": {
+        "refId": "43679",
+        "created": "2025-02-08T18:03:54.042768",
+        "action": "forceSend",
+        "msgSid": "ABC",
+        "objType": "games",
+        "status": "completed",
+        "updated": "2025-02-08T18:04:06.217847"
     }
 }

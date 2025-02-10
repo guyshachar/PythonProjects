@@ -69,7 +69,7 @@ class WhatsappApi:
             obj = {}
             obj[sentWhatsappMessage.sid] = {'refId': refId, 'created': datetime.now().strftime("%Y%m%d%H%M%S"), 'mobile': toMobile, 'contentSid': contentSid, 'msgId': sentWhatsappMessage.sid, 'status': sentWhatsappMessage.status, 'additionalInfo': additionalInfo, 'replyMessageSid': '', 'repliedAnswer': '', 'replyDate': None, 'action': ''}
             referee_file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}referees/templates/refId{refId}.json'
-            helpers.append_obj_to_file(obj, referee_file_path)
+            helpers.append_to_file(obj, referee_file_path)
 
             self.logger.debug(f'Whatsapp message.id: {sentWhatsappMessage.sid} {sentWhatsappMessage.status}')
 

@@ -87,10 +87,15 @@ class MyDescopeClient():
                 if resp:
                     print(json.dumps(resp, indent=4))
                 break
-            except Exception as error:
+            except Exception as ex:
                 print (f"Unable to update user {refereeDetail['refId']}.")
-                print ("Status Code: " + str(error.status_code))
-                print ("Error: " + str(error.error_message))
+                print ("Status Code: " + str(ex.status_code))
+                print ("Error: " + str(ex.error_message))
+
+    def deleteUser(self, loginId):
+        user = self.getRefereeDetailByRefId(loginId)
+        if user:
+            self.descopeClient.mgmt.user.delete(login_id=loginId)
 
     def addReferees(self):
         referee_file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}referees/details/refereesDetails.json'
@@ -107,18 +112,24 @@ class MyDescopeClient():
             refereeDetail['windowStartDatetime'] = None
             self.updateReferee(refereeDetail=refereeDetail)
 
-    def getRefereeDetail(self, refId):
+    def getRefereeDetailByRefId(self, refId):
         referee = self.descopeClient.mgmt.user.search_all(login_ids=[refId])
         if referee['total'] == 1:
             return referee['users'][0]['customAttributes']
         return None
-    
+
+    def getRefereeDetailByMobile(self, mobileNo):
+        referee = self.descopeClient.mgmt.user.search_all(phones=[mobileNo])
+        if referee['total'] == 1:
+            return referee['users'][0]['customAttributes']
+        return None
+
     def searchRefereesDetails(self):
         referees = self.descopeClient.mgmt.user.search_all()
         return referees['users']
    
     def updatePassword(self, refId, password):
-        referee = self.getRefereeDetail(refId)
+        referee = self.getRefereeDetailByRefId(refId)
         self.descopeClient.password.update(refId, password, None)
 
 # Example usage
@@ -129,7 +140,9 @@ if __name__ == "__main__":
         descopeClient = MyDescopeClient('P2rMfchUiS31ARASEQsuEuf08UME')
         #descopeClient.updateReferees() 
         #ref = descopeClient.searcRefereeDetail()
-        descopeClient.updateReferees()
+        #descopeClient.updateReferees()
+        ref = descopeClient.getRefereeDetailByRefId('43679')
+        descopeClient.getRefereeDetailByMobile('+972547799979')
         pass
     except Exception as error:
         # handle the error

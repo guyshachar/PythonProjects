@@ -63,7 +63,7 @@ class HandleUsers():
         return decryptedPassword
 
     def changeRefereePassword(self, refId, refPassword):
-        refereeDetail = self.getRefereeDetail(refId)
+        refereeDetail = self.getRefereeDetailByRefId(refId)
 
         encryptedPassword = self.encryptPassword(f'{refPassword}')
 
@@ -75,26 +75,33 @@ class HandleUsers():
 
         return True
 
-    def forceSend(self, refId):
-        refereeDetail = self.getRefereeDetail(refId)
-        refereeDetail['forceSend'] = True
+    def forceSend(self, refId, onOff):
+        refereeDetail = self.getRefereeDetailByRefId(refId)
+        refereeDetail['forceSend'] = onOff
         self.writeReferees()
 
     async def activate(self, refId):
-        refereeDetail = self.getRefereeDetail(refId)
+        refereeDetail = self.getRefereeDetailByRefId(refId)
         refereeDetail['status'] = 'active'
         self.descopeClient.updateReferee(refereeDetail)
         self.writeReferees()
 
     async def deactivate(self, refId):
-        refereeDetail = self.getRefereeDetail(refId)
+        refereeDetail = self.getRefereeDetailByRefId(refId)
         refereeDetail['status'] = 'inactive'
         self.descopeClient.updateReferee(refereeDetail)
         self.writeReferees()
 
-    def getRefereeDetail(self, refId):
-        refereeDetail = self.descopeClient.getRefereeDetail(refId)
-        refereeDetail['addressDetails'] = json.loads(refereeDetail['originAddress'])
+    def getRefereeDetailByRefId(self, refId):
+        refereeDetail = self.descopeClient.getRefereeDetailByRefId(refId)
+        if refereeDetail and refereeDetail.get('originAddress'):
+            refereeDetail['addressDetails'] = json.loads(refereeDetail['originAddress'])
+        return refereeDetail
+
+    def getRefereeDetailByMobile(self, mobileNo):
+        refereeDetail = self.descopeClient.getRefereeDetailByMobile(mobileNo)
+        if refereeDetail and refereeDetail.get('originAddress'):
+            refereeDetail['addressDetails'] = json.loads(refereeDetail['originAddress'])
         return refereeDetail
 
     def getAllRefereesDetails(self):
@@ -102,11 +109,12 @@ class HandleUsers():
         referesDetails = {}
         for referee in referees:
             refereeDetail = referee['customAttributes']
-            refereeDetail['addressDetails'] = json.loads(refereeDetail['originAddress'])
+            if refereeDetail.get('originAddress'):
+                refereeDetail['addressDetails'] = json.loads(refereeDetail['originAddress'])
             referesDetails[refereeDetail['refId']] = refereeDetail
         return referesDetails
 
-    def getAllReferesByMobile(self):
+    def getAllRefereesByMobile(self):
         refereesDetails = self.getAllRefereesDetails()
         refereesByMobile = {}
         for refId in refereesDetails:
@@ -114,14 +122,14 @@ class HandleUsers():
             refereesByMobile[refereeDetail['mobile']]=refereeDetail
         return (refereesDetails, refereesByMobile)
     
-    async def addPendingReferee(self, refId, mobileNo, baseUrl):
-        refereeDetail = self.getRefereeDetail(refId)
+    async def addPendingReferee(self, mobileNo):
+        refereeDetail = self.getRefereeDetailByMobile(mobileNo)
         if refereeDetail:
             refereeDetail['status'] = 'pending'
             self.descopeClient.updateReferee(refereeDetail)
         else:
             refereeDetail = {
-                "refId": refId,
+                "refId": mobileNo,
                 "status": "pending",
                 "mobile": mobileNo
             }
@@ -132,7 +140,7 @@ class HandleUsers():
         return None
 
     async def addReferee(self, refId, name, id, refPassword, mobile, address, lastNoticeBeforeGameInHours, timeArrivalInMin, color=None):
-        refereeDetail = self.getRefereeDetail(refId)
+        refereeDetail = self.getRefereeDetailByRefId(refId)
         if refereeDetail:
             return f''
         
@@ -178,8 +186,8 @@ class HandleUsers():
         self.writeReferees()
         return None
 
-    async def updateReferee(self, refId, name, id, refPassword, mobileNo, address, lastNoticeBeforeGameInHours, timeArrivalInMin, color):
-        refereeDetail = self.getRefereeDetail(refId)
+    async def updateReferee(self, loginId, refId, name, id, refPassword, mobileNo, address, lastNoticeBeforeGameInHours, timeArrivalInMin, color):
+        refereeDetail = self.getRefereeDetailByRefId(loginId)
         text = None
         if not refereeDetail:
             text = f"{datetime.now()} קוד שופט {refId} נכשל ברישום, אנא פנה למנהל המערכת"
@@ -203,6 +211,7 @@ class HandleUsers():
                 coordinates = [None, None]
 
             refereeDetail = {
+                "loginIds": [refId],
                 "name": name,
                 "refId": refId,
                 "id": id,
@@ -230,12 +239,19 @@ class HandleUsers():
             }
 
             self.descopeClient.updateReferee(refereeDetail)
+            if loginId != refId:
+                self.descopeClient.deleteUser(loginId=loginId)
             self.writeReferees()
         
         return text
 
+    async def deleteReferee(self, loginId):
+        refereeDetail = self.getRefereeDetailByRefId(loginId)
+        if refereeDetail:
+            self.descopeClient.deleteUser(loginId=loginId)
+
     async def start24HoursWindow(self, refId, windowStartDatetimeStr):
-        refereeDetail = self.getRefereeDetail(refId)
+        refereeDetail = self.getRefereeDetailByRefId(refId)
         if not refereeDetail:
             return False
 
@@ -252,7 +268,7 @@ class HandleUsers():
             return True
         
     async def requestStart24HoursWindow(self, refId):
-        refereeDetail = self.getRefereeDetail(refId)
+        refereeDetail = self.getRefereeDetailByRefId(refId)
         if not refereeDetail:
             return
 

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="assets/favicon.png" type="image/png">
-    <title>שירות תזכורת לשופט</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
+    <title>שירות הודעות ותזכורת לשופט</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -81,7 +81,7 @@
 
     <main>
         <div class="container">
-            <h2>ברוך הבא למערכת שירות תזכורות לשופט</h2>
+            <h2>ברוך הבא למערכת שירות הודעות ותזכורות לשופט</h2>
             <p>
                 מערכת זו מספקת התראות ועדכונים בזמן אמת לשופטי הכדורגל.
                 השאר מעודכן על מנת לקבל את מגוון השירותים שהמערכת מספקת.
@@ -94,10 +94,13 @@
 
     <footer>
         <p>
+            Goldstein Aharon 2, Givatayim | Mobile: +972-54-7799979 | אהרון גולדשטיין 2, גבעתיים | גיא שחר פתרונות תוכנה יצירתיים
+        </p>
+        <p>
             &copy; 2025 Referee Notification Service | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a>
         </p>
         <p>
-            <img src="assets/RefereeNotificationService.png" width=250px height="250px"/>
+            <img src="{{ url_for('static', filename='images/RefereeNotificationService.png') }}" width=250px height="250px"/>
         </p>
     </footer>
 </body>

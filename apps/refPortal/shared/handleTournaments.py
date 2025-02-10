@@ -106,7 +106,7 @@ async def getCupsList():
         page = await browser.new_page()
 
         # Open the URL
-        await page.goto(baseIFAUrl)
+        await helpers.gotoUrl(page, baseIFAUrl)
 
         # Wait for the submenu to be visible
         submenu_locator = (await page.query_selector_all("ul.second-level-list"))[3]
@@ -132,7 +132,7 @@ async def getLeaguesList():
         page = await browser.new_page()
 
         # Open the URL
-        await page.goto(baseIFAUrl)
+        await helpers.gotoUrl(page, baseIFAUrl)
 
         # Wait for the submenu to be visible
         submenu_locator = (await page.query_selector_all("ul.second-level-list"))[2]
@@ -164,8 +164,7 @@ async def fix_women_leagues(leagueSection, leagueText):
 
 async def getLeagueName(page, tournamentUrl):
     if page.url != f'{baseIFAUrl}{tournamentUrl}':
-        await page.goto(f'{baseIFAUrl}{tournamentUrl}', timeout=5000)
-    await helpers.scroll_to_bottom(page)
+        await helpers.gotoUrl(page, f'{baseIFAUrl}{tournamentUrl}', timeout=15000)
     tableTitle = await page.query_selector_all('span.big')
     if tableTitle and len(tableTitle) == 1: 
         return (await tableTitle[0].inner_text()).strip()
@@ -175,12 +174,26 @@ async def getVoleTableData(page):
     table_data = {}
     tableTitle = await page.query_selector_all('h1')
     if tableTitle: 
-        div = await page.query_selector_all("div.tables_container__iVr6u")
+        div = await page.query_selector_all("div.standings_container__Dm8WX")
         if not div:
-            print(f"No element found with selector: {'div.vertical-title'}")
+            print(f"No element found with selector: {'div.standings_container__Dm8WX'}")
             return table_data
 
-        headMapping = {
+        headMapping = [
+            "מעבר",
+            "מיקום",
+            "קבוצה",
+            "משחקים",
+            "ניצחונות",
+            "תיקו",
+            "הפסדים",
+            "שערים",
+            "הפרש",
+            "נקודות",
+        ]
+        headMapping1 = {
+            "מיקום": "מיקום",
+            "קבוצה": "קבוצה",
             "מש׳": "משחקים",
             "נצ׳": "ניצחונות",
             "ת׳": "תיקו",
@@ -196,16 +209,21 @@ async def getVoleTableData(page):
         for row in rows:
             elements = await row.query_selector_all("td")
             cells = {}
-            for i in range(len(elements)):
+            i = -1
+            for cell in elements:
+                i += 1
+                if i == 0:
+                    continue
                 cell = elements[i]
-                head = None
+                head = headMapping[i]
+                '''
                 if i == 0:
                     head = 'מיקום'
                 else:
                     head = await theadTr[i-1].inner_text()
-                
+                '''
                 obj = (await cell.inner_text()).strip()
-                if headMapping.get(head):
+                if False and headMapping.get(head):
                     head = headMapping[head]
                 cells[head] = obj
             teamName = cells['קבוצה'].translate(translation_table)
@@ -215,30 +233,40 @@ async def getVoleTableData(page):
 
 async def getIFATableData(page):
     table_data = {}
-    tableTitle = await page.query_selector_all('h2#LEAGUE_TABLE_TITLE_PLAYOFF')
-    if tableTitle: 
-        full_view_div = await page.query_selector_all("div.vertical-title")
-        if not full_view_div:
-            print(f"No element found with selector: {'div.vertical-title'}")
-            return table_data
 
-        # Find all rows in the table within the div
-        rows = await full_view_div[0].query_selector_all("a.table_row")
-        for row in rows:
-            # Extract all cell data (th or td)
-            elements = await row.query_selector_all("a, div")
-            cells = {}
-            href = await row.get_attribute("href")
-            cells['href'] = href
-            query = urlparse(href).query
-            params = parse_qs(query)
-            teamId = int(params.get('team_id', 0)[0])
-            cells['teamId'] = teamId
-            for cell in elements:
-                obj = (await cell.inner_text()).strip().split('\n')
-                cells[obj[0]] = obj[1]
-            teamName = cells['קבוצה'].translate(translation_table)
-            table_data[teamName] = cells
+    roundLocator = page.locator(f"select#ddlBoxes")
+    if roundLocator and await roundLocator.count() == 1:
+        roundOptions = roundLocator.locator('option')
+        roundOptionsTexts = [await roundOptions.nth(i).text_content() for i in range(await roundOptions.count())]
+        
+        for roundOptionText in roundOptionsTexts:
+            await roundLocator.select_option(label=roundOptionText, timeout=15000)
+            await asyncio.sleep(100/1000)
+
+            tableTitle = await page.query_selector_all('h2#LEAGUE_TABLE_TITLE_PLAYOFF')
+            if tableTitle: 
+                full_view_div = await page.query_selector_all("div.vertical-title")
+                if not full_view_div:
+                    print(f"No element found with selector: {'div.vertical-title'}")
+                    return table_data
+
+                # Find all rows in the table within the div
+                rows = await full_view_div[0].query_selector_all("a.table_row")
+                for row in rows:
+                    # Extract all cell data (th or td)
+                    elements = await row.query_selector_all("a, div")
+                    cells = {}
+                    href = await row.get_attribute("href")
+                    cells['href'] = href
+                    query = urlparse(href).query
+                    params = parse_qs(query)
+                    teamId = int(params.get('team_id', 0)[0])
+                    cells['teamId'] = teamId
+                    for cell in elements:
+                        obj = (await cell.inner_text()).strip().split('\n')
+                        cells[obj[0]] = obj[1]
+                    teamName = cells['קבוצה'].translate(translation_table)
+                    table_data[teamName] = cells
 
     return table_data
 
@@ -248,9 +276,8 @@ async def getVoleLeagueData(page, voleUrl):
     while table_data == {} and t < 2:
         try:
             if page.url != f'{baseVoleUrl}{voleUrl}':
-                await page.goto(f'{baseVoleUrl}{voleUrl}', timeout=5000)
+                await helpers.gotoUrl(page, f'{baseVoleUrl}{voleUrl}', timeout=15000)
             await asyncio.sleep(50/1000)
-            await helpers.scroll_to_bottom(page)
             table_data = await getVoleTableData(page)
         except Exception as e:
             pass
@@ -268,10 +295,8 @@ async def getIFALeagueData(page, tournamentUrl):
     while table_data == {} and t < 2:
         try:
             if page.url != f'{baseIFAUrl}{tournamentUrl}':
-                await page.goto(f'{baseIFAUrl}{tournamentUrl}', timeout=10000)
-            await page.wait_for_load_state(state='load', timeout=5000)
+                await helpers.gotoUrl(page, f'{baseIFAUrl}{tournamentUrl}', timeout=15000)
             await asyncio.sleep(50/1000)
-            await helpers.scroll_to_bottom(page)
             table_data = await getIFATableData(page)
         except Exception as e:
             pass
@@ -332,37 +357,67 @@ async def refreshLeaguesTables(forceLoad = True, leagueName = None):
 
     return found
 
-async def getGameUrl(page, tournament, homeTeamId, guestTeamId, homeTeamName, guestTeamName):
+async def getGameUrl(page, tournament, round, fixture, homeTeamId, guestTeamId, homeTeamName, guestTeamName):
     try:
         aRow = None
-        divRow = None
-        await page.goto(f"{baseIFAUrl}{tournament['href']}", )        
-        await helpers.scroll_to_bottom(page)
-        
-        if homeTeamId:
-            selector = f".table_row[data-team1='{homeTeamId}'][data-team2='{guestTeamId}']"
-            aRowsLocator = page.locator(f"a{selector}")
-            if aRowsLocator and await aRowsLocator.count() == 1:
-                aRow = aRowsLocator.nth(0)
+        url = f"{baseIFAUrl}{tournament['href']}"
+        await helpers.gotoUrl(page, url)        
+        fixtureOptionText = f'מחזור {fixture}'
 
-        else:
-            div = page.locator(f"div.results-grid")
-            if await div.count() == 0:
-                return None
+        try:
+            roundLocator = page.locator(f"select#ddlBoxes")
+            if roundLocator and await roundLocator.count() == 1:
+                roundOptions = roundLocator.locator('option')
+                roundOptionsTexts = [await roundOptions.nth(i).text_content() for i in range(await roundOptions.count())]
+                
+                for roundOptionText in roundOptionsTexts:
+                    if True or f'סבב {round}' in roundOptionsTexts:
+                        await roundLocator.select_option(label=roundOptionText, timeout=15000)
+                        await asyncio.sleep(100/1000)
+                    fixtureLocator = page.locator(f"select#ddlRounds")            
+                    if fixtureLocator and await fixtureLocator.count() == 1:     
+                        fixtureOptions = fixtureLocator.locator('option')
+                        fixtureOptionsTexts = [await fixtureOptions.nth(i).text_content() for i in range(await fixtureOptions.count())]
+                        if fixtureOptionText in fixtureOptionsTexts:
+                            await fixtureLocator.select_option(label=fixtureOptionText, timeout=15000)
+                            await asyncio.sleep(300/1000)
+                            #fixtureTitleLocator = page.locator('div.table_data_header')
+                            #fixtureTitle = await (fixtureTitleLocator.nth(0)).inner_text()
+                
+                    if homeTeamId:
+                        selector = f".table_row[data-team1='{homeTeamId}'][data-team2='{guestTeamId}']"
+                        aRowsLocator = page.locator(f"a{selector}")
+                        if aRowsLocator and await aRowsLocator.count() == 1:
+                            aRow = aRowsLocator.nth(0)
+                            break
 
-            # Select all spans under divs with the class 'player'
-            gamesRows = div.locator("a.table_row")
-            games = [(gamesRows.nth(i)) for i in range(await gamesRows.count())]
-            for game in games:
-                gameText = await game.inner_text()
-                if homeTeamName in gameText and guestTeamName in gameText:
-                    aRow = game
-                    break
+                    else:
+                        resultsDivLocator = page.locator(f"div.results-grid")
+                        cnt = await resultsDivLocator.count()
+                        if cnt == 0:
+                            return None
+
+                        for i in range(cnt):
+                            resultGridLocator = resultsDivLocator.nth(i)
+                            gamesRowsLocator = resultGridLocator.locator("a.table_row")
+                            games = [(gamesRowsLocator.nth(i)) for i in range(await gamesRowsLocator.count())]
+                            for game in games:
+                                gameText = await game.inner_text()
+                                if homeTeamName in gameText and guestTeamName in gameText:
+                                    aRow = game
+                                    break
+                            if aRow:
+                                break
+
+        except Exception as ex:
+            pass
 
         if aRow:
+            logging.info(f'המשחק {homeTeamName} נגד {guestTeamName} פורסם')
             return f'{baseIFAUrl}{await aRow.get_attribute("href")}'
-    except Exception as e:
-        print(f'Error in getGameUrl {e}')
+        
+    except Exception as ex:
+        logging.error(f'Error in getGameUrl {url} {ex}')
     
     return None
 
@@ -427,12 +482,20 @@ def parsePlayersSpans(playersSpans):
 
 def formatPlayers(players):
     sortedPlayers = dict(sorted(players.items(), key=lambda player: player[1]['no']))
-    formatedPlayers =  [f"{'ק' if sortedPlayers[playerNo].get('c') else ''}{'ש' if sortedPlayers[playerNo].get('gk') else ''}{sortedPlayers[playerNo]['no']}" for playerNo in sortedPlayers]
+    #formatedPlayers =  [f"{'ק' if sortedPlayers[playerNo].get('c') else ''}{'ש' if sortedPlayers[playerNo].get('gk') else ''}{sortedPlayers[playerNo]['no']}" for playerNo in sortedPlayers]
+    captainPlayer = next((key for key, value in players.items() if value.get('c') == True), None)
+    goalkeeperPlayer = next((key for key, value in players.items() if value.get('gk') == True), None)
+    formatedPlayers = []
+    if captainPlayer:
+        formatedPlayers.append(str(captainPlayer))
+    if goalkeeperPlayer:
+        formatedPlayers.append(str(goalkeeperPlayer))
+    formatedPlayers += [f"{sortedPlayers[playerNo]['no']}" for playerNo in sortedPlayers  if (not captainPlayer or playerNo != captainPlayer) and (not goalkeeperPlayer or playerNo != goalkeeperPlayer)]
     return formatedPlayers
 
 async def scrapGameDetails(page, url):
     # Navigate to the URL
-    await page.goto(url)
+    await helpers.gotoUrl(page, url)
 
     homeActiveSpans = await scrapTeamSectionDetails(page, 'GAME_PLAYER_TYPE_ACTIVE_HOME')
     homeReplacementSpans = await scrapTeamSectionDetails(page, 'GAME_PLAYER_TYPE_Replacement_HOME')
@@ -489,9 +552,9 @@ def sort():
     sorted_players_desc = sorted(players, key=lambda x: x['score'], reverse=True)
     print("Sorted by score (descending):", sorted_players_desc)
 
-async def approveGame(refereeDetail, game, statusCell, page):
+async def approveGame(refereeDetail, gameId, statusCell, page):
     try:
-        logging.info(f'approveGame refId={refereeDetail["refId"]} gameId={game["id"]}')
+        logging.info(f'approveGame refId={refereeDetail["refId"]} gameId={gameId} title={page.url}')
         if statusCell:
             await statusCell.click()
             inputsLocators = page.locator("input.circle[name='confirm']")
@@ -507,14 +570,17 @@ async def approveGame(refereeDetail, game, statusCell, page):
 
         return False
     except Exception as ex:
-        logging.error(f'logout error: {ex}')
+        logging.error(f'approveGame error: {ex}')
 
 async def openBrowser():
     async with async_playwright() as p:                
         browser = await p.firefox.launch(headless=True)
-        page = await browser.new_page
-        players = await scrapGameDetails(page, 'https://vole.one.co.il')
-        await scrapVoleLeagues(page)
+        page = await browser.new_page()
+        #await page.goto
+        #textLocator = page.locator('div.table_data_header')
+        #await textLocator.inner_text()
+        players = await scrapGameDetails(page, 'https://www.football.org.il/leagues/games/game/?game_id=972746')
+        #await scrapVoleLeagues(page)
         pass
         #asyncio.run(refreshLeaguesTables())
 
@@ -535,7 +601,7 @@ async def openBrowser():
         browser.close
 
 if __name__ == "__main__":
-    asyncio.run(refreshLeaguesTables())
-    #asyncio.run(openBrowser())
+    #asyncio.run(refreshLeaguesTables())
+    asyncio.run(openBrowser())
 
     pass
