@@ -4,3 +4,6 @@ apps/refPortal/data/
 .DS_Store
 apps/TzevaAdom/redAlert
 apps/redAlert
+apps/refPortal/shared/__pycache__/helpers.cpython-311.pyc
+apps/refPortal/shared/__pycache__/helpers.cpython-313.pyc
+apps/refPortal/shared/__pycache__/twilioClient.cpython-311.pyc
