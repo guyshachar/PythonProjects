@@ -73,6 +73,9 @@ class RefPortalApi():
         downloadIcsFileLimit = self.limiter.limit('10 per minute')(self.downloadIcsFile)
         self.app.add_url_rule('/api/file/<fileId>', 'file', downloadIcsFileLimit, methods=['GET'])
 
+    def getFlaskApp(self):
+        return self.app
+
     async def start(self):
         try:
             self.logger.info('start')
@@ -185,6 +188,7 @@ class RefPortalApi():
         return self.addPendingProcess(mobileNo)
     
     async def registration(self):
+        self.logger.info(f"In registration")
         return render_template('registration.html')
 
     async def registrationSubmit(self):
@@ -435,8 +439,10 @@ class RefPortalApi():
         
         return str(response), 200  # Respond with Twilio XML response
 
+refPortalApi = RefPortalApi()
+#app13 = refPortalApi.getFlaskApp()
+
 if __name__ == '__main__':
-    refPortalApi = RefPortalApi()
     asyncio.run(refPortalApi.start())
     #asyncio.run(refPortalApi.approveGame('43679', '26396ab6'))
 """

@@ -356,7 +356,7 @@ class RefPortalService():
         file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/rules.json'
         self.rules = helpers.load_from_file(file_path)
 
-    def loadGames(self, filePath, file=None):
+    def loadGames(self, filePath=None, file=None):
         self.logger.info('load games...')
         file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/games.json'
         self.games = helpers.load_from_file(file_path)
@@ -624,12 +624,12 @@ class RefPortalService():
         details = ''
         details += self.generateGameRefereeDetails(game, 'שופט ראשי')
         details += self.generateGameRefereeDetails(game, 'שופט ראשי*')
-        details += self.generateGameRefereeDetails(game,'ע. שופט 1')
-        details += self.generateGameRefereeDetails(game,'ע. שופט 2')
-        details += self.generateGameRefereeDetails(game,'שופט רביעי')
-        details += self.generateGameRefereeDetails(game,'שופט מזכירות')
-        details += self.generateGameRefereeDetails(game,'שופט ראשון')
-        details += self.generateGameRefereeDetails(game,'שופט שני')
+        details += self.generateGameRefereeDetails(game, 'ע. שופט 1')
+        details += self.generateGameRefereeDetails(game, 'ע. שופט 2')
+        details += self.generateGameRefereeDetails(game, 'שופט רביעי')
+        details += self.generateGameRefereeDetails(game, 'שופט מזכירות')
+        details += self.generateGameRefereeDetails(game, 'שופט ראשון')
+        details += self.generateGameRefereeDetails(game, 'שופט שני')
         return details
 
     def generateReviewDetails(self, game):
@@ -1659,7 +1659,7 @@ class RefPortalService():
                     if (len(refereeData[objType]['removed']) > 1 and len(refereeData[objType]['changed']) >= 0) and len(refereeData[objType]['added']) == 0:
                         self.logger.error(self.colorText(refereeDetail,f"CheckRefereeData removed={len(refereeData[objType]['removed'])} changed={len(refereeData[objType]['changed'])} {refereeData[objType]}"))
                         return
-                    if len(refereeData[objType]['added']) > 0:
+                    if objType == 'games' and len(refereeData[objType]['added']) > 0:
                         self.lastGameAssignment = datetime.now()
                     if len(refereeData[objType]['added']) > 0 or len(refereeData[objType]['removed']) > 0 or len(refereeData[objType]['changed']) > 0:
                         self.logger.info(self.colorText(refereeDetail, f"{objType} A:{len(refereeData[objType]['added'])} R:{len(refereeData[objType]['removed'])} C:{len(refereeData[objType]['changed'])} #{cnt}/{t}"))

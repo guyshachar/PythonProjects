@@ -287,8 +287,8 @@ def seconds_to_hms(total_seconds):
         duration_str = f'{hours:02}:{duration_str}'
     return duration_str
 
-def save_to_json(fields):
-    data = json.dumps(fields, ensure_ascii=False, indent=4, cls=DateTimeEncoder)
+def save_to_json(fields, ensure_ascii=False, indent=4):
+    data = json.dumps(fields, ensure_ascii=ensure_ascii, indent=indent, cls=DateTimeEncoder)
     return data
 
 def load_from_json(data):

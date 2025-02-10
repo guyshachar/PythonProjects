@@ -8,3 +8,4 @@ twilio
 paho-mqtt
 playwright
 descope
+gunicorn

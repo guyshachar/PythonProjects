@@ -62,6 +62,7 @@ class TwilioClient:
             self.logger.error(f'writeMessages {ex}')
 
     async def sendUsingContentTemplate(self, toMobile, contentSid, contentVariables = None, mediaUrl = None, sendAt = None):
+        isAndroid = True
         if not contentSid:
             return
         
@@ -73,7 +74,9 @@ class TwilioClient:
             if contentVariables:
                 for key in contentVariables:
                     contentVariablesFixed[key] = contentVariables[key].replace('\n', '\r')
-            contentVariablesJson = helpers.save_to_json(contentVariablesFixed)
+                    if False and isAndroid:
+                        contentVariablesFixed[key] = contentVariablesFixed[key].replace('\r', 'ֿ\r\n')
+            contentVariablesJson = helpers.save_to_json(contentVariablesFixed, True)
 
             media = None
             if self.twilioAddMedia and mediaUrl:
@@ -321,10 +324,18 @@ class TwilioClient:
             pass
         pass
 
-if __name__ == '__main__':
-    file = ''
-    leagueId = file[file.find('leagueId')+8:].rstrip('.json')
+def readWA():
+    filename = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}whatsappmessage'
+    with open(filename, 'r') as file:
+        while True:
+            ch = file.read(1)  # Read one character
+            if not ch:
+                break  # Stop at EOF            
+            print(f'ch={ch} asc={ascii(ch)} ord={ord(ch)}')
 
+if __name__ == '__main__':
+    #readWA()
+    #pass
     client = TwilioClient(fromMobile=os.environ.get('twilioFromMobile'),twilioServiceId=os.environ.get('twilioServiceId'))
     #logging.basicConfig(level=logging.DEBUG)
     #isOpen = client.checkIfWindowIsOpen('+972525253248')
