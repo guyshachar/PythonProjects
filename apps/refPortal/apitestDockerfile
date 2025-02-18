@@ -17,6 +17,8 @@ RUN pip install playwright
 RUN playwright install
 RUN playwright install-deps  
 
+#RUN pip install ics pytz docker
+
 # Copy the script into the container
 RUN mkdir -p /shared
 RUN mkdir -p /rpApi
@@ -35,7 +37,7 @@ WORKDIR /app
 ENV BUILD_DATE=202502162352
 ENV logLevel=INFO
 
-EXPOSE 5001
+EXPOSE 5002
 
 # Command to run the script
 #CMD ["python", "test.py"]

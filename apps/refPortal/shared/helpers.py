@@ -13,6 +13,7 @@ import socket
 import threading
 from ics import Calendar, Event
 import pytz
+from colorama import Fore, Style
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -287,8 +288,8 @@ def seconds_to_hms(total_seconds):
         duration_str = f'{hours:02}:{duration_str}'
     return duration_str
 
-def save_to_json(fields, ensure_ascii=False, indent=4):
-    data = json.dumps(fields, ensure_ascii=ensure_ascii, indent=indent, cls=DateTimeEncoder)
+def save_to_json(data, ensure_ascii=False, indent=4):
+    data = json.dumps(data, ensure_ascii=ensure_ascii, indent=indent, cls=DateTimeEncoder)
     return data
 
 def load_from_json(data):
@@ -374,7 +375,7 @@ def getGameIcsFilename(refId, gameId):
     return (fileId, icsFile)
 
 def createIcs(name, begin, duration, description, location, removal, fileName):
-    israel_tz = pytz.timezone(os.environ.get('timezone'))
+    localTZ = pytz.timezone(os.environ.get('TZ'))
     gameCalendar = None
     event = None
 
@@ -396,7 +397,7 @@ def createIcs(name, begin, duration, description, location, removal, fileName):
         event.name = name
         gameCalendar.events.add(event)
 
-    event.begin = israel_tz.localize(begin)
+    event.begin = localTZ.localize(begin)
     event.duration = {"hours": duration}
     event.description = description
     event.location = location
@@ -417,6 +418,23 @@ def testConnection(host="8.8.8.8", port=80):
         return "DNS resolution failed"
     except socket.error as ex:
         return f"Network error: {ex}"
+
+def logError(logger, label, ex, refereeDetail=None):
+    if refereeDetail:
+        logger.error(colorText(refereeDetail, f'{label}: Exception Type: {type(ex).__name__}, Message: {ex}'))
+    else:
+        logger.error(f'{label}: Exception Type: {type(ex).__name__}, Message: {ex}')
+    logging.exception("An error occurred")
+
+def colorText(refereeDetail, text):
+    color = Fore.WHITE
+    try:
+        if refereeDetail.get('color'):
+            color = eval(f"Fore.{refereeDetail['color']}")
+    except Exception as ex:
+        pass
+    return f'{color}{refereeDetail["name"]}#{refereeDetail["refId"]}:{text}{Style.RESET_ALL}'
+
 
 if __name__ == "__main__":
     append_to_file({'aaa':'bbb'}, f'{os.getenv("MY_DATA_FILE", f"/run/data/")}testFile.json')

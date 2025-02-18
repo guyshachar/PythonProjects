@@ -15,8 +15,11 @@ from urllib.parse import urlparse
 # Add the rpService directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from shared.handleUsers import HandleUsers
-import shared.handleTournaments as handleTournaments
+from shared.handleTournaments import HandleTournaments
+from shared.handleRefereeData import HandleRefereeData
 from shared.twilioClient import TwilioClient
+from shared.dockerClient import DockerClient
+from shared.browserActions import BrowserActions
 import shared.helpers as helpers
 from shared.fileWatcher import watchFileChange
 
@@ -27,13 +30,16 @@ class RefPortalApi():
         logging.basicConfig(level=logLevel, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
         
-        self.handleUsers = HandleUsers()
-
+        self.handleUsers = HandleUsers(self.logger)
+        self.handleTournaments = HandleTournaments(self.logger)
+        self.handleRefereeData = HandleRefereeData(self.logger)
+        self.dockerClient = DockerClient(self.logger)
+        self.browserActions = BrowserActions(self.logger)
         (self.refereesDetails, self.refereesByMobile) = self.handleUsers.getAllRefereesByMobile()
         
         twilioServiceId = os.environ.get('twilioServiceId')
         self.twilioFromMobile = os.environ.get('twilioFromMobile')
-        self.twilioClient = TwilioClient(twilioServiceId=twilioServiceId, fromMobile=self.twilioFromMobile)
+        self.twilioClient = TwilioClient(self.logger, twilioServiceId=twilioServiceId, fromMobile=self.twilioFromMobile)
         self.twilioOnBoardingAdminMobile = os.environ.get('twilioOnBoardingAdminMobile')
 
         openText=f'Ref Portal Api {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} build#{os.environ.get("BUILD_DATE")} host={socket.gethostname()}'
@@ -46,32 +52,36 @@ class RefPortalApi():
 
         self.app.before_request(self.beforeRequestFunc)
 
+        #static
         self.app.add_url_rule('/', 'root', self.root, methods=['GET'])
         self.app.add_url_rule('/welcome', 'welcome', self.welcome, methods=['GET'])
-        self.app.add_url_rule('/health', 'health', self.health, methods=['GET'])
         self.app.add_url_rule('/getReferee', 'getReferee', self.getReferee, methods=['GET'])
-        self.app.add_url_rule('/getReferee', 'getRefereeSubmit', self.getRefereeSubmit, methods=['POST'])
         self.app.add_url_rule('/addPending', 'addPending', self.addPending, methods=['GET'])
-        self.app.add_url_rule('/addPending', 'addPendingSubmit', self.addPendingSubmit, methods=['POST'])
         self.app.add_url_rule('/registration', 'registration', self.registration, methods=['GET'])
-        self.app.add_url_rule('/registration', 'registrationSubmit', self.registrationSubmit, methods=['POST'])
         self.app.add_url_rule('/changePassword', 'changePassword', self.changePassword, methods=['GET'])
-        self.app.add_url_rule('/changePassword', 'changePasswordSubmit', self.changePasswordSubmit, methods=['POST'])
         self.app.add_url_rule('/activate', 'activate', self.activate, methods=['GET'])
-        self.app.add_url_rule('/activate', 'activateSubmit', self.activateSubmit, methods=['POST'])
-        self.app.add_url_rule('/changePassword', 'changePassword', self.changePassword, methods=['GET'])
-        self.app.add_url_rule('/changePassword', 'changePasswordSubmit', self.changePasswordSubmit, methods=['POST'])
         self.app.add_url_rule('/deactivate', 'deactivate', self.deactivate, methods=['GET'])
-        self.app.add_url_rule('/deactivate', 'deactivateSubmit', self.deactivateSubmit, methods=['POST'])
         self.app.add_url_rule('/refreshLeaguesTables', 'refreshLeaguesTables', self.refreshLeaguesTables, methods=['GET'])
-        self.app.add_url_rule('/refreshLeaguesTables', 'refreshLeaguesTablesSubmit', self.refreshLeaguesTablesSubmit, methods=['POST'])
+
+        #api
+        self.app.add_url_rule('/api/health', 'health', self.health, methods=['GET'])
+        self.app.add_url_rule('/api/getReferee', 'getRefereeSubmit', self.getRefereeSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/addPending', 'addPendingSubmit', self.addPendingSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/registration', 'registrationSubmit', self.registrationSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/changePassword', 'changePasswordSubmit', self.changePasswordSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/activate', 'activateSubmit', self.activateSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/changePassword', 'changePasswordSubmit', self.changePasswordSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/deactivate', 'deactivateSubmit', self.deactivateSubmit, methods=['POST'])
+        self.app.add_url_rule('/api/refreshLeaguesTables', 'refreshLeaguesTablesSubmit', self.refreshLeaguesTablesSubmit, methods=['POST'])
         self.app.add_url_rule('/api/approveGame/<refId>/<msgSid>/<gameId>', 'approveGame', self.approveGame, methods=['GET'])
-        self.app.add_url_rule('/reloadReferees', 'reloadReferees', self.reloadReferees, methods=['GET'])
-        self.app.add_url_rule('/incomingWebhook', 'incomingWebhook', self.incomingWebhook, methods=['POST'])
-        statusCallBackLimit = self.limiter.exempt()(self.statusCallback)
-        self.app.add_url_rule('/api/statusCallback', 'statusCallback', statusCallBackLimit, methods=['POST'])
+        self.app.add_url_rule('/api/reloadReferees', 'reloadReferees', self.reloadReferees, methods=['GET'])
         downloadIcsFileLimit = self.limiter.limit('10 per minute')(self.downloadIcsFile)
         self.app.add_url_rule('/api/file/<fileId>', 'file', downloadIcsFileLimit, methods=['GET'])
+
+        # twilio
+        self.app.add_url_rule('/twilio/incomingWebhook', 'incomingWebhook', self.incomingWebhook, methods=['POST'])
+        statusCallBackLimit = self.limiter.exempt()(self.statusCallback)
+        self.app.add_url_rule('/twilio/statusCallback', 'statusCallback', statusCallBackLimit, methods=['POST'])
 
     def getFlaskApp(self):
         return self.app
@@ -79,11 +89,13 @@ class RefPortalApi():
     async def start(self):
         try:
             self.logger.info('start')
-            ssl_file_path = f'{os.getenv("MY_SSL_FILE", "/run/ssl/")}'
+            ssl_file_path = f'{os.getenv("MY_SSL_FILE", "/run/ssl/rp")}'
+            port = int(f'{os.getenv("port", "5001")}')
+            self.logger.info(f'ssl_file_path={ssl_file_path}')
             flaskDebug = eval(os.environ.get('flaskDebug') or 'True')
-            self.app.run(host='0.0.0.0', debug=flaskDebug, port=5001, ssl_context=(f'{ssl_file_path}cert.pem', f'{ssl_file_path}key.pem'))     
-        except Exception as e:
-            self.logger.error(json.dumps(e))
+            self.app.run(host='0.0.0.0', debug=flaskDebug, port=port, ssl_context=(f'{ssl_file_path}.crt', f'{ssl_file_path}.key'))
+        except Exception as ex:
+            helpers.logError(self.logger, 'start', ex)
 
     def watchFiles(self):
         try:
@@ -93,7 +105,7 @@ class RefPortalApi():
             self.twilioClient.loadMessages(messages_file_path)
 
         except Exception as ex:
-            self.logger.error(f'watchFiles error: {ex}')
+            helpers.logError(self.logger, f'watchFiles error', ex)
 
     def beforeRequestFunc(self):
         self.logger.info(f"Intercepted request to: {request.path} from: {get_remote_address()}")
@@ -116,8 +128,10 @@ class RefPortalApi():
         return render_template('welcome.html')
     
     async def health(self):
+        logs = await self.getServiceLogs()
+        logsJson = helpers.save_to_json(logs)
         logging.info('health')
-        return f'Health is ok {datetime.now()}...'
+        return f'Health is ok {datetime.now()}...\n{logsJson}'
 
     async def getReferee(self):
         return render_template('getReferee.html')
@@ -215,7 +229,7 @@ class RefPortalApi():
         timeArrivalInMins = int(request.form.get('timeArrivalInMins').strip())
         
         self.logger.info(f"refId: {refId}, refName: {refName}, id: {id}, mobile: {mobileNo}")
-        result = await self.handleUsers.updateReferee(mobileNo, refId, refName, id, refPassword, None, originAddress, reminderInHours, timeArrivalInMins, None)
+        result = await self.handleUsers.updateReferee(mobileNo, refId, refName, id, refPassword, None, originAddress, reminderInHours, timeArrivalInMins, self.handleUsers.getRandomColor())
 
         if not result:
             await self.reloadReferees()
@@ -275,6 +289,17 @@ class RefPortalApi():
         else:
             return f"{datetime.now()} קוד שופט {refId} נכשל בהפעלת שופט, אנא פנה למנהל המערכת"
 
+    async def deactivateByRefId(self, refId):
+        # Handle the submitted parameters (e.g., print or save them)
+        self.logger.info(f"refId: {refId}")
+        
+        result = await self.handleUsers.deactivate(refId)
+
+        if not result:
+            return f"{datetime.now()} קוד שופט {refId} שופט הושבת בהצלחה"
+        else:
+            return f"{datetime.now()} קוד שופט {refId} נכשל בהשבתת שופט, אנא פנה למנהל המערכת"
+
     async def activateSubmit(self):       
         refId = request.form.get('refId').strip()
         # Handle the submitted parameters (e.g., print or save them)
@@ -307,7 +332,7 @@ class RefPortalApi():
         else:
             return f"{datetime.now()} קוד שופט {refId} נכשל בהפעלת שופט, אנא פנה למנהל המערכת"
 
-    async def forceSendByRefId(self, refId, objType = None, msgSid = None):
+    async def forceSendByRefId(self, refId, objType, msgSid = None):
         self.logger.info(f"refId: {refId}")
 
         if not msgSid:
@@ -321,7 +346,7 @@ class RefPortalApi():
 
     async def forceSendSubmit(self):       
         refId = request.form.get('refId').strip()
-        return self.forceSendByRefId(refId)
+        return self.forceSendByRefId(refId, 'games')
 
     async def refreshLeaguesTables(self):
         return render_template('refreshLeaguesTables.html')
@@ -331,7 +356,7 @@ class RefPortalApi():
         # Handle the submitted parameters (e.g., print or save them)
         self.logger.info(f"leagueName: {leagueName}")
         
-        result = await handleTournaments.refreshLeaguesTables(True, leagueName)
+        result = await self.handleTournaments.refreshLeaguesTables(True, leagueName)
 
         if result == True:
             return f"{datetime.now()} טבלאות עודכנו בהצלחה"
@@ -353,6 +378,15 @@ class RefPortalApi():
         self.handleUsers.writeReferees()
         return f"{datetime.now()} מאגר השופטים נטען מחדש"
 
+    async def getServiceLogs(self, tail = 1):
+        dockerServices = await self.dockerClient.getServices('refportalservice')
+        logs = []
+        for service in dockerServices:
+            self.logger.info(f'service={service.name}')
+            serviceLogs = await self.dockerClient.getServiceLogs(service, tail)
+            logs.append(serviceLogs)
+        return logs
+
     async def incomingWebhook(self):
         current_message_sid = request.form.get('MessageSid')
         original_replied_message_sid = request.form.get('OriginalRepliedMessageSid')
@@ -363,7 +397,7 @@ class RefPortalApi():
         button_id = request.form.get('ButtonPayload')
 
         response = MessagingResponse()
-        #response.message('טקסט לא מזוהה')
+        result = None
 
         self.logger.info(f"Received quick reply from {from_mobile} to {to_number}: {button_id} '{message_body}'")
         self.logger.info(f"Original replied message SID: {original_replied_message_sid}")
@@ -371,59 +405,110 @@ class RefPortalApi():
         self.logger.info(f"search for Referee")
         
         refereeDetail = self.refereesByMobile.get(fromMobileNo)
+        if message_body and message_body.lower().startswith('simulate#') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            if len(message_body.split('#')) != 3:
+                result = 'פרמטרים שגויים'
+            else:
+                fromMobileNo = message_body.split('#')[1].replace(' ','').replace('-','')
+                message_body = message_body.split('#')[2]
+                refereeDetail = self.refereesByMobile.get(fromMobileNo)
+                if not refereeDetail:
+                    refereeDetail = self.refereesDetails.get(fromMobileNo)
+                    if refereeDetail:
+                        fromMobileNo = refereeDetail['mobile']
+
         if refereeDetail:
             referee_webhook_file_path = f'{os.getenv("MY_DATA_FILE", "/run/data/")}referees/webhook/refId{refereeDetail["refId"]}_{current_message_sid}.json'
             helpers.save_to_file(request.form, referee_webhook_file_path)
+ 
+        # Request to Approve Game by Referee
+        if button_id and button_id.lower().startswith('approvegameid_') and refereeDetail:
+            gameId = button_id.split('_')[1]
+            result = await self.approveGame(refereeDetail['refId'], current_message_sid, gameId)
 
+        # Request to Update Password by Referee
+        elif message_body and message_body.lower().startswith('updatepassword_') and refereeDetail:
+            if len(message_body.split('_')) != 2:
+                result = 'פרמטרים שגויים'
+            else:
+                refPassword = message_body.split('_')[1]
+                result = await self.changePasswordByRefId(refereeDetail['refId'], refPassword)
+
+        # Request to Get All Games by Referee
+        elif message_body and (message_body.startswith('שיבוצים') or message_body.startswith('ביקורות')) and refereeDetail:
+            shortResponse = False
+            if message_body.startswith('שיבוצים'):
+                objType = 'games'
+                if message_body.startswith('שיבוצים קצר'):
+                    shortResponse = True
+            else:
+                objType = 'reviews'
+            result = await self.handleRefereeData.getDataByRefId(refereeDetail['refId'], objType, shortResponse)
+
+        elif message_body == 'חדש רישום' and refereeDetail:
+            pass
+        
         # Join Confirmation reply by Referee
-        if button_id and button_id.lower().startswith('joinconfirmation_'):
+        elif button_id and button_id.lower().startswith('joinconfirmation_'):
             answer = button_id.split('_')[1]
             mobileNo = button_id.split('_')[2]
             result = await self.joinConfirmationReply(mobileNo, answer)
             response.message(result)
 
-        # Request to Approve Game by Referee
-        elif button_id and button_id.lower().startswith('approvegameid_') and refereeDetail:
-            gameId = button_id.split('_')[1]
-            result = await self.approveGame(refereeDetail['refId'], current_message_sid, gameId)
-            response.message(result)
+        # Activate Referee by Admin
+        elif button_id and button_id.lower().startswith('activateref_') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            refId = button_id.split('_')[1]
+            result = await self.activateByRefId(refId)
 
-        # Request to Update Password by Referee
-        elif message_body and message_body.lower().startswith('updatepassword_') and refereeDetail:
-            refPassword = message_body.split('_')[1]
-            result = await self.changePasswordByRefId(refereeDetail['refId'], refPassword)
-            response.message(result)
+        # Activate Referee by Admin
+        elif message_body and message_body.lower().startswith('activateref_') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            refId = message_body.split('_')[1]
+            result = await self.activateByRefId(refId)
 
-        elif fromMobileNo == self.twilioOnBoardingAdminMobile:
-            # Ask to Join new Referee by Admin
-            if message_body and message_body.lower().startswith('asktojoin_'):
+        # Deactivate Referee by Admin
+        elif message_body and message_body.lower().startswith('deactivateref_') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            refId = message_body.split('_')[1]
+            result = await self.deactivateByRefId(refId)
+
+        # Ask to Join new Referee by Admin
+        elif message_body and message_body.lower().startswith('join_') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            if len(message_body.split('_')) != 2:
+                result = 'פרמטרים שגויים'
+            else:
                 mobileNo = message_body.split('_')[1]
                 result = await self.askToJoin(mobileNo)
-                response.message(result)
 
-            # Activate Referee by Admin
-            elif button_id and button_id.lower().startswith('activateref_'):
-                refId = button_id.split('_')[1]
-                result = await self.activateByRefId(refId)
-                response.message(result)
+        # Ask to Join new Referee by Admin
+        elif message_body and message_body.lower() == 'asktojoin':
+            mobileNo = fromMobileNo
+            result = await self.askToJoin(mobileNo)
 
-            # Force Send games/reviews messages to Referee by Admin
-            elif button_id and button_id.lower().startswith('forcesend'):
-                objType = None
-                refId = button_id.split('_')[1]
-                if len(button_id.split('_')) > 2:
-                    objType = button_id.split('_')[2]
-                result = await self.forceSendByRefId(refId, objType, current_message_sid)
-                response.message(result)
-            elif message_body == 'חדש רישום':
-                pass
+        # Force Send games/reviews messages to Referee by Admin
+        elif message_body and message_body.lower().startswith('forcesend') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            if len(message_body.split('_')) != 3:
+                result = 'פרמטרים שגויים'
             else:
-                response.message('טקסט לא מזוהה')
-        elif message_body == 'חדש רישום':
-            pass
-        else:
-            response.message('טקסט לא מזוהה')
+                refId = message_body.split('_')[1]
+                objType = message_body.split('_')[2]
+                result = await self.forceSendByRefId(refId, objType, current_message_sid)
 
+        elif message_body and message_body.lower().startswith('test') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            if len(message_body.split('_')) != 2:
+                result = 'פרמטרים שגויים'
+            else:
+                size = int(message_body.split('_')[1])
+                result = f"{'A' * size} size={size}"
+
+        elif message_body and message_body.lower().startswith('logs') and fromMobileNo == self.twilioOnBoardingAdminMobile:
+            logs = await self.getServiceLogs(5)
+            logsJson = helpers.save_to_json(logs)
+            result = logsJson
+        
+        else:
+            result = 'טקסט לא מזוהה'
+
+        if result:
+            response.message(result[:1600])
         return str(response), 200  # Respond with Twilio XML response
 
     async def statusCallback(self):
@@ -435,14 +520,14 @@ class RefPortalApi():
 
         response = MessagingResponse()
 
-        self.logger.info(f"Received status update for Message SID: {messageSid} with status: {messageStatus} error code: {errorCode}")
+        self.logger.debug(f"Received status update for Message SID: {messageSid} with status: {messageStatus} error code: {errorCode}")
         
         return str(response), 200  # Respond with Twilio XML response
 
-refPortalApi = RefPortalApi()
 #app13 = refPortalApi.getFlaskApp()
 
 if __name__ == '__main__':
+    refPortalApi = RefPortalApi()
     asyncio.run(refPortalApi.start())
     #asyncio.run(refPortalApi.approveGame('43679', '26396ab6'))
 """

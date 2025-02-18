@@ -1,4 +1,3 @@
-#from Shared.logger import Logger
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime, timedelta
@@ -12,8 +11,6 @@ import asyncio
 from urllib.parse import urlencode
 import json
 #from html2image import Html2Image
-from bs4 import BeautifulSoup
-import html2text
 import firebase_admin
 from firebase_admin import credentials, messaging
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -23,10 +20,11 @@ import pageManager
 from shared.mqttClient import MqttClient
 from shared.twilioClient import TwilioClient
 from playwright.async_api import async_playwright
-from colorama import Fore, Style
 import copy
-import shared.handleTournaments as handleTournaments
+from shared.handleTournaments import HandleTournaments
+from shared.handleRefereeData import HandleRefereeData
 from shared.fileWatcher import watchFileChange
+from shared.browserActions import BrowserActions
 
 class RefPortalService():
     def __init__(self):
@@ -59,15 +57,14 @@ class RefPortalService():
 
         self.logger.propagate = False
 
-        self.fileVersion = os.environ.get('fileVersion') or 'v'
         self.openText=f'Ref Portal Service {helpers.datetime_to_str(datetime.now())} build#{os.environ.get("BUILD_DATE")} host={socket.gethostname()}'
         self.logger.info(self.openText)
         self.logger.debug(self.openText)
 
-        self.loginUrl = os.environ.get('loginUrl') or 'https://ref.football.org.il/login'
-        self.gamesUrl = os.environ.get('gamesUrl') or 'https://ref.football.org.il/referee/home'
-        self.reviewsUrl = os.environ.get('reviewsUrl') or 'https://ref.football.org.il/referee/reviews'
-        self.IFAUrl = os.environ.get('IFAUrl') or 'www.football.org.il'
+        self.handleUsers = HandleUsers(self.logger)
+        self.handleTournaments = HandleTournaments(self.logger)
+        self.handleRefereeData = HandleRefereeData(self.logger)
+        self.browserActions = BrowserActions(self.logger)
 
         self.dataDic = {
             'pk' : 'pk',
@@ -75,11 +72,11 @@ class RefPortalService():
             "games" : {
                 "url": "https://ref.football.org.il/referee/home",
                 "processTemplates": self.processTemplatesGames,
-                "convert": self.convertGamesTableToText,
+                "convert": self.browserActions.convertGamesTableToText,
                 "parse": self.parseText,
                 'postParse': self.postParseGames,
                 'compare': self.compareList,
-                'generate': self.generateGameDetails,
+                'generate': self.handleRefereeData.generateGameDetails,
                 "actions": self.gamesActions,
                 'notify': self.notifyUpdate,
                 "notifyTitle" : "שיבוצים:",
@@ -96,11 +93,11 @@ class RefPortalService():
            },
             "reviews": {
                 "url" : "https://ref.football.org.il/referee/reviews",
-                "convert": self.convertReviewsTableToText,
+                "convert": self.browserActions.convertReviewsTableToText,
                 "parse": self.parseText,
                 'postParse': self.postParseReviews,
                 'compare': self.compareList,
-                'generate': self.generateReviewDetails,
+                'generate': self.handleRefereeData.generateReviewDetails,
                 'notify': self.notifyUpdate,
                 "notifyTitle" : "ביקורות:",
                 "tags" : [ "מס.", 'תאריך', "שעה", "מסגרת משחקים", "משחק", "מגרש", "מחזור", "תפקיד במגרש", "מבקר", "ציון" ],
@@ -115,23 +112,22 @@ class RefPortalService():
         self.checkGames = eval(os.environ.get('checkGames') or 'True')
         self.checkReviews = eval(os.environ.get('checkReviews') or 'True')
         self.translation_table = str.maketrans('', '', "!@#'? \"")
+        self.openWindowReminder = int(os.environ.get('openWindowReminder') or '18')
 
         self.swLevel = os.environ.get('swLevel') or 'debug'
 
         self.apiServiceUrlBase = os.environ.get('apiServiceUrlBase')
         self.approveGames = eval(os.environ.get('approveGames') or 'False')
-        self.start24HoursWindowNotification = eval(os.environ.get('start24HoursWindowNotification') or 'False')
         twilioServiceId = os.environ.get('twilioServiceId')
         self.twilioFromMobile = os.environ.get('twilioFromMobile')
-        self.twilioClient = TwilioClient(twilioServiceId=twilioServiceId, fromMobile=self.twilioFromMobile)
+        self.twilioClient = TwilioClient(self.logger, twilioServiceId=twilioServiceId, fromMobile=self.twilioFromMobile)
         self.twilioUseTemplate = eval(os.environ.get('twilioUseTemplate') or 'False')
         self.twilioUseFreeText = eval(os.environ.get('twilioUseFreeText') or 'False')
         self.twilioSend = eval(os.environ.get('twilioSend') or 'False')
         self.twilioNewGameContentSid = os.environ.get('twilioNewGameContentSid')
         self.twilioGameUpdateContentSid = os.environ.get('twilioGameUpdateContentSid')
         self.twilioGameNoticeContentSid = os.environ.get('twilioGameNoticeContentSid')
-        self.handleUsers = HandleUsers()
-
+        
         self.refIdsPartition = (os.environ.get('refIdsPartition') or '1,2,3,4,5,6,7,8,9,0').split(',')
 
         self.loadMetadata(True)
@@ -139,7 +135,7 @@ class RefPortalService():
         self.concurrentPages = int(os.environ.get('concurrentPages') or '4')
         self.browserRenewal = int(os.environ.get('browserRenewal') or '5')
         self.alwaysRenewPages = eval(os.environ.get('alwaysRenewPages', 'False'))
-        self.activeReferees = len(self.activeRefereeDetails)
+        self.activeReferees = len(self.handleRefereeData.activeRefereeDetails)
         if self.activeReferees < self.concurrentPages:
             self.concurrentPages = self.activeReferees
 
@@ -152,7 +148,7 @@ class RefPortalService():
         self.mqttPublish = eval(os.environ.get('mqttPublish') or 'True')
         self.mqttClient = MqttClient(parent=self)
         self.mqttTopic = 'my/mqtt/refPortal'
-        self.logger.info(f'logLevel={logLevel} url={self.loginUrl} interval={self.pollingInterval} twilio={self.twilioSend} mqtt={self.mqttPublish} pages={self.concurrentPages} approveGames={self.approveGames}')
+        self.logger.info(f'logLevel={logLevel} interval={self.pollingInterval} twilio={self.twilioSend} mqtt={self.mqttPublish} pages={self.concurrentPages} approveGames={self.approveGames}')
    
     def updateRefereeAddress(self, refereeDetail, address = None):
         if 'addressDetails' not in refereeDetail or address and address != refereeDetail['addressDetails']['address']:
@@ -188,31 +184,39 @@ class RefPortalService():
             tournaments_file_path = f'{os.getenv("MY_DATA_FILE", "/run/data/")}tournaments/tournaments.json'
             leagueTables_file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/tables/'
             rules_file_path = f'{os.getenv("MY_DATA_FILE", "/run/data/")}tournaments/rules.json'
-            games_file_path = f'{os.getenv("MY_DATA_FILE", "/run/data/")}tournaments/games.json'
+            games_file_path = f'{os.getenv("MY_DATA_FILE", "/run/data/")}tournaments/games/'
             messages_file_path = f'{os.getenv("MY_DATA_FILE", "/run/data/")}messages/messages.json'
 
-            self.refereeFileWatchObserver = watchFileChange(referee_file_path, self.shouldLoadRefereesFile)
-            self.refTemplatesFileWatchObserver = watchFileChange(refTemplates_file_path, self.shouldLoadTemplatesFile)
-            self.fieldsFileWatchObserver = watchFileChange(fields_file_path, self.shouldLoadFieldsFile)
-            self.sectionsFileWatchObserver = watchFileChange(sections_file_path, self.shouldLoadSectionsFile)
-            self.tournamentsFileWatchObserver = watchFileChange(tournaments_file_path, self.shouldLoadTemplatesFile)
-            self.leagueTablesFileWatchObserver = watchFileChange(leagueTables_file_path, self.shouldLoadLeagueTableFile)
-            self.rulesFileWatchObserver = watchFileChange(rules_file_path, self.shouldLoadRulesFile)
-            self.gamesFileWatchObserver = watchFileChange(games_file_path, self.shouldLoadGamesFile)
-            self.messagesFileWatchObserver = watchFileChange(messages_file_path, self.shouldLoadMessagesFile)
+            if initial:
+                self.refereeFileWatchObserver = watchFileChange(referee_file_path, self.shouldLoadRefereesFile)
+                self.refTemplatesFileWatchObserver = watchFileChange(refTemplates_file_path, self.shouldLoadTemplatesFile)
+                self.fieldsFileWatchObserver = watchFileChange(fields_file_path, self.shouldLoadFieldsFile)
+                self.sectionsFileWatchObserver = watchFileChange(sections_file_path, self.shouldLoadSectionsFile)
+                self.tournamentsFileWatchObserver = watchFileChange(tournaments_file_path, self.shouldLoadTournamentsFile)
+                self.leagueTablesFileWatchObserver = watchFileChange(leagueTables_file_path, self.shouldLoadLeagueTableFile)
+                self.rulesFileWatchObserver = watchFileChange(rules_file_path, self.shouldLoadRulesFile)
+                self.gamesFileWatchObserver = watchFileChange(games_file_path, self.shouldLoadGamesFile)
+                self.messagesFileWatchObserver = watchFileChange(messages_file_path, self.shouldLoadMessagesFile)
 
-            if initial or self.refereesFileChanged or self.refTemplatesFileChanged and len(self.refTemplatesFileChanged) > 0:
+            if initial or self.refereesFileChanged:
                 self.loadActiveRefereeDetails(referee_file_path, None, initial)
+            if not initial and self.refTemplatesFileChanged and len(self.refTemplatesFileChanged) > 0:
+                for refId in self.refTemplatesFileChanged:
+                    file = self.refTemplatesFileChanged[refId]
+                    self.loadRefTemplates(refTemplates_file_path, file)
             if initial or self.fieldsFileChanged:
                 self.loadFields(fields_file_path)
             if initial or self.sectionsFileChanged:
                 self.loadSections(sections_file_path)
-            if initial or self.tournamentsFileChanged or self.leagueTableFileChanged and len(self.leagueTableFileChanged) > 0:
-                self.loadTournaments(tournaments_file_path, None, initial)
+            if initial or self.tournamentsFileChanged or self.handleTournaments.leagueTableFileChanged and len(self.handleTournaments.leagueTableFileChanged) > 0:
+                self.handleTournaments.loadTournaments(tournaments_file_path, None, initial)
             if initial or self.rulesFileChanged:
                 self.loadRules(rules_file_path)
-            if initial or self.gamesFileChanged:
-                self.loadGames(games_file_path)
+            if not initial and self.gamesFileChanged and len(self.gamesFileChanged) > 0:
+                self.handleTournaments.loadTournaments(tournaments_file_path, None, initial)
+                for id in self.gamesFileChanged:
+                    file = self.gamesFileChanged[id]
+                    self.handleTournaments.loadGames(games_file_path, file)
             if initial or self.messagesFileChanged:
                 self.twilioClient.loadMessages(messages_file_path)
 
@@ -221,13 +225,13 @@ class RefPortalService():
             self.fieldsFileChanged = False
             self.sectionsFileChanged = False
             self.tournamentsFileChanged = False
-            self.leagueTableFileChanged = {}
+            self.handleTournaments.leagueTableFileChanged = {}
             self.rulesFileChanged = False
-            self.gamesFileChanged = False
+            self.gamesFileChanged = {}
             self.messagesFileChanged = False
 
         except Exception as ex:
-            self.logError(f'watchFiles', ex)
+            helpers.logError(self.logger, f'watchFiles', ex)
 
     def shouldLoadRefereesFile(self, filePath, file=None):
         self.refereesFileChanged = True
@@ -235,7 +239,8 @@ class RefPortalService():
         refId = file[file.find('refId')+5:].rstrip('.json')
         if not refId.isdigit():
             return
-        self.refTemplatesFileChanged[refId] = True
+        if not self.refTemplatesFileChanged.get(refId):            
+            self.refTemplatesFileChanged[refId] = file
     def shouldLoadRefereesFile(self, filePath, file=None):
         self.refereesFileChanged = True
     def shouldLoadFieldsFile(self, filePath, file=None):
@@ -248,39 +253,36 @@ class RefPortalService():
         leagueId = file[file.find('leagueId')+8:].rstrip('.json')
         if not leagueId.isdigit():
             return
-        self.leagueTableFileChanged[leagueId] = True
+        self.handleTournaments.leagueTableFileChanged[leagueId] = True
     def shouldLoadRulesFile(self, filePath, file=None):
         self.rulesFileChanged = True
     def shouldLoadGamesFile(self, filePath, file=None):
-        self.gamesFileChanged = True
+        id = file[:file.find('.')]
+        if not self.gamesFileChanged.get(id):            
+            self.gamesFileChanged[id] = file
     def shouldLoadMessagesFile(self, filePath, file=None):
         self.messagesFileChanged = True
 
     def loadActiveRefereeDetails(self, filePath, path=None, initial=False):
-        if initial or self.shouldLoadRefereesFile:
-            refereesDetails = self.handleUsers.getAllRefereesDetails()
-            localReferees = helpers.load_from_file(filePath)
-            if localReferees and len(localReferees) > 0:
-                localRefereesDetails = {}
-                for refId in localReferees:
-                    localRefereesDetails[refId] = refereesDetails[refId]
-                refereesDetails = localRefereesDetails            
-            activeRefereeDetails = [refereesDetails[refId] for refId in refereesDetails if refereesDetails[refId].get('name') and refereesDetails[refId].get('status') == "active" and str(refId)[-1] in self.refIdsPartition]
-            sortedActiveRefereeDetails = sorted(activeRefereeDetails, key=lambda referee: referee['name'])
-            activeRefereeDetails = {}
-        if initial or self.refTemplatesFileChanged and len(self.refTemplatesFileChanged) > 0:
-            self.refTemplateMessages = {}
+        refereesDetails = self.handleUsers.getAllRefereesDetails()
+        localReferees = helpers.load_from_file(filePath)
+        if localReferees and len(localReferees) > 0:
+            localRefereesDetails = {}
+            for refId in localReferees:
+                localRefereesDetails[refId] = refereesDetails[refId]
+            refereesDetails = localRefereesDetails            
+        activeRefereeDetails = [refereesDetails[refId] for refId in refereesDetails if refereesDetails[refId].get('name') and refereesDetails[refId].get('status') == "active" and str(refId)[-1] in self.refIdsPartition]
+        sortedActiveRefereeDetails = sorted(activeRefereeDetails, key=lambda referee: referee['name'])
+        activeRefereeDetails = {}
+        self.refTemplateMessages = {}
         for refereeDetail in sortedActiveRefereeDetails:
             refId = refereeDetail['refId']
-            if initial or self.shouldLoadRefereesFile:
-                activeRefereeDetails[refId] = refereeDetail
-            if initial or self.refTemplatesFileChanged.get(refId, False):
-                refTemplatedFilePath = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}referees/templates/'
-                self.loadRefTemplates(refTemplatedFilePath, f'refId{refereeDetail["refId"]}.json')
+            activeRefereeDetails[refId] = refereeDetail
+            refTemplatedFilePath = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}referees/templates/'
+            self.loadRefTemplates(refTemplatedFilePath, f'refId{refId}.json')
 
-        if initial or self.shouldLoadRefereesFile:
-            self.activeRefereeDetails = activeRefereeDetails
-            self.logger.info(f'Referees#: {len(refereesDetails)} Active#: {len(activeRefereeDetails)}')
+        self.handleRefereeData.activeRefereeDetails = activeRefereeDetails
+        self.logger.info(f'Referees#: {len(refereesDetails)} Active#: {len(activeRefereeDetails)}')
 
     def loadRefTemplates(self, filePath, file):
         refId = file[file.find('refId')+5:].rstrip('.json')
@@ -305,7 +307,7 @@ class RefPortalService():
                 refereeDetails[refId] = refereeDetail
             return refereeDetails
         except Exception as ex:
-            self.logError('readRefereeDetails', ex, refereeDetail)
+            helpers.logError(self.logger, 'readRefereeDetails', ex, refereeDetail)
 
         return None
     
@@ -316,9 +318,9 @@ class RefPortalService():
             refereeDetails = self.readRefereeDetails(referee_file_path)
             refereeDetails[refereeDetail['refId']] = refereeDetail
             helpers.save_to_file(refereeDetails, referee_file_path)
-            self.activeRefereeDetails = refereeDetails
+            self.handleRefereeData.activeRefereeDetails = refereeDetails
         except Exception as ex:
-            self.logError('writeReferees', ex, refereeDetail)
+            helpers.logError(self.logger, 'writeReferees', ex, refereeDetail)
 
     def loadFields(self, filePath, file=None):
         self.logger.info('load fields...')
@@ -328,323 +330,10 @@ class RefPortalService():
         self.logger.info('load sections...')
         self.sections = helpers.load_from_file(filePath)
 
-    def loadTournaments(self, filePath, file=None, initial=False):
-        self.logger.info('load tournaments...')
-        self.tournaments = helpers.load_from_file(filePath)
-
-        self.logger.info('load tournaments tables...')
-        self.tournamentsTables = {}
-        for tournamentName in self.tournaments:
-            tournament = self.tournaments[tournamentName]
-            if tournament.get('leagueId'):
-                leagueId = str(tournament["leagueId"])
-                if initial or self.leagueTableFileChanged.get(leagueId):
-                    filePath = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/tables/'
-                    self.loadLeagueTable(filePath, f'leagueId{leagueId}.json')
-
-    def loadLeagueTable(self, filePath, file):
-        leagueId = file[file.find('leagueId')+8:].rstrip('.json')
-        if not leagueId.isdigit():
-            return
-        fullPath = f'{filePath}{file}'
-        if os.path.exists(fullPath):
-            self.tournamentsTables[leagueId] = helpers.load_from_file(fullPath)
-            self.logger.info(f'refresh table leagueId={leagueId} #teams={len(self.tournamentsTables[leagueId])}...')
-
     def loadRules(self, filePath, file=None):
         self.logger.info('load rules...')
         file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/rules.json'
         self.rules = helpers.load_from_file(file_path)
-
-    def loadGames(self, filePath=None, file=None):
-        self.logger.info('load games...')
-        file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/games.json'
-        self.games = helpers.load_from_file(file_path)
-
-    def writeGame(self, gamePk, gameDetail):
-        gamesFilePath = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}tournaments/games.json'
-        self.games[gamePk] = gameDetail
-        helpers.save_to_file(self.games, gamesFilePath)
-
-    def getTagText(self, objType, tag, cellHtml):
-        if tag and f'{tag}Tag' in self.dataDic[objType]:
-            tagParse = self.dataDic[objType][f'{tag}Tag']
-            for filter, useText in tagParse['dic']:
-                if filter == None or filter in cellHtml:
-                    return tagParse['name'], useText
-        
-        return None, None
-
-    def transformHtmlTable(self, html):
-        # Parse the HTML
-        soup = BeautifulSoup(html, 'html.parser')
-
-        # Create the table and header row
-        table = soup.new_tag('table')
-        header_row = soup.new_tag('tr')
-        headers = ['תפקיד', '* שם', '* דרג', '* טלפון', '* כתובת']
-
-        for header in headers:
-            th = soup.new_tag('th')
-            span = soup.new_tag('span', _ngcontent_nop_c149="", **{"class": "info"})
-            span.string = header
-            th.append(span)
-            header_row.append(th)
-
-        table.append(header_row)
-
-        # Process each 'info-box'
-        for info_box in soup.find_all('div', class_='info-box'):
-            data_row = soup.new_tag('tr')
-            # Add role (title)
-            title_td = soup.new_tag('td')
-            title_span = info_box.find('span', class_='title')
-            title_td.append(title_span)
-            data_row.append(title_td)
-
-            # Add other fields from list items
-            for li in info_box.find_all('li'):
-                data_td = soup.new_tag('td')
-                data_span = li.find_all('span')[-1]  # The value is in the second <span>
-                data_td.append(data_span)
-                data_row.append(data_td)
-            
-            table.append(data_row)
-
-        # Output the transformed HTML
-        return str(table.prettify())
-
-    async def convertGamesTableToTextUsingSoup(self, html):
-        games = "games"
-        results = []
-
-        try:
-            if html == None:
-                return results
-
-            # Parse the HTML using BeautifulSoup
-            soup = BeautifulSoup(html, 'html.parser')
-
-            h = html2text.HTML2Text()
-            # Ignore converting links from HTML
-            h.ignore_links = False
-
-            # Extract table rows
-            rows = soup.find_all('tr')  
-            
-            # Get headers (assumes the first row contains headers)
-            headers = [th.get_text(strip=True) for th in rows[0].find_all('th')]
-            if len(rows) <= 1:
-                pass
-            else:
-                i = 0
-                for row in rows[1:]:  # Skip the header row
-                    i += 1
-                    cells = row.find_all('td')
-                    if len(cells) == len(headers):  # Regular rows
-                        for header, cell in zip(headers, cells):
-                            cellText = cell.get_text(strip=True)
-                            (tagName, tagText) = self.getTagText(games, header, str(cell))
-                            obj = None
-                            if header and (cellText or tagText):
-                                obj = {'header': header, 'text': cellText or tagText, 'cell': cell}
-                                results.append(obj)
-                            if tagName and cellText and tagText:
-                                obj = {'header': tagName, 'text': tagText, 'cell': cell}
-                                results.append(obj)
-
-        except Exception as ex:
-            self.logError('convertGamesTableToTextUsingSoup', ex)
-            return None
-
-        return results
-
-    async def convertGamesTableToText(self, page, refereeDetail):
-        games = "games"
-        results = []
-
-        try:
-            '''
-            if html == None:
-                results.append({'text':'אין שיבוצים'})
-                return results
-            '''
-            tablesLocator = page.locator('table.ng-tns-c150-1')
-            cnt = await tablesLocator.count()
-            self.logger.debug(self.colorText(refereeDetail, f'convertGamesTableToText/tablesLocator={cnt}'))
-            if cnt == 0: #Still need to investigate this scenario
-                return results
-            
-            if cnt == 1:
-                gamesTable = tablesLocator.nth(0)
-                rowsLocator = gamesTable.locator('tr')
-                cnt = await rowsLocator.count()
-                self.logger.debug(self.colorText(refereeDetail, f'convertGamesTableToText/rowsLocator={cnt}'))
-                gameRows = [(rowsLocator.nth(i)) for i in range(cnt)]
-                
-                # Process each subsequent row and map to headers
-                if len(gameRows) <= 1:
-                    results.append({'text': 'אין שיבוצים'})
-
-                else:
-                    gameHeadersLocator = gameRows[0].locator('th')
-                    gameHeaders = [(gameHeadersLocator.nth(i)) for i in range(await gameHeadersLocator.count())]
-                    gameHeadersTexts = [(await header.inner_text()).strip() for header in gameHeaders]
-
-                    i = 0
-                    for gameRow in gameRows[1:]:  # Skip the header row
-                        i += 1
-                        gameCellsLocator = gameRow.locator('td')
-                        gameCells = [(gameCellsLocator.nth(i)) for i in range(await gameCellsLocator.count())]
-                        if len(gameCells) == len(gameHeadersTexts):  # Regular rows
-                            for gameHeader, gameCell in zip(gameHeadersTexts, gameCells):
-                                cellText = (await gameCell.inner_text()).strip()
-                                cellHTml = await gameCell.evaluate("element => element.outerHTML")
-                                (tagName, tagText) = self.getTagText(games, gameHeader, cellHTml)
-                                obj = None
-
-                                await gameCell.evaluate('(element, unique_id) => element.id = unique_id', f'{gameHeader}_{i}')
-
-                                if gameHeader and (cellText or tagText):
-                                    obj = {'header': gameHeader, 'text': cellText or tagText, 'cell': gameCell}
-                                    results.append(obj)
-                                if tagName and cellText and tagText:
-                                    obj = {'header': tagName, 'text': tagText, 'cell': gameCell}
-                                    results.append(obj)
-
-                        elif len(gameCells) == 1:  # Row with colspan
-                            cellHTml = await gameCells[0].evaluate("element => element.outerHTML")
-                            transformedHtml = self.transformHtmlTable(cellHTml)
-                            #self.logger.warning(str(html1))
-                            nestedResult = await self.convertGamesTableToTextUsingSoup(transformedHtml)
-                            results.append({'text': ''})
-                            for obj in nestedResult:
-                                results.append(obj)
-                
-        except Exception as ex:
-            self.logError('convertGamesTableToText', ex, refereeDetail)
-            return None
-        
-        return results
-
-    async def convertReviewsTableToText(self, page, refereeDetail):
-        reviews = "reviews"
-        results = []
-
-        try:
-            '''
-            if html == None:
-                results.append({'text':'אין ביקורות'})
-                return results
-            '''
-            tablesLocator = page.locator('table.ng-star-inserted')
-            cnt = await tablesLocator.count()
-            self.logger.debug(self.colorText(refereeDetail, f'convertReviewsTableToText/tablesLocator={cnt}'))
-            if cnt == 0: #Still need to investigate this scenario
-                return results
-            
-            if cnt == 1:
-                reviewsTable = tablesLocator.nth(0)
-                rowsLocator = reviewsTable.locator('tr')
-                cnt = await rowsLocator.count()
-                self.logger.debug(self.colorText(refereeDetail, f'convertReviewsTableToText/rowsLocator={cnt}'))
-                reviewRows = [(rowsLocator.nth(i)) for i in range(await rowsLocator.count())]
-
-                reviewHeadersLocator = reviewRows[0].locator('th')
-                reviewHeaders = [(reviewHeadersLocator.nth(i)) for i in range(await reviewHeadersLocator.count())]
-                reviewHeadersTexts = [(await header.inner_text()).strip() for header in reviewHeaders]
-                # Process each subsequent row and map to headers
-                if len(reviewRows) <= 1:
-                    results.append({'text': 'אין ביקורות'})
-                else:
-                    i = 0
-                    for reviewRow in reviewRows[1:]:  # Skip the header row
-                        i += 1
-                        reviewCellsLocator = reviewRow.locator('td')
-                        reviewCells = [(reviewCellsLocator.nth(i)) for i in range(await reviewCellsLocator.count())]
-                        if len(reviewCells) == len(reviewHeadersTexts):  # Regular rows
-                            for reviewHeader, reviewCell in zip(reviewHeadersTexts, reviewCells):
-                                cellText = (await reviewCell.inner_text()).strip()
-                                cellHTml = await reviewCell.evaluate("element => element.outerHTML")
-                                (tagName, tagText) = self.getTagText(reviews, reviewHeader, cellHTml)
-                                obj = None
-
-                                await reviewCell.evaluate('(element, unique_id) => element.id = unique_id', f'{reviewHeader}_{i}')
-
-                                if reviewHeader and (cellText or tagText):
-                                    obj = {'header': reviewHeader, 'text': cellText or tagText, 'cell': reviewCell}
-                                    results.append(obj)
-                                if tagName and cellText and tagText:
-                                    obj = {'header': tagName, 'text': tagText, 'cell': reviewCell}
-                                    results.append(obj)
-
-                        elif len(reviewCells) == 1:  # Row with colspan
-                            results.append({'text': await reviewCells.nth(0).inner_text()})
-                
-        except Exception as ex:
-            self.logError(f'convertReviewsTableToText', ex, refereeDetail)
-            return None
-        
-        return results
-        
-    def objProperty(self, obj, property):
-        if obj.get(property):
-            return f'{property}: {obj.get(property)}'
-        return None
-
-    def generateGameRefereeDetails(self, currentGame, job): 
-        currentJobProp = currentGame.get('nested').get(job)
-
-        if currentJobProp:
-            details = f'\n{job}'
-            details += f"\n{self.objProperty(currentJobProp, '* שם')}"
-            details += f"\n{self.objProperty(currentJobProp, '* סטטוס')}"
-            details += f"\n{self.objProperty(currentJobProp, '* דרג')}"
-            details += f"\n{self.objProperty(currentJobProp, '* טלפון')}"
-            details += f"\n{self.objProperty(currentJobProp, '* כתובת')}"
-            return details
-        else:
-            return ''
-        
-    def generateGameDetails(self, game):
-        details = ''
-        details += self.objProperty(game, 'תאריך')
-        details += f"\n{self.objProperty(game, 'יום')}"
-        details += f"\n{self.objProperty(game, 'מסגרת משחקים')}"
-        details += f"\n{self.objProperty(game, 'משחק')}"
-        details += f"\n{self.objProperty(game, 'סבב')}"
-        details += f"\n{self.objProperty(game, 'מחזור')}"
-        details += f"\n{self.objProperty(game, 'מגרש')}"
-        details += f"\n{self.objProperty(game, 'סטטוס')}"
-        details += '\n'
-        details += self.generateGameReferees(game)
-        return details
-
-    def generateGameReferees(self, game):
-        details = ''
-        details += self.generateGameRefereeDetails(game, 'שופט ראשי')
-        details += self.generateGameRefereeDetails(game, 'שופט ראשי*')
-        details += self.generateGameRefereeDetails(game, 'ע. שופט 1')
-        details += self.generateGameRefereeDetails(game, 'ע. שופט 2')
-        details += self.generateGameRefereeDetails(game, 'שופט רביעי')
-        details += self.generateGameRefereeDetails(game, 'שופט מזכירות')
-        details += self.generateGameRefereeDetails(game, 'שופט ראשון')
-        details += self.generateGameRefereeDetails(game, 'שופט שני')
-        return details
-
-    def generateReviewDetails(self, game):
-        details = ''
-        details += self.objProperty(game, 'מס.')
-        details += f"\n{self.objProperty(game, 'תאריך')}"
-        details += f"\n{self.objProperty(game, 'שעה')}"
-        details += f"\n{self.objProperty(game, 'מסגרת משחקים')}"
-        details += f"\n{self.objProperty(game, 'משחק')}"
-        details += f"\n{self.objProperty(game, 'מגרש')}"
-        details += f"\n{self.objProperty(game, 'מחזור')}"
-        details += f"\n{self.objProperty(game, 'תפקיד במגרש')}"
-        details += f"\n{self.objProperty(game, 'מבקר')}"
-        details += f"\n{self.objProperty(game, 'ציון')}"
-        return details
 
     async def parseText(self, objType, convertResults):
         try:
@@ -720,21 +409,22 @@ class RefPortalService():
             return dicObjects
 
         except Exception as ex:
-            self.logError(f'parseText', ex)
+            helpers.logError(self.logger, f'parseText', ex)
             return None
 
     async def processTemplatesGames(self, objType, refereeData, page):
         try:
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
+            refId = refereeData['refId']
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refId]
 
-            messages = self.refTemplateMessages[refereeDetail['refId']]
-            self.logger.debug(self.colorText(refereeDetail, f"{len(messages)}"))
+            messages = self.refTemplateMessages[refId]
+            self.logger.debug(helpers.colorText(refereeDetail, f"{len(messages)}"))
             if messages:
                 save = False
                 for msgId in list(messages.keys()):
-                    self.logger.debug(self.colorText(refereeDetail, f"{msgId}"))
+                    self.logger.debug(helpers.colorText(refereeDetail, f"{msgId}"))
                     message = messages[msgId]
-                    self.logger.debug(self.colorText(refereeDetail, f"{msgId} {message.get('repliedButtonId')} {message['action']}"))
+                    self.logger.debug(helpers.colorText(refereeDetail, f"{msgId} {message.get('repliedButtonId')} {message['action']}"))
                     if message['created'] < datetime.now() - timedelta(weeks=2):
                         del messages[msgId]
                         save = True
@@ -748,39 +438,34 @@ class RefPortalService():
                         game = refereeDetail[objType][gameId]
                         if not game.get('cells') or not game['cells'].get('סטטוס'):
                             continue
-                        self.logger.info(self.colorText(refereeDetail, f"{message['msgSid']} gameId={gameId} {game['משחק']}"))
+                        self.logger.info(helpers.colorText(refereeDetail, f"{message['msgSid']} gameId={gameId} {game['משחק']}"))
                         cell = game['cells']['סטטוס']
-                        result = await handleTournaments.approveGame(refereeDetail, gameId, cell, page)
+                        result = await self.handleTournaments.approveGame(refereeDetail, gameId, cell, page)
                         if result:
                             message['status'] = 'completed'
                             message['updated'] = datetime.now()
-                            self.logger.info(self.colorText(refereeDetail, f"{gameId} אושר בפורטל"))
+                            self.logger.info(helpers.colorText(refereeDetail, f"{gameId} אושר בפורטל"))
                             await self.sendGeneralNotification(refereeDetail, f'משחק {game["משחק"]}', 'השיבוץ אושר בפורטל')
                             save = True
                 
                     elif message['action'] == 'forceSend':
-                        objType = message['objType']
-                        if objType and not refereeDetail.get(objType):
+                        if message['objType'] != objType:
                             continue
-                        if not objType or objType == 'games':
-                            refereeData['games']['prevList'] = {}
-                        if not objType or objType == 'reviews':
-                            refereeData['reviews']['prevList'] = {}
-                        self.logger.info(self.colorText(refereeDetail, f"{message['msgSid']} objType={objType}"))
+                        refereeData[objType]['prevList'] = {}
                         message['status'] = 'completed'
                         message['updated'] = datetime.now()
-                        self.logger.info(self.colorText(refereeDetail, f"{objType} ישלח מחדש"))
+                        self.logger.info(helpers.colorText(refereeDetail, f"{message['msgSid']} objType={objType} ישלח מחדש"))
                         save = True
                 
                 if save:
                     self.writeRefTemplate(refereeDetail)
 
         except Exception as ex:
-            self.logError(f'processTemplatesGames', ex, refereeDetail)
+            helpers.logError(self.logger, f'processTemplatesGames', ex, refereeDetail)
 
     async def postParseGames(self, objType, refereeData, page, manager):
         try:
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeData['refId']]
             if not refereeDetail.get(objType): 
                 refereeDetail[objType] = {}
             for gamePk in refereeData[objType]['currentList']:
@@ -814,11 +499,11 @@ class RefPortalService():
                     del game['cells']
 
         except Exception as ex:
-            self.logError(f'postParseGames', ex, refereeDetail)
+            helpers.logError(self.logger, f'postParseGames', ex, refereeDetail)
 
     async def postParseReviews(self, objType, refereeData, page, manager):
         try:
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeData['refId']]
             numOfReviews = len(refereeData[objType]['currentList'])
             i = 0
             if not refereeDetail.get(objType): 
@@ -839,11 +524,11 @@ class RefPortalService():
                     del review['cells']
                 i += 1
         except Exception as ex:
-            self.logError(f'postParseReviews', ex, refereeDetail)
+            helpers.logError(self.logger, f'postParseReviews', ex, refereeDetail)
 
     async def compareList(self, objType, refereeData, page):
         try:
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeData['refId']]
             prevList = refereeData[objType]['prevList']
             currentList = refereeData[objType]['currentList']
 
@@ -888,9 +573,9 @@ class RefPortalService():
                 currentItemText = generateDetailsFunc(currentItem)
                 refereeData[objType]['removedText'] += f'{currentItemText}\n'
                 tournamentName = currentItem['מסגרת משחקים']
-                tournament = self.tournaments.get(tournamentName)
+                tournament = self.handleTournaments.tournaments.get(tournamentName)
                 if self.sections.get(tournament['section']):
-                    await handleTournaments.refreshLeagueTable(page, tournament, self.sections[tournament['section']])
+                    await self.handleTournaments.refreshLeagueTable(page, tournament, self.sections[tournament['section']])
 
             #Changed/Nonchanged
             changedList = {}
@@ -914,28 +599,7 @@ class RefPortalService():
                 refereeData[objType]['changedText'] += f'{currentItemText}\n'
 
         except Exception as ex:
-            self.logError(f'compareList', ex, refereeDetail)
-
-    async def findGameTeamsInTable(self, game):
-        tournamentName = game['מסגרת משחקים']
-        tournament = self.tournaments.get(tournamentName)
-        leagueTable = None
-        homeTeam = None
-        guestTeam = None
-        if tournament and tournament['tournament'] == 'league' and self.tournamentsTables.get(f"{tournament['leagueId']}"):
-            leagueTable = self.tournamentsTables[f"{tournament['leagueId']}"]
-            homeTeam = leagueTable.get(game['homeTeamName'].translate(self.translation_table))
-            if not homeTeam:
-                homeTeamBestMatch = helpers.find_best_match(game['homeTeamName'], leagueTable.keys())
-                if homeTeamBestMatch:
-                    homeTeam = leagueTable.get(homeTeamBestMatch.translate(self.translation_table))
-            guestTeam = leagueTable.get(game['guestTeamName'].translate(self.translation_table))
-            if not guestTeam:
-                guestTeamBestMatch = helpers.find_best_match(game['guestTeamName'], leagueTable.keys())
-                if guestTeamBestMatch:
-                    guestTeam = leagueTable.get(guestTeamBestMatch.translate(self.translation_table))
-
-        return (tournament,leagueTable, homeTeam, guestTeam)
+            helpers.logError(self.logger, f'compareList', ex, refereeDetail)
 
     def teamStatistics(self, teamInTable):
         text = f"\n*{teamInTable['קבוצה']}*:"
@@ -945,7 +609,11 @@ class RefPortalService():
         return text
 
     async def gameStatistics(self, game, extended=True):
-        (tournament, leagueTable, homeTeam, guestTeam) = await self.findGameTeamsInTable(game)
+        (tournament, leagueTable, homeTeam, guestTeam) = await self.handleTournaments.findGameTeamsInTable(game)
+        tournamentText = None
+        if tournament:
+            tournamentText = tournament.get("text")
+        self.logger.debug(f'gameStatistics tournament={tournamentText} leagueTable={leagueTable} homeTeam={homeTeam}')
         if tournament and homeTeam and guestTeam:
             homeTeamPosition = int(homeTeam.get('מיקום'))
             guestTeamPosition = int(guestTeam.get('מיקום'))
@@ -973,8 +641,8 @@ class RefPortalService():
 
     async def gamesActions(self, objType, refereeData, page):
         try:
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
-            self.logger.debug(self.colorText(refereeDetail, 'reminders'))
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeData['refId']]
+            self.logger.debug(helpers.colorText(refereeDetail, 'reminders'))
             
             games = refereeData[objType]['currentList']
             i = 0
@@ -983,13 +651,16 @@ class RefPortalService():
                 game = games[gamePk]
 
                 tournamentName = game['מסגרת משחקים']
-                tournament = self.tournaments.get(tournamentName)
+                tournament = self.handleTournaments.tournaments.get(tournamentName)
 
-                addressDetails = None
+                field = None
+                fieldAddressDetails = None
                 fieldTitle = game.get('מגרש')
-                if fieldTitle:
-                    addressDetails = self.fields[fieldTitle]['addressDetails']
-                self.logger.debug(self.colorText(refereeDetail, f"reminders1 {game.get('date')}"))
+                if fieldTitle and self.fields.get(fieldTitle):
+                    field = self.fields[fieldTitle]
+                if field:
+                    fieldAddressDetails = field.get('addressDetails')
+                self.logger.debug(helpers.colorText(refereeDetail, f"reminders1 {game.get('date')}"))
 
                 if 'reminders' in refereeDetail:
                     if 'reminders' not in game:
@@ -1000,12 +671,13 @@ class RefPortalService():
                     if 'gameReport' not in game['reminders'] and game.get('תפקיד') == 'שופט ראשי':
                         reminders['gameReport']={'reminderInHrs': -3, 'sent': False}
                     
-                    for reminder in reminders:
-                        reminderInHrs = reminders[reminder]['reminderInHrs']
+                    for reminderId in reminders:
+                        reminder = reminders[reminderId]
+                        reminderInHrs = reminder['reminderInHrs']
                         if reminderInHrs == -99:
                             continue
 
-                        if reminders[reminder]['sent'] == False:
+                        if reminder['sent'] == False:
                             checkReminderTime = await self.checkReminderTime(game['date'], reminderInHrs, 5)
                             if checkReminderTime:
                                 noticeTitle = None
@@ -1015,7 +687,7 @@ class RefPortalService():
                                 minsLeft = round(secondsLeft/60)
                                 hoursLeft = round(minsLeft/60)
 
-                                if reminder == 'firstReminder':
+                                if reminderId == 'firstReminder':
                                     noticeTitle = f'תזכורת ראשונה {game["מסגרת משחקים"]}'
                                     noticeDetails = f"בעוד {hoursLeft} שעות יש לך משחק"
                                     if len(game['nested']) > 1:
@@ -1024,15 +696,15 @@ class RefPortalService():
                                     statistics = await self.gameStatistics(game, True)
                                     if statistics:
                                         noticeDetails += f'\n{statistics}'
-                                elif reminder == 'lastReminder':
+                                elif reminderId == 'lastReminder':
                                     noticeTitle = f'תזכורת אחרונה {game["מסגרת משחקים"]}'
                                     noticeDetails = f'בעוד {hoursLeft} שעות מתחיל המשחק נא להערך בהתאם'
                                     #arrival time
-                                    if 'addressDetails' in refereeDetail and 'coordinates' in refereeDetail['addressDetails'] and addressDetails:
+                                    if 'addressDetails' in refereeDetail and 'coordinates' in refereeDetail['addressDetails'] and fieldAddressDetails:
                                         from_coordinates_lat = refereeDetail['addressDetails']['coordinates']['lat']
                                         from_coordinates_lng = refereeDetail['addressDetails']['coordinates']['lng']
-                                        to_coordinates_lat = addressDetails['coordinates']['lat']
-                                        to_coordinates_lng = addressDetails['coordinates']['lng']
+                                        to_coordinates_lat = fieldAddressDetails['coordinates']['lat']
+                                        to_coordinates_lng = fieldAddressDetails['coordinates']['lng']
                                         arriveAt = game['date'] + timedelta(seconds=-refereeDetail["timeArrivalInAdvance"]*60)
                                         duration_secs = await helpers.getWazeRouteDuration(page, from_coordinates_lat, from_coordinates_lng, to_coordinates_lat, to_coordinates_lng, arriveAt)
                                         if duration_secs:
@@ -1048,10 +720,16 @@ class RefPortalService():
                                                 noticeDetails += f'\nכדי להגיע {refereeDetail["timeArrivalInAdvance"]} דקות לפני המשחק הוא {durationStr},'
                                                 noticeDetails += f' כדאי לצאת בשעה {departTimeStr}'
                                     #waze link
-                                    noticeDetails += f'\n\n*קישור למגרש:* {addressDetails["wazeLink"]}'
+                                    noticeDetails += f'\n\n*קישור למגרש:* {fieldAddressDetails["wazeLink"]}'
                                     #field address
-                                    noticeDetails += f'\n\n*כתובת המגרש:* {addressDetails["address"]}'
-
+                                    noticeDetails += f'\n\n*כתובת המגרש:* {fieldAddressDetails["address"]}'
+                                    #field parking
+                                    if field and field.get('parking'):
+                                        noticeDetails += f'\n*פרטי חניה:* {field["parking"]}'
+                                    #field door code
+                                    if field and field.get('roomcode'):
+                                        noticeDetails += f'\n*קוד לחדר שופטים:* {field["roomcode"]}'
+                                    
                                     if tournament and tournament.get('rules'):
                                         rules = self.rules.get(tournament['rules'].strip())
                                         if rules:
@@ -1062,105 +740,76 @@ class RefPortalService():
                                                 for rule in rules['cup']:
                                                     noticeDetails += f"\n{rule}: {rules['cup'][rule]}"
                                 
-                                elif reminder == 'lineupsAnnounced':
+                                elif reminderId == 'lineupsAnnounced':
 
-                                    if not self.games.get(gamePk):
-                                        (tournament, leagueTable, homeTeam, guestTeam) = await self.findGameTeamsInTable(game)
-                                        if tournament:
-                                            url = await handleTournaments.getGameUrl(page, tournament, game['סבב'], game['מחזור'], homeTeam.get('teamId') if homeTeam else None, guestTeam.get('teamId') if guestTeam else None, game['homeTeamName'], game['guestTeamName'])
-                                            if url:
-                                                playersSections = await handleTournaments.scrapGameDetails(page, url)
-                                                gameDetail = { 'url': url, 'players': playersSections }
-                                                self.writeGame(gamePk, gameDetail)
-                                                self.loadGames()
+                                    if tournament:
+                                        url = None
+                                        squads = None
+                                        if not tournament.get('games') or not tournament['games'].get(gamePk):
+                                            (tournament, leagueTable, homeTeam, guestTeam) = await self.handleTournaments.findGameTeamsInTable(game)
+                                            if tournament:
+                                                url = await self.handleTournaments.getGameUrl(page, tournament, game['סבב'], game['מחזור'], homeTeam.get('teamId') if homeTeam else None, guestTeam.get('teamId') if guestTeam else None, game['homeTeamName'], game['guestTeamName'])
+                                                if url:
+                                                    squads = await self.handleTournaments.scrapGameDetails(page, url, gamePk, tournamentName)
 
-                                    if self.games.get(gamePk):
-                                        url = self.games[gamePk].get('url')
-                                        playersSections = self.games[gamePk].get('players')
-                                        noticeTitle = f'פורסמו ההרכבים {game["מסגרת משחקים"]}'
-                                        if secondsLeft:
-                                            durationStr = helpers.seconds_to_hms(secondsLeft)
-                                            if durationStr[:3] == '00:':
-                                                durationStr = f'{durationStr[3:]} דקות'
-                                            else:
-                                                durationStr = f'{durationStr} שעות'
-                                            noticeDetails = f'המשחק יתחיל בעוד {durationStr}'
-                                        noticeDetails += f"\nלהלן הקישור לפרטי המשחק {url}"
+                                        if tournament.get('games') and tournament['games'].get(gamePk):
+                                            url = tournament['games'][gamePk].get('url')
+                                            squads = tournament['games'][gamePk].get('squads')
+                                            noticeTitle = f'פורסמו ההרכבים {game["מסגרת משחקים"]}'
+                                            if secondsLeft:
+                                                durationStr = helpers.seconds_to_hms(secondsLeft)
+                                                if durationStr[:3] == '00:':
+                                                    durationStr = f'{durationStr[3:]} דקות'
+                                                else:
+                                                    durationStr = f'{durationStr} שעות'
+                                                noticeDetails = f'המשחק יתחיל בעוד {durationStr}'
+                                            noticeDetails += f"\nלהלן הקישור לפרטי המשחק {url}"
 
-                                        noticeDetails += '\n*קבוצה ביתית:*'
-                                        homeActiveNos = ','.join(playersSections[0])
-                                        noticeDetails += f'\n*הרכב:* {homeActiveNos}'
-                                        if len(playersSections[1]) > 0:
-                                            homeBencheNos = ','.join(playersSections[1])
-                                            noticeDetails += f'\n*מחליפים:* {homeBencheNos}'
-                                        noticeDetails += f'\n*מאמן:* {playersSections[3]}'
+                                            noticeDetails += '\n*קבוצה ביתית:*'
+                                            homeActiveNos = squads['homeActivePlayersNos']
+                                            noticeDetails += f'\n*הרכב:* {homeActiveNos}'
+                                            if len(squads['homeReplacementPlayersNos']) > 0:
+                                                homeBencheNos = squads['homeReplacementPlayersNos']
+                                                noticeDetails += f'\n*מחליפים:* {homeBencheNos}'
+                                            noticeDetails += f"\n*מאמן:* {squads['homeCoach']}"
 
-                                        noticeDetails += '\n*קבוצה אורחת:*'
-                                        guestActiveNos = ','.join(playersSections[4])
-                                        noticeDetails += f'\n*הרכב:* {guestActiveNos}'
-                                        if len(playersSections[5]) > 0:
-                                            guestBenchNos = ','.join(playersSections[5])
-                                            noticeDetails += f'\n*מחליפים:* {guestBenchNos}'
-                                        noticeDetails += f'\n*מאמן:* {playersSections[7]}'
+                                            noticeDetails += '\n*קבוצה אורחת:*'
+                                            guestActiveNos = squads['awayActivePlayersNos']
+                                            noticeDetails += f'\n*הרכב:* {guestActiveNos}'
+                                            if len(squads['awayReplacementPlayersNos']) > 0:
+                                                guestBenchNos = squads['awayReplacementPlayersNos']
+                                                noticeDetails += f'\n*מחליפים:* {guestBenchNos}'
+                                            noticeDetails += f"\n*מאמן:* {squads['awayCoach']}"
 
-                                        if False and tournament and tournament.get('rules'):
-                                            rules = self.rules.get(tournament['rules'])
-                                            if rules:
-                                                noticeDetails += f'\n*חוקים:*'
-                                                for rule in rules['game']:
-                                                    noticeDetails += f"\n{rule}: {rules['game'][rule]}"
-                                                if tournament['tournament'] == 'cup':
-                                                    for rule in rules['cup']:
-                                                        noticeDetails += f"\n{rule}: {rules['cup'][rule]}"
-                                elif reminder == 'gameReport':
+                                elif reminderId == 'gameReport':
                                     noticeTitle = f'נא למלא דו״ח בפורטל למשחק {game["מסגרת משחקים"]}:'
-                                    noticeDetails = f'{self.loginUrl}'
+                                    noticeDetails = f'{self.browserActions.loginUrl}'
 
                                 if noticeTitle and noticeDetails:
                                     if game['סטטוס'] == 'מחכה לאישור':
                                         noticeTitle += f" ({game['סטטוס']})"
                                     msgSid = await self.reminder(refereeDetail, game['date'], noticeTitle, game["משחק"], noticeDetails)
-                                    reminders[reminder]['sent'] = True
-                                    reminders[reminder]['messageSid'] = msgSid
+                                    reminder['sent'] = True
+                                    reminder['messageSid'] = msgSid
+                                    reminder['sentDate'] = datetime.now()
                         i += 1
 
         except Exception as ex:
-            self.logError(f'actions', ex, refereeDetail)
+            helpers.logError(self.logger, f'actions', ex, refereeDetail)
 
     async def sendGeneralReminders(self, refereeDetail):
-        reminderTime = os.environ.get('registerReminderTime')
-        if reminderTime == None:
-            return
-        reminderHour = int(reminderTime[:2])
-        reminderMin = int(reminderTime[2:])
-        sendReminderContentSid = os.environ.get('twilioOpenWindow')
-        sendReminder = False
-        now = datetime.now()
-        refereeDetail = self.activeRefereeDetails[refereeDetail['refId']]
-        lastGeneralReminder = refereeDetail.get('lastGeneralReminder')
-        
-        next_am = now.replace(hour=reminderHour, minute=reminderMin, second=0, microsecond=0)
-        if now >= next_am:
-            next_am += timedelta(days=1)
-        
-        checkReminderTime = await self.checkReminderTime(next_am, 0, 10)
-        if checkReminderTime and (not lastGeneralReminder or lastGeneralReminder <  next_am):
-            sendReminder = True
-            lastGeneralReminder = next_am
+        sendRegisterReminderContentSid = os.environ.get('twilioOpenWindow')
+        refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeDetail['refId']]
+        await self.twilioClient.sendUsingContentTemplate(refereeDetail['mobile'], sendRegisterReminderContentSid, {'name': refereeDetail['name']})
 
-        next_pm = now.replace(hour=reminderHour+12, minute=reminderMin, second=0, microsecond=0)
-        if now >= next_pm:
-            next_pm += timedelta(days=1)
-
-        checkReminderTime = await self.checkReminderTime(next_pm, 0, 10)
-        if checkReminderTime and (not lastGeneralReminder or lastGeneralReminder <  next_pm):
-            sendReminder = True
-            lastGeneralReminder = next_pm
-
-        if sendReminder:
-            await self.twilioClient.sendUsingContentTemplate(refereeDetail['mobile'], sendReminderContentSid, {'name': refereeDetail['name']})
-
-        refereeDetail['lastGeneralReminder'] = lastGeneralReminder
+    async def checkGeneralReminders(self, refereeDetail):
+        (windowIsOpen, lastMessageTime, timeElapsed) = self.twilioClient.checkIfWindowIsOpen(refereeDetail['mobile'])
+        if windowIsOpen == False:
+            self.logger.warning(helpers.colorText(refereeDetail,f'24 hours window is closed, last message time {timeElapsed}'))
+        if timeElapsed.seconds > 60 * 60 * self.openWindowReminder and refereeDetail.get('lastMessageTime') != lastMessageTime:
+            await self.sendGeneralReminders(refereeDetail)
+            refereeDetail['lastMessageTime'] = lastMessageTime
+        return
 
     async def checkReminderTime(self, dueDate, hoursInAdvance, reminderOffsetInMins):
         remindBefore1AM = 1
@@ -1182,7 +831,7 @@ class RefPortalService():
 
     async def reminder(self, refereeDetail, dueDate, noticeTitle, gameTitle, noticeDetails):
         msgSid = await self.sendGameNoticeNotification(noticeTitle, gameTitle, noticeDetails, refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
-        self.logger.debug(self.colorText(refereeDetail, f'reminders {dueDate}'))
+        self.logger.debug(helpers.colorText(refereeDetail, f'reminders {dueDate}'))
         return msgSid
     
     async def send_push_notification(self, deviceToken, title, body):
@@ -1199,7 +848,7 @@ class RefPortalService():
             response = messaging.send(message)
             self.logger.info(f"Successfully sent message: {response}")
         except Exception as ex:
-            self.logError(f'sendPush', ex)
+            helpers.logError(self.logger, f'sendPush', ex)
 
     async def sendNewGameNotification(self, title, game, toId, refId, toMobile, toName, toDeviceToken=None, sendAt=None):
         newgame = self.twilioNewGameContentSid      
@@ -1224,7 +873,7 @@ class RefPortalService():
                 'week': game.get('מחזור'),
                 'field': game.get('מגרש'),
                 'status': game.get('סטטוס'),
-                'referees': self.generateGameReferees(game),
+                'referees': self.handleRefereeData.generateGameReferees(game),
                 'gameId': game['id'],
                 'fileId': fileId
             }
@@ -1259,7 +908,7 @@ class RefPortalService():
                 'week': game.get('מחזור'),
                 'field': game.get('מגרש'),
                 'status': game.get('סטטוס'),
-                'referees': self.generateGameReferees(game),
+                'referees': self.handleRefereeData.generateGameReferees(game),
                 'fileId': fileId
             }
             msgSid = await self.twilioClient.sendUsingContentTemplate(toMobile=toMobile, contentSid=gamesupdate, contentVariables=variables, mediaUrl=icsFileUrl, sendAt=sendAt)
@@ -1382,7 +1031,7 @@ class RefPortalService():
     async def notifyUpdate(self, objType, refereeData):
         try:
             msgSid = None
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeData['refId']]
             title = self.dataDic[objType]["notifyTitle"]
             itemDescFunc = self.dataDic[objType]['generate']
 
@@ -1393,13 +1042,13 @@ class RefPortalService():
                 for pk in refereeData[objType]['removed']:
                     item = refereeData[objType]['prevList'][pk]
                     itemDesc = itemDescFunc(item)
-                    self.logger.info(self.colorText(refereeDetail, f'\n{title1}\n{itemDesc}'))
+                    self.logger.info(helpers.colorText(refereeDetail, f'\n{title1}\n{itemDesc}'))
                     if objType == 'games':
                         msgSid = await self.sendGameUpdateNotification(title1, item, True, refereeDetail["id"], refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
                     elif objType == 'reviews':
                         msgSid = await self.sendReviewUpdateNotification(title1, item, True, refereeDetail["id"], refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
                     item['removeMessageSid'] = msgSid
-                self.logger.debug(self.colorText(refereeDetail, f"{objType} removed list#{len(refereeData[objType]['removed'])}={refereeData[objType]['removed']}"))
+                self.logger.debug(helpers.colorText(refereeDetail, f"{objType} removed list#{len(refereeData[objType]['removed'])}={refereeData[objType]['removed']}"))
 
             if len(refereeData[objType]['changed']) > 0:
                 title1 = f"עדכון שיבוץ"
@@ -1408,89 +1057,31 @@ class RefPortalService():
                 for pk in refereeData[objType]['changed']:
                     item = refereeData[objType]['currentList'][pk]
                     itemDesc = itemDescFunc(item)
-                    self.logger.info(self.colorText(refereeDetail, f'\n{title1}\n{itemDesc}'))
+                    self.logger.info(helpers.colorText(refereeDetail, f'\n{title1}\n{itemDesc}'))
                     if objType == 'games':
                         msgSid = await self.sendGameUpdateNotification(title1, item, False, refereeDetail["id"], refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
                     elif objType == 'reviews':
                         msgSid = await self.sendReviewUpdateNotification(title1, item, False, refereeDetail["id"], refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
                     item['changedMessageSid'] = msgSid
-                self.logger.debug(self.colorText(refereeDetail, f"{objType} changed list#{len(refereeData[objType]['changed'])}={refereeData[objType]['changed']}"))
+                self.logger.debug(helpers.colorText(refereeDetail, f"{objType} changed list#{len(refereeData[objType]['changed'])}={refereeData[objType]['changed']}"))
 
             if len(refereeData[objType]['added']) > 0:
                 title1 = title + f"*חדש*\n{refereeData[objType]['addedText']}\n"
                 for pk in refereeData[objType]['added']:
                     item = refereeData[objType]['currentList'][pk]
                     itemDesc = itemDescFunc(item)
-                    self.logger.info(self.colorText(refereeDetail, f'\n{itemDesc}'))
+                    self.logger.info(helpers.colorText(refereeDetail, f'\n{itemDesc}'))
                     if objType == 'games':
                         msgSid = await self.sendNewGameNotification(title, item, refereeDetail["id"], refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
                     elif objType == 'reviews':
                         msgSid = await self.sendNewReviewNotification(title, item, refereeDetail["id"], refereeDetail["refId"], refereeDetail["mobile"], refereeDetail["name"])
                     item['newMessageSid'] = msgSid
-                self.logger.debug(self.colorText(refereeDetail, f"{objType} added list#{len(refereeData[objType]['added'])}={refereeData[objType]['added']}")) 
+                self.logger.debug(helpers.colorText(refereeDetail, f"{objType} added list#{len(refereeData[objType]['added'])}={refereeData[objType]['added']}")) 
 
-            self.logger.debug(self.colorText(refereeDetail, f'notify: {objType}'))
+            self.logger.debug(helpers.colorText(refereeDetail, f'notify: {objType}'))
         
         except Exception as ex:
-            self.logError(f'notifyUpdate', ex, refereeDetail)
-
-    def getRefereeFilePath(self, objType, refereeDetail):
-        try:
-            referee_file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}referees/{objType}/'
-            referee_file_path = f'{referee_file_path}refId{refereeDetail["refId"]}_{self.fileVersion}'
-
-            return referee_file_path
-        except Exception as e:
-            pass
-
-    async def readRefereeDataFile(self, objType, refereeData):
-        refereeDetail = self.activeRefereeDetails[refereeData['refId']]
-        if objType not in refereeData or 'currentList' not in refereeData[objType] or not refereeData[objType]['currentList']:
-            file_datetime = None
-            
-            try:
-                referee_file_path = f'{self.getRefereeFilePath(objType, refereeDetail)}.json'
-                self.logger.debug(f'file: {referee_file_path}')
-                if objType not in refereeData:
-                    refereeData[objType] = {}
-                t=0
-                while not os.path.exists(referee_file_path) and t < 5:
-                    await asyncio.sleep(150 * (t + 1) / 1000)
-                    t += 1
-
-                if os.path.exists(referee_file_path):
-                    file_datetime = datetime.fromtimestamp(os.path.getmtime(referee_file_path))
-                    refereeData[objType]['currentList'] = helpers.load_from_file(referee_file_path)
-                else:
-                    file_datetime = datetime.now()
-                    refereeData[objType]['currentList'] = {}
-                refereeData[objType]['fileDateTime'] = helpers.datetime_to_str(file_datetime)
-            except Exception as ex:
-                self.logError(f'readRefereeDataFile', ex, refereeDetail)
-
-    async def writeRefereeDataFile(self, objType, refereeData):
-        try:
-            prevListText = helpers.save_to_json(refereeData[objType]['prevList'])
-            currentListText = helpers.save_to_json(refereeData[objType]['currentList'])
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
-            pref_referee_file_path = self.getRefereeFilePath(objType, refereeDetail)
-            referee_file_path = f'{pref_referee_file_path}.json' 
-            dir = os.path.dirname(referee_file_path)
-            self.logger.debug(f'file: {dir} {referee_file_path}')
-            if dir and not os.path.exists(dir):
-                self.logger.debug(f'create dir: {dir}')
-                os.makedirs(dir)
-            fileExists = os.path.exists(referee_file_path)
-            if prevListText != currentListText or not fileExists:
-                self.logger.debug(f'prev:{prevListText}')
-                self.logger.debug(f'current:{currentListText}')
-                if fileExists:
-                    fileDateTime = helpers.datetime_to_str(datetime.fromtimestamp(os.path.getmtime(referee_file_path)))
-                    shutil.copy(referee_file_path, f'{pref_referee_file_path}_{fileDateTime}.json')
-                helpers.save_to_file(refereeData[objType]['currentList'], referee_file_path)
-                refereeData[objType]['fileDateTime'] = helpers.datetime_to_str(datetime.now())
-        except Exception as ex:
-            self.logError(f'writeFileText', ex, refereeDetail)
+            helpers.logError(self.logger, f'notifyUpdate', ex, refereeDetail)
 
     def resetProgress(self):
         self.completedReferees = 0
@@ -1507,56 +1098,53 @@ class RefPortalService():
     async def checkRefereeTask(self, manager, refId):
         anyChange = False
         semaphore, page = await manager.acquire_page()
-        refereeDetail = self.activeRefereeDetails[refId]
-        self.logger.debug(self.colorText(refereeDetail, f'seq={refereeDetail.get("seq")}'))
+        refereeDetail = self.handleRefereeData.activeRefereeDetails[refId]
+        self.logger.debug(helpers.colorText(refereeDetail, f'seq={refereeDetail.get("seq")}'))
         
         try:          
-            testResult = helpers.testConnection(self.IFAUrl, 443)
+            testResult = helpers.testConnection(self.handleTournaments.baseIFAUrl, 443)
             if testResult:
                 self.logger.warning(f'TestConnection: {testResult}')
 
             refereeData = { 'refId': refId }
 
-            await self.sendGeneralReminders(refereeDetail)
+            await self.checkGeneralReminders(refereeDetail)
 
-            (windowIsOpen, lastMessageDatetime) = self.twilioClient.checkIfWindowIsOpen(refereeDetail['mobile'])
-            if windowIsOpen == False:
-                self.logger.warning(self.colorText(refereeDetail,f'24 hours window is closed, last message time {lastMessageDatetime}'))
-                #return
-
-            loginSuccesful = await self.login(refereeDetail, page)
-            self.logger.debug(self.colorText(refereeDetail, f'after login = {loginSuccesful}'))
+            loginSuccesful = await self.browserActions.login(refereeDetail, page)
+            self.logger.debug(helpers.colorText(refereeDetail, f'after login = {loginSuccesful}'))
 
             if loginSuccesful == False:
                 await manager.release_page(semaphore, page)
                 return
 
             for objType in refereeDetail.get('objTypes'):
-                await self.readRefereeDataFile(objType, refereeData)
+                await self.handleRefereeData.readRefereeDataFile(objType, refereeData)
 
             for objType in refereeDetail.get('objTypes'):
                 if objType == 'games' and self.checkGames or objType == 'reviews' and self.checkReviews:
                     changed = await self.checkRefereeData(objType, refereeData, page, manager)
                     if changed:
                         anyChange = True
+            
+            self.logger.debug(helpers.colorText(refereeDetail,f'end of CheckRefereeTask'))
 
         except Exception as ex:
-            self.logError(f'CheckRefereeTask', ex, refereeDetail)
+            helpers.logError(self.logger, f'CheckRefereeTask', ex, refereeDetail)
 
         try:
             if self.alwaysRenewPages:
                 await manager.release_page(semaphore, page)
             else:
-                loggedoutSuccessfully = await self.logout(refereeDetail, page)
-                self.logger.debug(self.colorText(refereeDetail, f'loggedoutSuccessfully={loggedoutSuccessfully}'))
+                loggedoutSuccessfully = await self.browserActions.logout(refereeDetail, page)
+                self.logger.debug(helpers.colorText(refereeDetail, f'loggedoutSuccessfully={loggedoutSuccessfully}'))
                 if loggedoutSuccessfully == True:
                         await manager.release_page(semaphore, page)
                 else:
-                    self.logger.warning(self.colorText(refereeDetail, f'renew page'))
+                    self.logger.warning(helpers.colorText(refereeDetail, f'renew page'))
                     await manager.renew_page(semaphore, page)
             #await manager.context.tracing.stop(path=f"{referee_file_path}traceFinally{datetime.now().strftime("%Y%m%d%H%M%S")}}.zip")
         except Exception as ex:
-            self.logError(f'CheckRefereeTask loggedOut', ex, refereeDetail)
+            helpers.logError(self.logger, f'CheckRefereeTask loggedOut', ex, refereeDetail)
         finally:
             #self.simulateDynamicProgress(infoNoResult)
             return anyChange
@@ -1564,8 +1152,8 @@ class RefPortalService():
     async def checkRefereeData(self, objType, refereeData, page, manager):
         changed = False
         try:
-            refereeDetail = self.activeRefereeDetails[refereeData['refId']]
-            self.logger.info(self.colorText(refereeDetail, f'Checking {objType}...'))
+            refereeDetail = self.handleRefereeData.activeRefereeDetails[refereeData['refId']]
+            self.logger.info(helpers.colorText(refereeDetail, f'Checking {objType}...'))
             
             swName = f'checkRefereeData={refereeDetail["name"]}{objType}'
             helpers.stopwatchStart(swName)
@@ -1592,11 +1180,11 @@ class RefPortalService():
                     await asyncio.sleep(150 * (j + 1) / 1000)
                     self.logger.debug(f'url={page.url}')
                     title = await page.title()
-                    self.logger.debug(self.colorText(refereeDetail, f'title: {title}'))
+                    self.logger.debug(helpers.colorText(refereeDetail, f'title: {title}'))
                     
                     helpers.stopwatchStart(f'{swName}Convert')
                     convertResults = await self.dataDic[objType]['convert'](page, refereeDetail)
-                    self.logger.debug(self.colorText(refereeDetail, f'convertResults: {convertResults}'))
+                    self.logger.debug(helpers.colorText(refereeDetail, f'convertResults: {convertResults}'))
                     helpers.stopwatchStop(f'{swName}Convert', level=self.swLevel)
 
                     if convertResults == None:
@@ -1607,12 +1195,12 @@ class RefPortalService():
                             if not refereeData[objType].get('NoResult'):
                                 refereeData[objType]['NoResult'] = 0
                             refereeData[objType]['NoResult'] += 1
-                            self.logger.debug(self.colorText(refereeDetail, f"{objType} no results found = {refereeData[objType]['NoResult']}"))                            
+                            self.logger.debug(helpers.colorText(refereeDetail, f"{objType} no results found = {refereeData[objType]['NoResult']}"))                            
 
                         if self.dataDic[objType].get('parse'):
                             helpers.stopwatchStart(f'{swName}parse')
                             parsedList = await self.dataDic[objType]['parse'](objType, convertResults)
-                            self.logger.debug(self.colorText(refereeDetail, f'parsedList: {parsedList}'))
+                            self.logger.debug(helpers.colorText(refereeDetail, f'parsedList: {parsedList}'))
                             helpers.stopwatchStop(f'{swName}parse', level=self.swLevel)
 
                             if parsedList and len(parsedList) > 0:
@@ -1622,7 +1210,7 @@ class RefPortalService():
                         elif "parse" not in self.dataDic[objType]:# and len(hText) > len(refereeData[objType][f"prevText"]):
                             found = True
 
-                        self.logger.debug(self.colorText(refereeDetail, f'parse objType={objType} t={t} found={found} parsedList={cnt}'))
+                        self.logger.debug(helpers.colorText(refereeDetail, f'parse objType={objType} t={t} found={found} parsedList={cnt}'))
             
                         if found == True:
                             break
@@ -1631,7 +1219,7 @@ class RefPortalService():
                     break
 
             if parsedList == None:
-                self.logger.warning(self.colorText(refereeDetail, f"{objType} no results found = {refereeData[objType]['NoResult']}"))
+                self.logger.warning(helpers.colorText(refereeDetail, f"{objType} no results found = {refereeData[objType]['NoResult']}"))
                 del refereeData[objType]['NoResult']
                 return
             
@@ -1657,109 +1245,28 @@ class RefPortalService():
 
                     # avoid errors in reviews and send removal for all reviews
                     if (len(refereeData[objType]['removed']) > 1 and len(refereeData[objType]['changed']) >= 0) and len(refereeData[objType]['added']) == 0:
-                        self.logger.error(self.colorText(refereeDetail,f"CheckRefereeData removed={len(refereeData[objType]['removed'])} changed={len(refereeData[objType]['changed'])} {refereeData[objType]}"))
+                        self.logger.error(helpers.colorText(refereeDetail,f"CheckRefereeData removed={len(refereeData[objType]['removed'])} changed={len(refereeData[objType]['changed'])} {refereeData[objType]}"))
                         return
                     if objType == 'games' and len(refereeData[objType]['added']) > 0:
                         self.lastGameAssignment = datetime.now()
                     if len(refereeData[objType]['added']) > 0 or len(refereeData[objType]['removed']) > 0 or len(refereeData[objType]['changed']) > 0:
-                        self.logger.info(self.colorText(refereeDetail, f"{objType} A:{len(refereeData[objType]['added'])} R:{len(refereeData[objType]['removed'])} C:{len(refereeData[objType]['changed'])} #{cnt}/{t}"))
+                        self.logger.info(helpers.colorText(refereeDetail, f"{objType} A:{len(refereeData[objType]['added'])} R:{len(refereeData[objType]['removed'])} C:{len(refereeData[objType]['changed'])} #{cnt}/{t}"))
                         await self.dataDic[objType]['notify'](objType, refereeData)
                         changed = True
                     else:
                         fileDateText = refereeData[objType]['fileDateTime']
-                        self.logger.info(self.colorText(refereeDetail, f'No {objType} update since {fileDateText} #{cnt}/{t}'))
+                        self.logger.info(helpers.colorText(refereeDetail, f'No {objType} update since {fileDateText} #{cnt}/{t}'))
             
                 if refereeData[objType].get('currentList') and self.dataDic[objType].get('actions'):
                     await self.dataDic[objType]['actions'](objType, refereeData, page)
 
-                await self.writeRefereeDataFile(objType, refereeData)
+                await self.handleRefereeData.writeRefereeDataFile(objType, refereeData)
 
             helpers.stopwatchStop(f'{swName}', level=self.swLevel)
         except Exception as ex:
-            self.logError('CheckRefereeData', ex, refereeDetail)
+            helpers.logError(self.logger, 'CheckRefereeData', ex, refereeDetail)
         finally:
             return changed
-
-    def colorText(self, refereeDetail, text):
-        color = Fore.WHITE
-        try:
-            if refereeDetail.get('color'):
-                color = eval(f"Fore.{refereeDetail['color']}")
-        except Exception as ex:
-            pass
-        return f'{color}{refereeDetail["name"]}#{refereeDetail["refId"]}:{text}{Style.RESET_ALL}'
-
-    async def login(self, refereeDetail, page):
-        try:
-            t=0
-            while page.url != self.gamesUrl and t < 5:
-                t+=1
-                self.logger.debug(self.colorText(refereeDetail, f'login#{t}'))
-                try:
-                    await helpers.gotoUrl(page, self.loginUrl)
-                    await asyncio.sleep(1000*t / 1000)
-
-                    input_elements = await page.query_selector_all('input')
-                    if len(input_elements) == 3:
-                        usernameField = input_elements[0]
-                        await usernameField.fill(refereeDetail["refId"])
-
-                        passwordField = input_elements[1]
-                        await passwordField.fill(self.handleUsers.decryptPassword(refereeDetail['password']))
-
-                        idField = input_elements[2]
-                        await idField.fill(refereeDetail["id"])
-
-                        await idField.press("Enter")
-                        '''
-                        # Find the submit button and click it
-                        buttonsLocator = page.locator('button')
-                        if await buttonsLocator.count() > 0:
-                            mainButton = buttonsLocator.nth(0)
-                            await mainButton.click()
-                        '''
-                        await asyncio.sleep(500 / 1000)
-                except Exception as ex:
-                    self.logError('login', ex, refereeDetail)
-            await asyncio.sleep(500 / 1000)
-
-            if page.url != self.gamesUrl:
-                self.logger.error(self.colorText(refereeDetail, f'Login failed#{t}'))
-            else:
-                self.logger.debug(self.colorText(refereeDetail, f'Login successfull#{t}'))
-                return True
-
-        except Exception as ex:
-            self.logError(f'Login', ex, refereeDetail)
-
-        return False
-    
-    async def logout(self, refereeDetail, page):
-        t=0
-        
-        while page.url != self.loginUrl and t < 3:
-            try:
-                t+=1
-                await helpers.gotoUrl(page, self.loginUrl)
-                self.logger.debug(self.colorText(refereeDetail, f'logout#{t}'))
-                button_elements = await page.query_selector_all("button")
-                logoutButtons = [button for button in button_elements if (await button.inner_text()).strip() == "יציאה"]
-
-                self.logger.debug(f'logoutButtons={len(logoutButtons)}')
-                if len(logoutButtons) == 1:
-                    logoutButton = button_elements[0]
-                    await logoutButton.click()
-                await asyncio.sleep(1000*t / 1000)
-            except Exception as ex:
-                pass
-
-        if page.url != self.loginUrl:
-            self.logger.error(self.colorText(refereeDetail, f'Logout failed#{t}'))
-            return False
-        else:
-            self.logger.debug(self.colorText(refereeDetail, f'Logout successfull#{t}'))
-    
-        return True
 
     async def start(self):
         self.logger.debug('Start')
@@ -1773,7 +1280,7 @@ class RefPortalService():
                 manager = pageManager.PageManager(self.concurrentPages)
                 while True:
                     try:
-                        if self.activeRefereeDetails:
+                        if self.handleRefereeData.activeRefereeDetails:
                             if i % self.browserRenewal == 0:
                                 self.logger.info('Browser renewal...')
                                 if browser:# and context:
@@ -1786,8 +1293,10 @@ class RefPortalService():
 
                             helpers.stopwatchStart(f'Loop time')
                             self.resetProgress()
-                            refereesTasks = [self.checkRefereeTask(manager, refId) for refId in self.activeRefereeDetails]
+                            refereesTasks = [self.checkRefereeTask(manager, refId) for refId in self.handleRefereeData.activeRefereeDetails]
+                            self.logger.debug(f'before tasks gather')
                             tasksResults = await asyncio.gather(*refereesTasks)
+                            self.logger.debug(f'after tasks gather')
                             for taskResult in tasksResults:
                                 pass
                             helpers.stopwatchStop(f'Loop time', level='info')
@@ -1795,12 +1304,12 @@ class RefPortalService():
                             self.loadMetadata()
                             i += 1
                     except Exception as ex:
-                        self.logError('Start', ex)
+                        helpers.logError(self.logger, 'Start', ex)
                     finally:
                         await asyncio.sleep(self.pollingInterval / 1000)
 
         except Exception as ex:
-            self.logError(f'start', ex)
+            helpers.logError(self.logger, f'start', ex)
         
         finally:
             self.logger.debug(f'close')
@@ -1825,7 +1334,7 @@ class RefPortalService():
 
     def logError(self, label, ex, refereeDetail=None):
         if refereeDetail:
-            self.logger.error(self.colorText(refereeDetail, f'{label}: Exception Type: {type(ex).__name__}, Message: {ex}'))
+            self.logger.error(helpers.colorText(refereeDetail, f'{label}: Exception Type: {type(ex).__name__}, Message: {ex}'))
         else:
             self.logger.error(f'{label}: Exception Type: {type(ex).__name__}, Message: {ex}')
         logging.exception("An error occurred")
@@ -1833,7 +1342,7 @@ class RefPortalService():
     async def getSpecificGame(self):
         refereeData = {}
         refereeData['refId'] = '43679'
-        await self.readRefereeDataFile('games', refereeData)
+        await self.handleRefereeData.readRefereeDataFile('games', refereeData)
         for gamePk in refereeData['games']['currentList']:
             game = refereeData['games']['currentList'][gamePk]
             stat = await self.gameStatistics(game, extended=True)

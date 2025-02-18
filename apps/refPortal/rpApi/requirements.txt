@@ -6,6 +6,9 @@ flask[async]
 Flask-Limiter
 twilio
 paho-mqtt
-playwright
 descope
 gunicorn
+colorama
+ics
+pytz
+docker

@@ -6,16 +6,21 @@ from pathlib import Path
 import logging
 import socket
 from datetime import datetime
+import asyncio
+from colorama import Fore, Style
+import random
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import shared.helpers as helpers
 from shared.twilioClient import TwilioClient
 from shared.descopeClient import MyDescopeClient
 
 class HandleUsers():
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         openText=f'Ref Portal Api {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} build#{os.environ.get("BUILD_DATE")} host={socket.gethostname()}'
         self.descopeClient = MyDescopeClient('P2rMfchUiS31ARASEQsuEuf08UME')
-        logging.info(openText)
+        self.logger.info(openText)
+        self.colors = list(vars(Fore))
 
     def refereeFilePath(self):
         referee_file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}referees/details/referees.json'
@@ -277,7 +282,7 @@ class HandleUsers():
         self.writeReferees()
     
     def verifyMobile(self, mobileNo):
-        client = TwilioClient('+14155238886')
+        client = TwilioClient(logging, '+14155238886')
 
         # Lookup API call
         lookup = client.lookups(mobileNo)
@@ -285,8 +290,28 @@ class HandleUsers():
         print(f"Carrier: {lookup.carrier}")
         print(f"Phone Type: {lookup.carrier['type']}")
 
+    def getRandomColor(self):
+        color = self.colors[random.randint(0, len(self.colors)-1)]
+        return color
+    
+    async def setColors(self):
+        try:
+            referees = self.getAllRefereesDetails()
+            for pk in referees:
+                referee = referees[pk]
+                if not referee.get('color'):
+                    continue
+                color = referee['color']
+                newColor = self.getRandomColor()
+                referee['color'] = newColor
+                self.descopeClient.updateReferee(referee)
+            self.writeReferees()
+        except Exception as ex:
+            pass
+
 if __name__ == "__main__":
-    pass
+    handleUsers = HandleUsers(logging)
+#    asyncio.run(handleUsers.setColors())
 #    referees = readReferees()
 #    passwords = readPasswords()
 #    mergeReferees(referees, passwords)

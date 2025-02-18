@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../images/favicon.png" type="image/png">
+    <title>הוסף שופט פוטנציאלי למערכת התראות מהפורטל</title>
+</head>
+<body r>
+    <h1>הכנס פרטים</h1>
+    <base href="https://api.refereex.com:24501">
+    <form action="/api/addPending" method="POST">
+        <label for="mobileNo">מספר נייד:</label>
+        <input type="text" id="mobileNo" name="mobileNo" value="+9725"><br><br>
+
+        <button type="submit">שלח</button>
+    </form>
+</body>
+</html>

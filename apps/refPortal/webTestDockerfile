@@ -6,11 +6,11 @@ VOLUME ["/run/data"]
 WORKDIR /app
 
 # Copy the requirements file into the container
-COPY web/requirements.txt .
+#COPY web/requirements.txt .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt 
-
+#RUN pip install --no-cache-dir -r requirements.txt 
+RUN pip install flask
 # Copy the script into the container
 COPY web*.py .
 

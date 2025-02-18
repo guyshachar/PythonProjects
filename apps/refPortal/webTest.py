@@ -17,7 +17,7 @@ class WebTest():
     async def start(self):
         logging.info('start')
         ssl_file_path = f'{os.getenv("MY_SSL_FILE", "/run/ssl/")}'
-        self.app.run(host='0.0.0.0', debug=True, port=5002, ssl_context=(f'{ssl_file_path}cert.pem', f'{ssl_file_path}key.pem'))     
+        self.app.run(host='0.0.0.0', debug=True, port=5002)#, ssl_context=(f'{ssl_file_path}cert.pem', f'{ssl_file_path}key.pem'))     
 
     @app.route('/')
     async def welcome(self):

@@ -1,51 +1,64 @@
 version: '3.8'
 services:
   app:
-    image: guyshacharacc/refportal:latest
+    image: refportalservice:latest
+    tty: true
     environment:
-      - fileVersion=v4
       - TZ=Asia/Jerusalem
-      - logLevel=DEBUG
-      - twilioSend=True
-      - alwaysClosePage=False
-      - browserRenewal = 50
-    secrets:
-      - refPortal_referees
-      - twilio_account_sid
-      - twilio_auth_token
-      - mqtt_broker
-      - mqtt_username
-      - mqtt_password
+      - logLevel=INFO
+      - fileVersion=v8
+      - swLevel=debug
+      - approveGames=True
+      - start24HoursWindowNotification=True
+      - alwaysClosePage=True
+      - mqttPublish=True
+      - loadInterval=500
+      - checkGames=True
+      - checkReviews=True
+      - concurrentPages=1
+      - browserRenewal=30
+      - twilioSend=False
+      - twilioServiceId=MG7ec40f0e4baff9a172ad9e78cbc3d269
+      - twilioFromMobile1=+14155238886
+      - twilioFromMobile=+972533932474
+      - twilioUseTemplate=True
+      - twilioUseFreeText=False
+      - twilioAddMedia=False
+      - twilioOpenWindow=HX9cca11d6aba6c462ef0da97ef9d55d90
+      - twilioNewGameContentSid=HXc778f502095de8425f0dee79ece9d355
+      - twilioGameUpdateContentSid=HXe2c43cb7131ab345a4ec354dcc4d6233
+      - twilioGameNoticeContentSid=HXc9438c8dad32dfd6aea090352d34b736
+      - twilioNewReviewContentSid=HX9047136eb2b6743d57eee044790b176c
+      - twilioReviewUpdateContentSid1=HX37c74e9d872d4ac5aee40f53dbb98bc8
+      - registerReminderTime=1000
+      - sendGeneralReminder=True
+      - browserHeadless=True
+      - alwaysRenewPages=True
+      - apiServiceUrlBase=https://guyshachar.ddns.net:24501/api/
+      - timeout=20000
+      - timezone=Asia/Jerusalem
+      - refIdsPartition=9
+      - app=APP1
     volumes:
-      - /Volumes/GuyMacExternal/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/referees:/run/referees
+      - /Volumes/Macintosh\ HD/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/data:/run/data
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-      resources:
-        limits:
-          memory: "1g"
-          cpus: "1.5"
 
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+  monitor:
+    image: refportalmonitor:latest
+    tty: true
     environment:
-      - WATCHTOWER_POLL_INTERVAL=30 # Check every 30 seconds
-
-secrets:
-  password_key:
-    external: true
-  twilio_account_sid:
-    external: true
-  twilio_auth_token:
-    external: true
-  mqtt_broker:
-    external: true
-  mqtt_username:
-    external: true
-  mqtt_password:
-    external: true
-  google_cloud_apikey:
-    external: true
+      - TZ=Asia/Jerusalem
+      - logLevel=INFO
+      - monitor_interval=5
+      - timeout_seconds=30
+      - restart_seconds=15
+      - servicePrefix=refportal
+    volumes:
+      - /Volumes/Macintosh\ HD/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/data:/run/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure

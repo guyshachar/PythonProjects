@@ -1,23 +1,30 @@
 from twilio.rest import Client as TwilioRestClient
-from datetime import datetime,timezone
+from twilio.request_validator import RequestValidator
+from datetime import datetime, timezone, timedelta
 import threading
 import asyncio
 import uuid
 import os
 import sys
+from requests.auth import HTTPDigestAuth
+from requests.auth import HTTPBasicAuth
+import requests
+import urllib
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import shared.helpers as helpers
 import logging
 import json
+import pytz
+from zoneinfo import ZoneInfo
 
 class TwilioClient:
-    def __init__(self, fromMobile=None, twilioServiceId=None):
+    def __init__(self, logger, fromMobile=None, twilioServiceId=None):
         try:
             account_sid = helpers.get_secret('twilio_account_sid')#refPortalSecret and refPortalSecret.get("twilio_account_sid", None)
             auth_token = helpers.get_secret('twilio_auth_token')#refPortalSecret and refPortalSecret.get("twilio_auth_token", None)
-            logging.getLogger("twilio").setLevel(logging.WARNING)
-            self.logger = logging.getLogger(__name__)
+            #logging.getLogger("twilio").setLevel(logging.WARNING)
+            self.logger = logger#logging.getLogger(__name__)
             self.twilioClient = TwilioRestClient(account_sid, auth_token)
             self.twilioFromMobile = fromMobile
             self.twilioServiceId = twilioServiceId
@@ -25,6 +32,8 @@ class TwilioClient:
             self.twilioSend = eval(os.environ.get('twilioSend') or 'False')
             self.twilioAddMedia = eval(os.environ.get('twilioAddMedia') or 'False')
             self.apiServiceUrlBase = os.environ.get('apiServiceUrlBase')
+
+            self.validator = RequestValidator(auth_token)
 
         finally:
             pass
@@ -52,7 +61,7 @@ class TwilioClient:
             file_path = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}messages/messages.json'
             self.messages = helpers.load_from_file(file_path)
         except Exception as ex:
-            self.logger.error(f'loadMessages {ex}')
+            self.logger.error(f'loadMessages file={file} {ex}')
 
     def writeMessages(self):
         try:
@@ -252,15 +261,15 @@ class TwilioClient:
         messages = self.twilioClient.messages.list(from_=f'whatsapp:{fromMobile}', limit=1)
 
         if messages and len(messages) > 0:
-            last_message_time = messages[0].date_sent.replace(tzinfo=timezone.utc)
-            time_difference = datetime.now(timezone.utc) - last_message_time
+            lastMessageTime = messages[0].date_sent.replace(tzinfo=timezone.utc)
+            timeElapsed = datetime.now(timezone.utc) - lastMessageTime
 
-            if time_difference.total_seconds() < 24*60*60:
-                return (True, last_message_time)
+            if timeElapsed.total_seconds() < 24*60*60:
+                return (True, lastMessageTime, timeElapsed)
             else:
-                return (False, last_message_time)
+                return (False, lastMessageTime, timeElapsed)
         else:
-            return (False, None)
+            return (False, None, None)
 
     async def testSend(self, toMobile, param1, param2, param3):
         to_whatsapp_number = f'whatsapp:{toMobile}'
@@ -324,6 +333,25 @@ class TwilioClient:
             pass
         pass
 
+    async def findFailedMessages(self):
+        sentAfterUTC = datetime.now().astimezone(ZoneInfo("UTC")) - timedelta(minutes=60)
+        messages = self.twilioClient.messages.list(to=f'whatsapp:{self.twilioFromMobile}', date_sent_after=sentAfterUTC)
+
+        # Filter messages with error code 502
+        failedMessages = [msg for msg in messages if msg.error_code == 11200]
+
+        # Resend each failed message    
+        for msg in failedMessages:
+            print(f"Resending to {msg.to}: {msg.body}")
+
+            new_message = client.messages.create(
+                to=msg.to,
+                from_=msg.from_,
+                body=msg.body
+            )
+
+            print(f"New Message SID: {new_message.sid}")
+
 def readWA():
     filename = f'{os.getenv("MY_DATA_FILE", f"/run/data/")}whatsappmessage'
     with open(filename, 'r') as file:
@@ -339,6 +367,7 @@ if __name__ == '__main__':
     client = TwilioClient(fromMobile=os.environ.get('twilioFromMobile'),twilioServiceId=os.environ.get('twilioServiceId'))
     #logging.basicConfig(level=logging.DEBUG)
     #isOpen = client.checkIfWindowIsOpen('+972525253248')
-    asyncio.run(client.testSend('+972547799979', 'a', 'b', 'c'))
+    #asyncio.run(client.testSend('+972547799979', 'a', 'b', 'c'))
+    asyncio.run(client.findFailedMessages())
     #result = client.lookups('+972547799979')
     pass
