@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 150" width="100%" height="100%">
+  <!-- Background -->
+  <rect width="400" height="150" fill="#ffffff" rx="15" />
+  
+  <!-- Logo Icon: Fusion of WhatsApp Bubble and Server/Network Node -->
+  <g transform="translate(25, 25)">
+    <!-- Base Layer: The Deep Navy Network Connections -->
+    <!-- Represents the backend infrastructure routing paths -->
+    <path d="M 25 50 L 55 50 M 55 50 L 80 25 M 55 50 L 80 75" fill="none" stroke="#1a2530" stroke-width="6" stroke-linecap="round" />
+    <circle cx="25" cy="50" r="7" fill="#1a2530" />
+    <circle cx="80" cy="25" r="7" fill="#1a2530" />
+    <circle cx="80" cy="75" r="7" fill="#1a2530" />
+    
+    <!-- Foreground Layer: The WhatsApp Silhouette Node -->
+    <!-- Positioned perfectly at the central intersection point -->
+    <g transform="translate(30, 25)">
+      <!-- WhatsApp Tailed Bubble Silhouette -->
+      <path d="M25,0 C11.2,0 0,11.2 0,25 C0,30.6 1.8,35.8 4.9,40 L1.2,51.2 L12.9,47.5 C16.5,49.1 20.6,50 25,50 C38.8,50 50,38.8 50,25 C50,11.2 38.8,0 25,0 Z" 
+            fill="#25D366" />
+      
+      <!-- Central Gateway Core (White cutout for sharp UI contrast) -->
+      <circle cx="25" cy="25" r="10" fill="#ffffff" />
+      <circle cx="25" cy="25" r="5" fill="#1a2530" />
+    </g>
+  </g>
+
+  <!-- Typography -->
+  <text x="145" y="82" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="52" font-weight="800" fill="#1a2530" letter-spacing="-1.5">OnWays</text>
+  
+  <text x="150" y="112" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#7f8c8d" letter-spacing="3.5">API GATEWAY</text>
+</svg>

@@ -1,0 +1,37 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--job-url",
+                "https://elbitsystemscareer.com/job/%25D7%25A8%25D7%2597%25D7%2595%25D7%2591%25D7%2595%25D7%25AA-Software-Engineer-for-Naval-Systems/1142876155/",
+                "--cv",
+                "Guy Shachar Developer CV.pdf",
+                "--tag",
+                "elbit",
+            ],
+            "env": {
+                "GEMINI_API_KEY": "AIzaSyD85QY9ugmEvweK3TcoJETNvAF6ZxCIf5w",
+            }
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "GEMINI_API_KEY": "AIzaSyD85QY9ugmEvweK3TcoJETNvAF6ZxCIf5w",
+            }
+        }
+    ]
+}

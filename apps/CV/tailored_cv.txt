@@ -1,0 +1,67 @@
+Guy Shachar
+Mobile: 054-7799979 | eMail: guyshachar.acc@gmail.com | LinkedIn
+
+**Professional Summary**
+Highly skilled and experienced R&D Developer with a strong background in leading software development teams and designing complex systems. After several years in R&D leadership roles, I am now seeking a hands-on software developer position to leverage my deep technical expertise and passion for building high-quality software. In my recent leadership roles, I maintained significant hands-on involvement (up to 70%), focusing on coding, solving intricate technical challenges, and directly contributing to product development. I bring a comprehensive understanding of end-to-end development, micro-services architecture, cloud technologies (AWS & Azure), and agile methodologies, coupled with a proactive, customer-centric approach.
+
+**Technical Skills**
+*   **Programming Languages:** C#, .Net, .Net Core, .Net Framework, Python, Node.js, PL/SQL
+*   **Cloud Platforms:** AWS (EC2, SQS, SNS, DynamoDB, Lambda, ECS, ELB, SSM, DMS, VPC, CloudWatch, API Gateway), Azure
+*   **Databases:** MS SQL, Oracle, Redis, DynamoDB, PostgreSQL (NoSQL)
+*   **Web Technologies:** ASP.NET, Angular, HTML, JavaScript, CSS
+*   **Message Brokers:** RabbitMQ, SQS
+*   **DevOps & CI/CD:** Azure DevOps CI/CD, Automation
+*   **Architectural Patterns:** Micro-services architecture, Dependency Injection
+*   **Tools & Methodologies:** Agile, Scrum, Cursor IDE, Git
+
+**Major Technical Accomplishments**
+*   Led the dismantling and re-implementation of an old ASP.NET MVC legacy system into a micro-service architecture, delivering the complex migration within a short timeframe.
+*   Initiated and developed an automatic process management system that, within two months, saved the purchase of a $1 million 3rd party application.
+*   Designed and developed variant infrastructure components, creating innovative and scalable solutions to challenging requirements, establishing a standard and providing generic features across the system.
+*   Initiated and extended a Gantt system, enabling both developers and managers to track support & roadmap projects on a single screen, significantly decreasing managerial overhead for task allocation.
+
+**Work Experience**
+
+**2025 - Present: Developer – RefereeX.com**
+*   Developed a Python-based service for sending notifications to Israeli Football Referees, integrated with Meta WhatsApp service.
+
+**2023-2024: R&D Team Lead & Scrum Master – Veritone (before Pandologic)**
+*   R&D Team Leader & Scrum Master for 4-6 developers, responsible for sensitive services integrated with customers and 3rd party vendors.
+*   Dedicated 30% of time to hands-on development, focusing on code quality improvement and technical implementation.
+*   Monitored, improved, and maintained servers in the Production environment.
+*   Developed extensively in .Net, .Net Core, C#, MS SQL, Redis, DynamoDB, SQS, EC2, RabbitMQ, utilizing Azure DevOps for CI/CD.
+
+**2022: R&D Team Leader & Scrum Master – 888 Holdings**
+*   R&D Team Leader & Scrum Master for an 8-member Platform Infrastructure team (Dev & QA).
+*   Led the creation of new components and migration from legacy monolith systems using micro-services architecture.
+*   Hands-on development in .Net 6, .Net Core, ASP.NET C#, Node.js, MS SQL & Redis, and implementing AWS services.
+*   Managed offshore developers (Romania).
+
+**2019-2021: R&D Team Leader & Scrum Master – Align Technologies**
+*   R&D Team Leader & Scrum Master for a 5-member scale-up team (Dev, QA & DevOps) in an agile environment.
+*   Instrumental in the company's transition to micro-services architecture on serverless infrastructure.
+*   Innovated R&D vs Tier3 support activity in the production environment.
+*   Hands-on development in .Net Core, ASP.NET C#, MS SQL, NoSQL PostgreSQL, Redis & DynamoDB, and various AWS services: ECS, ELB, SQS, SNS, EC2, SSM, DMS, Lambda, CloudWatch, API Gateway, VPC, CI/CD, Automation.
+*   Managed offshore developers (Moscow).
+
+**2019: R&D Senior Programmer/DevOps – Gimmonix**
+*   Full Stack Developer in a DevOps team, focusing on cross-platform micro-services systems.
+*   Designed and implemented micro-services architecture, utilizing AWS & Azure cloud-based technologies, Dependency Injection principles, and RabbitMQ message broker.
+*   Developed web applications using Angular, HTML, JavaScript & CSS.
+
+**2007-2017: R&D Team Leader & Developer - SintecMedia**
+*   Accumulated 10 years of full-stack hands-on software development experience.
+*   Managed an R&D team of 10 developers, including offshore teams.
+*   Led all software aspects of projects end-to-end, from research, planning, architecture, design, implementation, testing, and deployment.
+*   Served as Solution Architect for a core system module.
+*   Dedicated 50% of time to hands-on development in .Net C# and Oracle using PL/SQL.
+*   Managed multiple projects in parallel, recruited and mentored new employees.
+*   Engaged with customer issues, provided client on-site support, and conducted business reviews.
+
+**Community Activity**
+**2002-2017: Football Club General Manager – Shikun Vatikim Ramat-Gan**
+*   General Manager for a semi-professional football club in the Israeli football federation.
+*   Responsible for all financial aspects and bureaucracy procedures with various authorities.
+
+**Education**
+**B.Sc. in Computer Science, 2001** | The Open University
