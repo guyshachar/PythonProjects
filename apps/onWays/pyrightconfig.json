@@ -1,9 +1,8 @@
 {
   "pythonVersion": "3.11",
   "pythonPlatform": "Darwin",
-  "pythonPath": "/opt/homebrew/bin/python3.11",
-  "extraPaths": ["/opt/homebrew/lib/python3.11/site-packages"],
+  "venvPath": ".",
+  "venv": ".venv",
   "typeCheckingMode": "basic",
-  "reportMissingImports": "warning",
   "reportMissingModuleSource": "none"
 }
