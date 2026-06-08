@@ -4,6 +4,42 @@ apps/refPortal/data/
 .DS_Store
 apps/TzevaAdom/redAlert
 apps/redAlert
-apps/refPortal/shared/__pycache__/helpers.cpython-311.pyc
-apps/refPortal/shared/__pycache__/helpers.cpython-313.pyc
-apps/refPortal/shared/__pycache__/twilioClient.cpython-311.pyc
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# mypy / type checkers
+.mypy_cache/
+.dmypy.json
+.pytype/
+
+# IDE
+.idea/
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
