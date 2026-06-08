@@ -1,0 +1,9 @@
+{
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Darwin",
+  "venvPath": "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11",
+  "pythonPath": "/opt/homebrew/bin/python3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none"
+}
