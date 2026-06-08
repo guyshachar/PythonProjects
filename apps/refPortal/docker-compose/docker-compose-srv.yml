@@ -1,0 +1,190 @@
+version: '3.8'
+services:
+  gw:
+    image: guyshacharacc/refportalgw:latest-prod
+    init: true
+    tty: true
+    env_file:
+      - ../config/env
+    environment:
+      # 0 = allow Playwright proxy when BROWSER_PROXY_SERVER or PROXY_SERVER is set (production).
+      # Local: use docker-compose.local.yml or set DISABLE_BROWSER_PROXY=1 when no Tailscale sidecar.
+      DISABLE_BROWSER_PROXY: "${DISABLE_BROWSER_PROXY:-0}"
+      # socks5h:// is fine for curl; Playwright/Chromium need socks5:// — OrgServiceBase normalizes at runtime.
+      # Playwright uses BROWSER_PROXY_SERVER or PROXY_SERVER (see OrgServiceBase). Swarm DNS is
+      # {stack}_{service}, not the short compose service name — default matches restart.sh stack refportalservice_stack.
+      # Override: TAILSCALE_SOCKS_HOST=my_stack_tailscale docker stack deploy ...
+      PROXY_SERVER: socks5h://${TAILSCALE_SOCKS_HOST:-refportalservice_stack_tailscale}:1055
+      # Optional Playwright-only proxy; if empty, BROWSER_PROXY_SERVER falls back to PROXY_SERVER in code.
+      BROWSER_PROXY_SERVER: ${BROWSER_PROXY_SERVER:-}
+      CHROMIUM_SINGLE_PROCESS: "0"
+      refIdsPartition: 0,1,2,3,4,5,6,7,8,9
+      useApi: "False"
+      activeStatus: active
+      browserHeadless: "True"  # Set to False to see the browser
+      REPLICA_SLOT: "{{.Task.Slot}}"
+      APP_REPLICAS: "${APP_REPLICAS:-1}"
+      AWS_LAMBDA_FUNCTION_NAME1: AWS_LAMBDA_FUNCTION_NAME
+    volumes:
+      - ${HOME}/.aws:/root/.aws:ro
+      - ../config:/run/config
+      - ../data:/run/data
+      - ../logs:/run/logs
+      - ../ssl:/run/ssl
+      - ../secret:/run/secret
+      # Local NoCredentialsError fix: also pass -f docker-compose.local.yml (mounts ~/.aws into the container).
+    networks:
+      - refereex_shared_net
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: "2.5g"
+          cpus: "2.5"
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+        window: 120s
+
+  api:
+    image: guyshacharacc/refportalapi:latest-prod
+    init: true
+    tty: true
+    env_file:
+      - ../config/env
+    environment:
+      TAILSCALE_SOCKS_HOST: tailscale
+      PROXY_SERVER: socks5h://${TAILSCALE_SOCKS_HOST:-refportalservice_stack_tailscale}:1055
+      CHROMIUM_SINGLE_PROCESS: "0"
+      NODE_ENV: "${NODE_ENV:-production}"
+      HTTP_PORT: "${API_HTTP_PORT:-5001}"
+      HTTPS_PORT: "${API_HTTPS_PORT:-5002}"
+      refIdsPartition: "0,1,2,3,4,5,6,7,8,9"
+      PYTHONUNBUFFERED: "1"  # Prevents Python output buffering
+      REFALERT_WEBHOOK_VERIFY_SSL: "0"
+      REPLICA_SLOT_: "{{.Task.Slot}}"
+      APP_REPLICAS_: "${APP_REPLICAS:-1}"
+    ports:
+      - "${HTTP_PORT:-5001}:5001"  # HTTP port
+      - "${HTTPS_PORT:-5002}:5002"  # HTTPS port
+    volumes:
+      - /home/ec2-user/refPortalService/config:/run/config
+      - /home/ec2-user/refPortalService/data:/run/data
+      - /home/ec2-user/refPortalService/ssl:/run/ssl
+      - /home/ec2-user/refPortalService/logs:/run/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    #command: uvicorn rpApi.refPortalApiDI:app --host 0.0.0.0 --port ${HTTPS_PORT:-5001} --proxy-headers --ssl-keyfile /run/ssl/refereex.api.key --ssl-certfile /run/ssl/refereex.api.crt
+    command: uvicorn rpApi.refPortalApiDI:app --host 0.0.0.0 --port ${HTTP_PORT:-5001} --proxy-headers
+    #command: xvfb-run -a -s "-screen 0 1024x768x24" uvicorn rpApi.refPortalApiDI:app --host 0.0.0.0 --port ${HTTPS_PORT:-5001} --proxy-headers
+    deploy:
+      replicas: 0
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+        window: 120s
+    networks:
+      - refereex_shared_net
+
+  pwa:
+    image: guyshacharacc/refportalpwa:latest-${APP_ENV:-prod}
+    tty: true
+    env_file:
+      - ../config/env
+    environment:
+      - envFilePath = ./config/env
+      - NODE_ENV2=${NODE_ENV:-production}
+      - PWA_HTTP_PORT2=${PWA_HTTP_PORT:-8082}
+      - PWA_HTTPS_PORT2=${PWA_HTTPS_PORT:-8443}
+      - APP_ENV2=${APP_ENV:-prod}
+      - REPLICA_SLOT={{.Task.Slot}}
+    ports:
+      - "${PWA_HTTP_PORT:-8082}:8082"  # HTTP port
+      - "${PWA_HTTPS_PORT:-8443}:8443"  # HTTPS port
+    volumes:
+      - /home/ec2-user/refPortalService/config:/run/config
+      - ./ssl:/app/ssl:ro  # SSL certificates (read-only)
+      - ./logs:/app/logs    # Application logs
+    # PWA-specific command from Dockerfile
+    command: node start-server.js #--http-only
+    #command: sh -c "npm run start:http || node start-server.js --http-only"
+    deploy:
+      replicas: 0
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+        window: 120s
+    networks:
+      - refereex_shared_net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8082/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    # Labels for better container management
+    labels:
+      - "app=refportalpwa"
+      - "environment=${APP_ENV:-prod}"
+      - "version=${TAG:-latest}"
+    #depends_on:
+    #  cloudflared:
+    #    condition: service_healthy
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: ec2-playwright-proxy
+    environment:
+      - TS_AUTHKEY=tskey-auth-kSVoSjgQt411CNTRL-UvPhoY18r5jDHZYXdDiT5jeFSzSrB3to9  # Use an Auth Key from Tailscale Console
+      - TS_STATE_DIR=/var/lib/tailscale
+      # SOCKS5 for other containers on refereex_shared_net (tailscaled --socks5-server)
+      - TS_SOCKS5_SERVER=:1055
+      # This flag tells the container to use your RP5 as its exit node
+      - TS_EXTRA_ARGS=--exit-node=100.75.53.25
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - CAP_NET_ADMIN
+      - CAP_NET_RAW
+    healthcheck:
+      test: ["CMD-SHELL", "tailscale status >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - refereex_shared_net
+    deploy:
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+
+networks:
+  refereex_shared_net:
+    external: true
+    driver: bridge
+    name: refereex_shared_net
+
+volumes:
+  tailscale_data:
+    driver: local

@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  # PWA Service - Development Environment
+  pwa:
+    image: guyshacharacc/refportalpwa:latest-dev
+    container_name: refportalpwa-dev
+    tty: true
+    ports:
+      - "8083:8082"  # HTTP port (different host port)
+      - "8444:8443"  # HTTPS port (different host port)
+    env_file:
+      - ../env
+    environment:
+      - NODE_ENV=development
+      - PORT=8082
+      - HTTPS_PORT=8443
+      - APP_ENV=dev
+    volumes:
+      - ../ssl:/app/ssl:ro  # SSL certificates (read-only)
+      - ../logs:/app/logs    # Application logs
+      - .:/app               # Mount source code for development
+    # PWA-specific command from Dockerfile
+    command: sh -c "npm run start:http || node start-server.js --http-only"
+    restart: unless-stopped
+    networks:
+      - pwa_network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8082/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Labels for better container management
+    labels:
+      - "app=refportalpwa"
+      - "environment=dev"
+      - "version=latest-dev"
+
+networks:
+  pwa_network:
+    driver: bridge

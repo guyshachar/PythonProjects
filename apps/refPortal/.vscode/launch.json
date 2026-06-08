@@ -2,106 +2,136 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: RefPortalService File",
+            "name": "RefPortalGateway",
             "type": "debugpy",
             "request": "launch",
-            "program": "rpService/refPortalService.py",
+            "program": "rpGw/refPortalGateway.py",
             "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
             "env": {
-                "app": "LOCAL",
-                "logLevel": "INFO",
-                "fileVersion": "v8",
-                "loadInterval": "500",
-                "checkGames": "True",
-                "checkReviews": "True",
-                "mqttPublish": "False",
-                "twilioSend": "False",
-                "twilioServiceId": "MG7ec40f0e4baff9a172ad9e78cbc3d269",
-                "twilioServiceId1": "MGb8d7bb8a4e072ccf1e645c2b5109f4a5",
-                "twilioFromMobile1": "+14155238886",
-                "twilioFromMobile": "+972533932474",
-                "twilioUseTemplate": "True",
-                "twilioUseFreeText": "False",
-                "twilioAddMedia": "False",
-                "twilioOpenWindow": "HX9cca11d6aba6c462ef0da97ef9d55d90",
-                "twilioNewGameContentSid": "HXc778f502095de8425f0dee79ece9d355",
-                "twilioGameUpdateContentSid": "HXe2c43cb7131ab345a4ec354dcc4d6233",
-                "twilioGameNoticeContentSid": "HXc9438c8dad32dfd6aea090352d34b736",
-                "twilioNewReviewContentSid": "HX9047136eb2b6743d57eee044790b176c",
-                "twilioReviewUpdateContentSid": "HX37c74e9d872d4ac5aee40f53dbb98bc8",
-                "sendGeneralReminder": "True",
-                "registerReminderTime": "1012",
-                "approveGames": "True",
-                "start24HoursWindowNotification": "True",
-                "browserHeadless": "True",
-                "alwaysRenewPages": "True",
-                "browserRenewal": "3",
-                "apiServiceUrlBase": "https://refereex.com:24501/api/",
-                "timeout": "5000",
-                "TZ": "Asia/Jerusalem",
-                "refIdsPartition1": "1,2,3,4,9",
-                "MY_REFEREE_FILE": "./referees/",
-                "MY_CONFIG_FILE": "./config/",
-                "MY_DATA_FILE" : "/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/data/",
-                "MY_SECRET_FILE": "./secret/",
-                "MY_SSL_FILE": "./ssl/",
-                "twilioOnBoardingJoinConfirmation":"HX9862b1549f1c78a70d0dca4c15e0d9a4",
-                "twilioOnBoardingRegistration":"HXa5dcb70b48d59cdc87bedf232bcdd4b8",
-                "twilioOnBoardingActivate": "HXeef50e5476b996520b37d3eaf77c6ab5",
-                "twilioOnBoardingAdminMobile": "+972547799979",
-                "limitPerMin": "10",
+            },
+            "presentation": {
+                "hidden": true,
+                "group": "server",
+                "order": 1
+            }        
+        },
+        {
+            "name": "RefPortalGatewayDI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "rpGw/refPortalGatewayDI.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
+                "app_env": "prod",
+                "AWS_LAMBDA_FUNCTION_NAME1": "AWS_LAMBDA_FUNCTION_NAME",
+                "MY_CONFIG_FOLDER": "./config",
+                "browserHeadless": "False",
+                "CHROMIUM_SINGLE_PROCESS": "1",
+                "BROWSER_VIEWPORT_WIDTH": "1280",
+                "BROWSER_VIEWPORT_HEIGHT": "720",
+                "avoidChatGroups": "False",
+                "skipCollectItemsForAssigner1": "True",
+                "logDynamoDb": "False",
+                "loadInterval": "300",
+                "latencyFactor": "1.0",
+                "skipLoginOnHold": "True",
+                "filteredTenantKeys1": "IL#football#2025-26",
+                "filteredTenantKeys2": "IL#handball#2025-26",
+                "filteredTenantKeys3": "IL#handball#2025-26,IL#football#2025-26",
+                "filteredMobileNos0": "+972546225414,+972522899253",
+                "filteredMobileNos1": "+972522899253", //חכמון
+                "filteredMobileNos3": "+972506360689", //שיכהן 
+                "filteredMobileNos4": "+972537893718", //ירדנה
+                "filteredMobileNos5": "+972537221936", //מתן פינקר
+                "filteredMobileNos6": "+972505312062", //אייל קאופמן 
+                "filteredMobileNos7": "+972542244103", //רון ליבנה 
+                "filteredMobileNos8": "+972545876156", //רון ליבנה 
+                "pastCollectDays": "9",
+                "PROXY_SERVER": "",//tailscale-bridge:1055
+                "APP_REPLICAS": "1",
+                "REPLICA_SLOT": "1"
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 4
+            }
+        },        
+        {
+            "name": "RefPortalApi (Uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "rpApi.refPortalApi:app",
+                "--host", "0.0.0.0",
+                "--port", "5001",
+                "--ssl-keyfile", "./ssl/refereex.key",
+                "--ssl-certfile", "./ssl/refereex.crt",
+                "--reload"
+            ],
+            "jinja": true,
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
             }
         },
         {
-            "name": "Python Debugger: RefPortalApi File",
+            "name": "RefPortalApiDI HTTP(Uvicorn)",
             "type": "debugpy",
             "request": "launch",
-            "program": "rpApi/refPortalApi.py",
+            "module": "uvicorn",
+            "args": [
+                "rpApi.refPortalApiDI:app",
+                "--host", "0.0.0.0",
+                "--port", "5002",
+                //"--ssl-keyfile", "./ssl/refereex.key",
+                //"--ssl-certfile", "./ssl/refereex.crt",
+                "--reload"
+            ],
+            "jinja": true,
             "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
             "env": {
-                "app": "LOCAL",
-                "port": "5001",
-                "logLevel": "DEBUG",
-                "fileVersion": "v8",
-                "loadInterval": "500",
-                "checkGames": "True",
-                "checkReviews": "True",
-                "mqttPublish": "False",
-                "twilioSend": "True",
-                "twilioServiceId": "MG7ec40f0e4baff9a172ad9e78cbc3d269",
-                "twilioServiceId1": "MGb8d7bb8a4e072ccf1e645c2b5109f4a5",
-                "twilioFromMobile1": "+14155238886",
-                "twilioFromMobile": "+972533932474",
-                "twilioUseTemplate": "True",
-                "twilioUseFreeText": "False",
-                "twilioAddMedia": "False",
-                "twilioOpenWindow": "HX9cca11d6aba6c462ef0da97ef9d55d90",
-                "twilioNewGameContentSid": "HXc778f502095de8425f0dee79ece9d355",
-                "twilioGameUpdateContentSid": "HXe2c43cb7131ab345a4ec354dcc4d6233",
-                "twilioGameNoticeContentSid": "HXc9438c8dad32dfd6aea090352d34b736",
-                "twilioNewReviewContentSid": "HX9047136eb2b6743d57eee044790b176c",
-                "twilioReviewUpdateContentSid": "HX37c74e9d872d4ac5aee40f53dbb98bc8",
-                "sendGeneralReminder": "True",
-                "registerReminderTime": "1012",
-                "approveGames": "True",
-                "start24HoursWindowNotification": "True",
-                "browserHeadless": "True",
-                "alwaysRenewPages": "True",
-                "browserRenewal": "3",
-                "apiServiceUrlBase": "https://refereex.com:24551/api/",
-                "timeout": "5000",
-                "TZ": "Asia/Jerusalem",
-                "refIdsPartition1": "1,2,3,4,9",
-                "MY_REFEREE_FILE": "./referees/",
-                "MY_CONFIG_FILE": "./config/",
-                "MY_DATA_FILE" : "/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/data/",
-                "MY_SECRET_FILE": "./secret/",
-                "MY_SSL_FILE": "./ssl/refereex",
-                "twilioOnBoardingJoinConfirmation":"HX9862b1549f1c78a70d0dca4c15e0d9a4",
-                "twilioOnBoardingRegistration":"HXa5dcb70b48d59cdc87bedf232bcdd4b8",
-                "twilioOnBoardingActivate": "HXeef50e5476b996520b37d3eaf77c6ab5",
-                "twilioOnBoardingAdminMobile": "+972547799979",
-                "limitPerMin": "10",
+                "useApi": "True",
+                "MY_CONFIG_FOLDER": "./config",
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 2
+            }
+        },
+        {
+            "name": "RefPortalApiDI HTTPS(Uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "rpApi.refPortalApiDI:app",
+                "--host", "0.0.0.0",
+                "--port", "5003",
+                "--ssl-keyfile", "./ssl/pwa-dev.refereex.com.privkey.pem",
+                "--ssl-certfile", "./ssl/pwa-dev.refereex.com.fullchain.pem",
+                "--reload"
+            ],
+            "jinja": true,
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
+                "useApi": "True"
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 1
             }
         },
         {
@@ -115,50 +145,10 @@
                 "rpApi:app13"  // Replace with your module and app instance
             ],
             "console": "integratedTerminal",
+            "jinja": true,
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
             "env": {
-                "FLASK_ENV": "development",
-                "app": "LOCAL",
-                "logLevel": "INFO",
-                "fileVersion": "v8",
-                "loadInterval": "500",
-                "checkGames": "True",
-                "checkReviews": "True",
-                "mqttPublish": "False",
-                "twilioSend": "False",
-                "twilioServiceId": "MG7ec40f0e4baff9a172ad9e78cbc3d269",
-                "twilioServiceId1": "MGb8d7bb8a4e072ccf1e645c2b5109f4a5",
-                "twilioFromMobile1": "+14155238886",
-                "twilioFromMobile": "+972533932474",
-                "twilioUseTemplate": "True",
-                "twilioUseFreeText": "False",
-                "twilioAddMedia": "False",
-                "twilioOpenWindow": "HX9cca11d6aba6c462ef0da97ef9d55d90",
-                "twilioNewGameContentSid": "HXc778f502095de8425f0dee79ece9d355",
-                "twilioGameUpdateContentSid": "HXe2c43cb7131ab345a4ec354dcc4d6233",
-                "twilioGameNoticeContentSid": "HXc9438c8dad32dfd6aea090352d34b736",
-                "twilioNewReviewContentSid": "HX9047136eb2b6743d57eee044790b176c",
-                "twilioReviewUpdateContentSid": "HX37c74e9d872d4ac5aee40f53dbb98bc8",
-                "sendGeneralReminder": "True",
-                "registerReminderTime": "1012",
-                "approveGames": "True",
-                "start24HoursWindowNotification": "True",
-                "browserHeadless": "True",
-                "alwaysRenewPages": "True",
-                "browserRenewal": "3",
-                "apiServiceUrlBase": "https://refereex.com:24551/api/",
-                "timeout": "5000",
-                "TZ": "Asia/Jerusalem",
-                "refIdsPartition1": "1,2,3,4,9",
-                "MY_REFEREE_FILE": "./referees/",
-                "MY_CONFIG_FILE": "./config/",
-                "MY_DATA_FILE" : "/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/data/",
-                "MY_SECRET_FILE": "./secret/",
-                "MY_SSL_FILE": "./ssl/",
-                "twilioOnBoardingJoinConfirmation":"HX9862b1549f1c78a70d0dca4c15e0d9a4",
-                "twilioOnBoardingRegistration":"HXa5dcb70b48d59cdc87bedf232bcdd4b8",
-                "twilioOnBoardingActivate": "HXeef50e5476b996520b37d3eaf77c6ab5",
-                "twilioOnBoardingAdminMobile": "+972547799979",
-                "limitPerMin": "10",
             }    
         },
         {
@@ -166,51 +156,286 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
+            "args": [
+                "fix",
+            ],
             "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
             "env": {
-                "app": "LOCAL",
-                "logLevel": "INFO",
-                "fileVersion": "v8",
-                "loadInterval": "500",
-                "checkGames": "True",
-                "checkReviews": "True",
-                "mqttPublish": "False",
-                "twilioSend": "False",
-                "twilioServiceId": "MG7ec40f0e4baff9a172ad9e78cbc3d269",
-                "twilioServiceId1": "MGb8d7bb8a4e072ccf1e645c2b5109f4a5",
-                "twilioFromMobile1": "+14155238886",
-                "twilioFromMobile": "+972533932474",
-                "twilioUseTemplate": "True",
-                "twilioUseFreeText": "False",
-                "twilioAddMedia": "False",
-                "twilioOpenWindow": "HX9cca11d6aba6c462ef0da97ef9d55d90",
-                "twilioNewGameContentSid": "HXc778f502095de8425f0dee79ece9d355",
-                "twilioGameUpdateContentSid": "HXe2c43cb7131ab345a4ec354dcc4d6233",
-                "twilioGameNoticeContentSid": "HXc9438c8dad32dfd6aea090352d34b736",
-                "twilioNewReviewContentSid": "HX9047136eb2b6743d57eee044790b176c",
-                "twilioReviewUpdateContentSid": "HX37c74e9d872d4ac5aee40f53dbb98bc8",
-                "sendGeneralReminder": "True",
-                "registerReminderTime": "1012",
-                "approveGames": "True",
-                "start24HoursWindowNotification": "True",
-                "browserHeadless": "True",
-                "alwaysRenewPages": "True",
-                "browserRenewal": "3",
-                "apiServiceUrlBase": "https://refereex.com:24551/api/",
-                "timeout": "5000",
-                "TZ": "Asia/Jerusalem",
-                "refIdsPartition1": "1,2,3,4,9",
-                "MY_REFEREE_FILE": "./referees/",
-                "MY_CONFIG_FILE": "./config/",
-                "MY_DATA_FILE" : "/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal/data/",
-                "MY_SECRET_FILE": "./secret/",
-                "MY_SSL_FILE": "./ssl/",
-                "twilioOnBoardingJoinConfirmation":"HX9862b1549f1c78a70d0dca4c15e0d9a4",
-                "twilioOnBoardingRegistration":"HXa5dcb70b48d59cdc87bedf232bcdd4b8",
-                "twilioOnBoardingActivate": "HXeef50e5476b996520b37d3eaf77c6ab5",
-                "twilioOnBoardingAdminMobile": "+972547799979",
-                "limitPerMin": "10",
+                "season": "2025-26",
+                "useApi": "True",
+                "browserHeadless": "False",
+                "logLevel": "WARNING",
+                "logDynamoDb": "False",
+                "MY_CONFIG_FOLDER": "./config",
             }
         },
+        {
+            "name": "Python Debugger: Docx Generator File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "./docxGenerator/template_to_docx.py",
+            "args": [
+                "--ai-analyze",
+                "--ai-model",
+                "gemini",
+                "./docxGenerator/logoShiram.docx",
+                "-o",
+                "erez.docx",
+                //"--interactive",
+                "-i",
+                "./docxGenerator/erez.txt",
+                "--style-from",
+                "./docxGenerator/exampleReport.docx"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
+            }
+        },
+        {
+            "name": "Python Debugger: Docx Generator File#2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "./docxGenerator/applyTextOnDoc.py",
+            "args": [
+                "-t",
+                "./docxGenerator/exampleReport.docx",
+                "-i",
+                "./docxGenerator/erezMU.txt",
+                "-o",
+                "./docxGenerator/erez.docx",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
+            }
+        },
+        {
+            "name": "Python Debugger: update_table_schemas",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "AI/update_table_schemas.py",
+            "args": [
+                "rename"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
+                "app_env": "prod"
+            }
+        },
+        {
+            "name": "Python Debugger: prepare_new_season",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "AI/prepare_new_season.py",
+            "args": [
+                "full",
+                "2024-25",
+                "2025-26",
+                "--env", "prod"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "envFile": "${workspaceFolder}/config/env", // <-- This line loads the env file
+            "env": {
+                "app_env": "prod"
+            }
+        },
+        {
+            "name": "Start Vite Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/rpPwa/dev-server.js",
+            "cwd": "${workspaceFolder}/rpPwa",
+            "args": [
+                "--port", "8445",
+                "--https",
+                "--host", "pwa-dev.refereex.com"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "NODE_ENV": "development"
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 2
+            }
+        },
+        {
+            "name": "Start HTTP Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/rpPwa/start-server.js",
+            "console": "integratedTerminal",
+            "env": {
+                "envFilePath": "${workspaceFolder}/config/env",
+                "WSS_BASE_URL": "api-dev.refereex.com",
+                "API_BASE_URL": "https://api-dev.refereex.com",
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 2
+            }
+        },
+        {
+            "name": "Launch Safari",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:8082",
+            "webRoot": "${workspaceFolder}/rpPwa",
+            "runtimeExecutable": "/Applications/Safari.app/Contents/MacOS/Safari",
+            "runtimeArgs": [
+                "--remote-debugging-port=9222"
+            ],
+            "userDataDir": false,
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 2
+            }
+        },
+        {
+            "name": "Attach to Safari",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "webRoot": "${workspaceFolder}/rpPwa",
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 2
+            }
+        },
+        {
+            "name": "Debug PWA in Safari",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:8082",
+            "webRoot": "${workspaceFolder}/rpPwa",
+            "runtimeExecutable": "/Applications/Safari.app/Contents/MacOS/Safari",
+            "runtimeArgs": [
+                "--remote-debugging-port=9222",
+                "--user-data-dir=/tmp/safari-debug"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "refereeX-pwa",
+                "order": 2
+            }
+        },
+        {
+            "name": "Debug PWA in Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "https://pwa-dev.refereex.com/refportal-pwa.html",
+            "webRoot": "${workspaceFolder}/rpPwa",
+            "sourceMaps": true,
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+            "runtimeArgs": [
+                //"--disable-web-security",
+                "--disable-features=VizDisplayCompositor",
+                "--remote-debugging-port=9224",
+                "--disable-application-cache",
+                "--disable-cache",
+                "--disable-offline-load-stale-cache",
+                "--disk-cache-size=0",
+                "--media-cache-size=0"
+            ],
+            "presentation": {
+                "group": "refereeX-pwa",
+                "order": 3
+            }
+        },
+        {
+            "name": "Debug PWA in Chrome (Alternative)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "https://pwa-dev.refereex.com:8443/refportal-pwa.html",
+            "webRoot": "${workspaceFolder}/rpPwa",
+            "sourceMaps": true,
+            "userDataDir": false,
+            "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "runtimeArgs": [
+                "--remote-debugging-port=9223",
+                "--disable-web-security",
+                "--disable-features=VizDisplayCompositor",
+                "--disable-application-cache",
+                "--disable-cache",
+                "--disable-offline-load-stale-cache",
+                "--disk-cache-size=0",
+                "--media-cache-size=0"
+            ]
+        },
+        {
+            "name": "Debug PWA in Chrome (Edge)",
+            "type": "msedge",
+            "request": "launch",
+            "url": "https://pwa-dev.refereex.com:8443/refportal-pwa.html",
+            "webRoot": "${workspaceFolder}/rpPwa",
+            "sourceMaps": true,
+            "userDataDir": false,
+            "runtimeArgs": [
+                "--disable-application-cache",
+                "--disable-cache",
+                "--disable-offline-load-stale-cache",
+                "--disk-cache-size=0",
+                "--media-cache-size=0"
+            ]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Debug PWA (Vite + Chrome)",
+            "configurations": ["Start Vite Server (HTTP)", "Debug PWA in Chrome (Vite HTTP)"],
+            "stopAll": true,
+            "presentation": {
+                "group": "pwa-debug",
+                "order": 1
+            }
+        },
+        {
+            "name": "Debug PWA (Vite HTTPS + Chrome)",
+            "configurations": ["Start Vite Server", "Debug PWA in Chrome (Vite)"],
+            "stopAll": true,
+            "presentation": {
+                "group": "pwa-debug",
+                "order": 2
+            }
+        },
+        {
+            "name": "Debug PWA (RPApi - Server + Chrome)",
+            "configurations": ["RefPortalApiDI HTTPS(Uvicorn)", "Start HTTP Server", "Debug PWA in Chrome"],
+            "stopAll": true,
+            "presentation": {
+                "group": "pwa-debug",
+                "order": 2
+            }
+        },
+        {
+            "name": "Debug PWA (Server + Chrome)",
+            "configurations": ["Start HTTP Server", "Debug PWA in Chrome"],
+            "stopAll": true,
+            "presentation": {
+                "group": "pwa-debug",
+                "order": 1
+            }
+        },
+        {
+            "name": "Debug TestPWA (Simple - Server + Chrome)",
+            "configurations": ["Start HTTP Server", "Debug PWA in Chrome"],
+            "stopAll": true,
+            "presentation": {
+                "group": "pwa-debug",
+                "order": 3
+            }
+        }
     ]
 }

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css" rel="stylesheet" />
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
+  <style>
+    body {
+      margin: 40px;
+      font-family: Arial, sans-serif;
+    }
+    #calendar {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="calendar"></div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('calendar');
+
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',  // Weekly view with time grid
+        firstDay: {{ firstDay }},
+        slotMinTime: '08:00:00',      // Start at midnight
+        slotMaxTime: '24:00:00',      // End at midnight (full day)
+        slotLabelFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false             // 24-hour format
+        },
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false             // 24-hour format for event times
+        },
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        // Load events from the Flask endpoint
+        events: '/api/calendar/{{ guid }}',
+        eventContent: function(arg) {
+            // Default title and time text provided by FullCalendar
+            let title = arg.event.title;
+            let timeText = arg.timeText;
+            // Get the location from extendedProps
+            let location = arg.event.extendedProps.location || '';
+            
+            // Create custom HTML to display title, time, and location
+            let customHtml = `
+                <div>
+                <strong>${title}</strong><br>
+                ${timeText}<br>
+                <em>${location}</em>
+                </div>
+            `;
+            return { html: customHtml };
+        }
+      });
+
+      calendar.render();
+    });
+  </script>
+</body>
+</html>

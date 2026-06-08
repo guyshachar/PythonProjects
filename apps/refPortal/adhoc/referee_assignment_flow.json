@@ -1,0 +1,30 @@
+{
+  "version": "2.0",
+  "metadata": {
+    "name": "Referee Game Assignment",
+    "description": "Notify referees of new game assignments and collect confirmations"
+  },
+  "root_block": {
+    "name": "Start",
+    "type": "message",
+    "messages": [
+      {
+        "type": "text",
+        "text": "📋 משחק חדש הוקצה לך:\n🏟 {{venue}}\n🕓 {{time}}\n⚽ {{teams}}\n\nאתה מאשר קבלת המשחק?\nמספר מזהה: {{game_id}}",
+        "actions": [],
+        "replies": [
+          {
+            "type": "quick_reply",
+            "caption": "✅ מאשר",
+            "payload": "referee_accept_game"
+          },
+          {
+            "type": "quick_reply",
+            "caption": "❌ לא מאשר",
+            "payload": "referee_reject_game"
+          }
+        ]
+      }
+    ]
+  }
+}

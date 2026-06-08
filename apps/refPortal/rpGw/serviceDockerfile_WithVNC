@@ -1,0 +1,106 @@
+# Use the official Python image from the Docker Hub
+FROM python:3.13-slim
+#FROM public.ecr.aws/lambda/python:3.13-slim
+VOLUME ["/run/data"]
+VOLUME ["/run/logs"]
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install Playwright and browsers
+RUN pip install playwright
+RUN playwright install
+RUN pip install playwright-stealth
+
+# Install system dependencies for Playwright + VNC/X11 support
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    procps \
+    libxss1 \
+    libnss3 \
+    libnspr4 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libatspi2.0-0 \
+    libgtk-3-0 \
+    libxshmfence1 \
+    # VNC and X11 dependencies
+    xvfb \
+    x11vnc \
+    fluxbox \
+    xterm \
+    xfonts-base \
+    xfonts-75dpi \
+    xfonts-100dpi \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the requirements file into the container
+COPY rpService/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install ics pytz docker 
+
+# Copy the script into the container
+RUN mkdir -p /rpService
+RUN mkdir -p /rpApi
+COPY rpService/*.py rpService/.
+#COPY rpService/fonts/ rpService/fonts/
+COPY rpApi/*.py rpApi/.
+
+# Copy shared root files and subfolders
+COPY shared/*.py shared/.
+COPY shared/db/ shared/db/
+COPY shared/messaging/ shared/messaging/
+COPY shared/orgRelated/ shared/orgRelated/
+COPY shared/fonts/ shared/fonts/
+
+# Create startup script for VNC
+RUN echo '#!/bin/bash\n\
+# Start Xvfb in the background\n\
+Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset &\n\
+export DISPLAY=:99\n\
+\n\
+# Start VNC server\n\
+x11vnc -display :99 -nopw -listen 0.0.0.0 -xkb -forever -shared -rfbport 5900 &\n\
+\n\
+# Start window manager (optional, for better VNC experience)\n\
+fluxbox &\n\
+\n\
+# Wait a bit for services to start\n\
+sleep 2\n\
+\n\
+# Run the main application\n\
+exec "$@"\n\
+' > /start-with-vnc.sh && chmod +x /start-with-vnc.sh
+
+# Define entrypoint to start Tailscale and your app
+# Start Tailscale and your Python script
+ENV BUILD_DATE=202508220141
+ENV logLevel=INFO
+ENV fileVersion=v5
+ENV loadInterval=30000
+ENV loadUrl=https://ref.football.org.il/login
+ENV loadUrl2=https://www.google.com/
+ENV refPortalSM=refPortal/referees2
+ENV useTwilio=False
+ENV alwaysClosePage=False
+ENV mqttPublish=True
+ENV concurrentPages=4
+# VNC configuration
+ENV ENABLE_VNC=False
+ENV VNC_PORT=5900
+ENV DISPLAY=:99
+
+# Command to run the script
+# Use the VNC startup script if ENABLE_VNC is True, otherwise run directly
+CMD ["/bin/bash", "-c", "if [ \"$ENABLE_VNC\" = \"True\" ]; then /start-with-vnc.sh python rpService/refPortalServiceDI.py; else python rpService/refPortalServiceDI.py; fi"]

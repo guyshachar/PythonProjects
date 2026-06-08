@@ -1,0 +1,51 @@
+# Optimized single-stage build for RefPortal PWA
+FROM node:23-alpine
+
+# Install necessary packages and create user in single layer
+RUN apk add --no-cache openssl && \
+    addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Set default environment early (before COPY for better caching)
+ENV APP_ENV=dev \
+    NODE_ENV=development
+
+# Copy package files first for better caching
+COPY ./rpPwa/package*.json ./
+
+# Install dependencies with cache mount for faster rebuilds
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci && \
+    npm cache clean --force
+
+# Copy source code (this layer will invalidate cache when code changes)
+COPY ./rpPwa/. .
+
+# Create necessary directories and set permissions in single layer
+RUN mkdir -p ssl logs && \
+    chown -R nodejs:nodejs /app
+
+# Expose ports
+EXPOSE 8082 8443
+
+# Switch to non-root user
+USER nodejs
+
+# Health check
+#HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#    CMD node -e "require('http').get('http://localhost:8082/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+
+# Default command - try npm script first, fallback to direct node command
+#CMD ["sh", "-c", "npm run start:http || node start-server.js --http-only"]
+CMD ["node", "start-server.js"]
+
+# Labels for better container management
+LABEL maintainer="RefPortal Team" \
+      version="1.0.0" \
+      description="RefPortal PWA with Push Notifications" \
+      org.opencontainers.image.title="RefPortal PWA" \
+      org.opencontainers.image.description="Progressive Web App for Referee Management System" \
+      org.opencontainers.image.vendor="RefereeX"

@@ -3,3 +3,4 @@ pytz
 boto3
 colorama
 ics
+matplotlib

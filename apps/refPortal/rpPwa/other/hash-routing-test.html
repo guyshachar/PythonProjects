@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Routing Test - RefereeX PWA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            direction: rtl;
+        }
+        .test-links {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .test-links a {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .test-links a:hover {
+            background: #0056b3;
+        }
+        .current-hash {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+        }
+        .hash-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Hash Routing Test - RefereeX PWA</h1>
+    
+    <div class="current-hash">
+        <strong>Current Hash:</strong> <span id="currentHash">None</span>
+    </div>
+    
+    <div class="test-links">
+        <h3>Test Navigation Links:</h3>
+        <a href="#dashboard">📊 Dashboard</a>
+        <a href="#games">⚽ Games</a>
+        <a href="#reviews">📝 Reviews</a>
+        <a href="#fields">🏟️ Fields</a>
+        <a href="#rules">📋 Rules</a>
+        <a href="#chat">💬 Chat</a>
+        <a href="#invalid">❌ Invalid Section</a>
+    </div>
+    
+    <div class="hash-info">
+        <h3>Hash Routing Features:</h3>
+        <ul>
+            <li>✅ Direct navigation to sections via URL hash</li>
+            <li>✅ Browser back/forward button support</li>
+            <li>✅ Deep linking from external sources</li>
+            <li>✅ Service worker notification integration</li>
+            <li>✅ URL sharing with specific sections</li>
+            <li>✅ Fallback to dashboard for invalid hashes</li>
+        </ul>
+    </div>
+    
+    <div class="hash-info">
+        <h3>Test Scenarios:</h3>
+        <ol>
+            <li>Click the navigation links above to test hash changes</li>
+            <li>Use browser back/forward buttons to test navigation</li>
+            <li>Copy a URL with hash (e.g., #games) and paste in new tab</li>
+            <li>Test direct navigation to: <a href="https://pwa-dev.refereex.com:8443/refportal-pwa.html#games" target="_blank">#games section</a></li>
+        </ol>
+    </div>
+
+    <script>
+        // Simple hash routing demonstration
+        function updateCurrentHash() {
+            const hash = window.location.hash || 'None';
+            document.getElementById('currentHash').textContent = hash;
+        }
+
+        // Listen for hash changes
+        window.addEventListener('hashchange', () => {
+            console.log('Hash changed to:', window.location.hash);
+            updateCurrentHash();
+        });
+
+        // Update on page load
+        updateCurrentHash();
+        
+        console.log('Hash routing test page loaded');
+        console.log('Current URL:', window.location.href);
+        console.log('Current hash:', window.location.hash);
+    </script>
+</body>
+</html>
+

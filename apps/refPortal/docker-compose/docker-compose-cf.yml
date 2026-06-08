@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: refportal-cloudflared
+    restart: unless-stopped
+    # The command now points to the config file inside the container
+    command: tunnel --no-autoupdate run --token eyJhIjoiNmEzMTJlMmZjYWFjODNjZGZlNjU5OGRmZWY1YjYyODAiLCJ0IjoiYTM4ODY2NzctZmI5NS00ZTRkLTkzMmUtMmU5NTA5ZTQ1MThjIiwicyI6Ik5EWTROVGN5Tm1ZdFlXWmpNaTAwTTJJNExUazVPR1F0TkdKaE1XRXdOVGN6WkdaayJ9    # Alternative: Use config file for more complex routing
+    # command: tunnel --config /etc/cloudflared/config.yml --no-autoupdate run
+    # volumes:
+    #   - ./cloudflare-config.yml:/etc/cloudflared/config.yml:ro
+    ports:
+      - "49312:49312"  # Cloudflare tunnel port (if needed for external access)
+    networks:
+      - refportal_shared
+    # Health check for the tunnel
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Labels for better container management
+    labels:
+      - "app=cloudflared"
+      - "service=tunnel"
+      - "description=Cloudflare tunnel for RefPortal services"
+
+networks:
+  refportal_shared:
+    external: true

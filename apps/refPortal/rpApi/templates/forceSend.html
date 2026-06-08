@@ -6,9 +6,9 @@
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
     <title>שליחה מחודשת לשופט</title>
 </head>
-<body r>
+<body>
     <h1>הכנס פרטים</h1>
-    <form action="/forceSend" method="POST">
+    <form action="/api/forceSend" method="POST">
         <label for="refId">קוד שופט:</label>
         <input type="number" id="refId" name="refId"><br><br>
 

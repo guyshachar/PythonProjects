@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  refportal-pwa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: refportal-pwa
+    ports:
+      - "8082:8082"  # HTTP
+      - "8443:8443"  # HTTPS
+    volumes:
+      # Mount SSL certificates directory
+      - ./ssl:/app/ssl:ro
+      # Mount logs directory for persistence
+      - ./logs:/app/logs
+      # Mount environment file if needed
+      - ./.env:/app/.env:ro
+    environment:
+      - NODE_ENV=production
+      - HTTP_PORT=8082
+      - HTTPS_PORT=8443
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8082/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - refportal-network
+
+  # Optional: Redis for session storage and caching
+  redis:
+    image: redis:7-alpine
+    container_name: refportal-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - refportal-network
+
+volumes:
+  redis_data:
+
+networks:
+  refportal-network:
+    driver: bridge

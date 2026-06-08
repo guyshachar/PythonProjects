@@ -1,0 +1,294 @@
+{
+  "שיבוצים": {
+    "type": "action",
+    "variants": [
+      "שיבוץ",
+      "שיבוצי",
+      "שיבוצ"
+    ]
+  },
+  "שיבוצים קצר": {
+    "type": "action",
+    "variants": [
+      "שיבוץ קצר",
+      "שיבוצי קצר",
+      "שיבוצ קצר"
+    ]
+  },
+  "ביקורות": {
+    "type": "action",
+    "variants": [
+      "ביקורת",
+      "ביקור"
+    ]
+  },
+  "יומן": {
+    "type": "action",
+    "variants": [
+      "יומן",
+      "לוח שנה"
+    ]
+  },
+  "updatepassword": {
+    "type": "action",
+    "variants": [
+      "סיסמא",
+      "סיסמה",
+      "ססמא"
+    ]
+  },
+  "הפעל": {
+    "type": "action",
+    "variants": [
+      "הפעלה",
+      "activateref",
+      "activate"
+    ]
+  },
+  "נטרל": {
+    "type": "action",
+    "variants": [
+      "ניטרול",
+      "deactivateref",
+      "deactivate"
+    ]
+  },
+  "information": {
+    "type": "file",
+    "file": "information.txt",
+    "variants": [
+      "info",
+      "information",
+      "מידע"
+    ]
+  },
+  "support": {
+    "type": "action",
+    "variants": [
+      "support"
+    ]
+  },
+  "menu": {
+    "type": "action",
+    "variants": [
+      "menu"
+    ]
+  },
+  "monitor": {
+    "type": "action",
+    "variants": [
+      "monitor"
+    ]
+  },
+  "מאשר": {
+    "type": "action",
+    "variants": [
+      "מאשר",
+      "אשר",
+      "ברור",
+      "בסדר"
+    ]
+  },
+  "אופס": {
+    "type": "action",
+    "variants": [
+      "טעות",
+      "לא מאשר",
+      "חרטה",
+      "מתחרט",
+      "אופס"
+    ]
+  },
+  "*סיכום משחק*": {
+    "type": "action",
+    "variants": []
+  },
+  "מחוז": {
+    "type": "action",
+    "variants": [
+      "צפון",
+      "שרון",
+      "מרכז",
+      "דרום"
+    ]
+  },
+  "health": {
+    "type": "action",
+    "variants": []
+  },
+  "reminderforapproval": {
+    "type": "action",
+    "variants": []
+  },
+  "join": {
+    "type": "action",
+    "variants": [
+      "הצטרף",
+      "צירוף"
+    ]
+  },
+  "newjoiner": {
+    "type": "file",
+    "file": "newJoiner.txt",
+    "variants": [
+      "מצטרף חדש"
+    ]
+  },
+  "process": {
+    "type": "action",
+    "variants": [
+      "הרץ"
+    ]
+  },
+  "checkwindow": {
+    "type": "action",
+    "variants": [
+      "חלון",
+      "בדוק חלון"
+    ]
+  },
+  "forcesend": {
+    "type": "action",
+    "variants": [
+      "שגר"
+    ]
+  },
+  "approvelogin": {
+    "type": "action",
+    "variants": [
+    ]
+  },
+  "refreshleaguestables": {
+    "type": "action",
+    "variants": [
+      "רענן טבלאות"
+    ]
+  },
+  "בדיקות": {
+    "type": "action",
+    "variants": [
+      "בדיקה"
+    ]
+  },
+  "רישום": {
+    "type": "action",
+    "variants": [
+      "חדש רישום",
+      "חדש",
+      "מאשר/ת המשך קבלת הודעות ווטסאפ"
+    ]
+  },
+  "חוקת ילדים ב וטרומים 2025-26": {
+    "type": "file",
+    "file": "חוקת ילדים ב וטרומים 2025-26.pdf",
+    "variants": [
+      "מסמך חוקת ילדים",
+      "חוקת ילדים"
+    ]
+  },
+  "חוקת המשחק כולל שינויים 2025-26": {
+    "type": "file",
+    "file": "חוקת המשחק כולל שינויים 2025-26.pdf",
+    "variants": [
+      "מסמך חוקי המשחק מלא",
+      "חוקי המשחק"
+    ]
+  },
+  "נוהל רשימות שחקנים": {
+    "type": "file",
+    "file": "נוהל רשימות שחקנים.pdf",
+    "variants": [
+      "טופס רשימת שחקנים וכוננים",
+      "רשימת שחקנים",
+      "כונן",
+      "כוננים"
+    ]
+  },
+  "חוקת כדורגל נשים ונערות 2025-26": {
+    "type": "file",
+    "file": "חוקת כדורגל נשים ונערות 2025-26.pdf",
+    "variants": [
+      "מסמך חוקת נשים ונערות",
+      "נשים",
+      "נערות"
+    ]
+  },
+  "טבלת עזר זמנים וחילופים 2025-26": {
+    "type": "file",
+    "file": "טבלת עזר זמנים וחילופים 2025-26.pdf",
+    "variants": [
+      "מסמך זמנים וחילופים",
+      "זמנים וחילופים",
+      "פעימות"
+    ]
+  },
+  "שינויים תקנון רפואי 2024-25": {
+    "type": "file",
+    "file": "שינויים תקנון רפואי 2024-25.pdf",
+    "variants": [
+      "מסמך תקנון רפואי",
+      "תקתנון רפואי"
+    ]
+  },
+  "טופס החלפת שחקן": {
+    "type": "file",
+    "file": "טופס החלפת שחקן.pdf",
+    "variants": [
+      "טופס החלפת שחקן",
+      "החלפת שחקן",
+      "החלפ"
+    ]
+  },
+  "הנחיות למשחקי גביע": {
+    "type": "file",
+    "file": "הנחיות למשחקי גביע.pdf",
+    "variants": [
+      "מסמך משחקי גביע",
+      "משחקי גביע"
+    ]
+  },
+  "שינויי חוקה והנחיות ועדת שיפוט ארצית עונת 2025-26": {
+    "type": "file",
+    "file": "שינויי חוקה והנחיות ועדת שיפוט ארצית עונת 2025-26.pdf",
+    "variants": [
+      "מסמך שינויי חוקה",
+      "שינוי חוקה"
+    ]
+  },
+  "כושר גופני לאזורים": {
+    "type": "file",
+    "file": "כושר גופני לאזורים.pdf",
+    "variants": [
+      "מסמך כושר גופני לאזורים",
+      "כושר",
+      "כושר גופני"
+    ]
+  },
+  "פנקס דיגיטלי": {
+    "type": "file",
+    "file": "פנקס דיגיטלי.pdf",
+    "variants": [
+      "פנקס דיגיטלי",
+      "digital"
+    ]
+  },
+  "עדכון גירסה": {
+    "type": "url",
+    "url": "https://ext.football.org.il/files/it/ifa.apk",
+    "variants": [
+      "עדכון גירסה",
+      "install",
+      "upgrade"
+    ]
+  },
+  "fields": {
+    "type": "function",
+    "function": "getFieldsDetails",
+    "variants": [
+      "מגרש",
+      "מגרשים",
+      "field",
+      "fields"
+    ]
+  }
+}

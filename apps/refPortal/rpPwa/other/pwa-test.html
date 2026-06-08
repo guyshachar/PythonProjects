@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RefPortal PWA Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            direction: rtl;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <h1>RefPortal PWA Test Page</h1>
+    
+    <div class="test-section">
+        <h2>PWA Installation Test</h2>
+        <p>Test if the PWA can be installed on this device.</p>
+        <button class="test-button" onclick="testInstallation()">Test Installation</button>
+        <div id="installStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Service Worker Test</h2>
+        <p>Test if the service worker is registered and working.</p>
+        <button class="test-button" onclick="testServiceWorker()">Test Service Worker</button>
+        <div id="swStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Push Notification Test</h2>
+        <p>Test push notification functionality.</p>
+        <button class="test-button" onclick="testPushNotifications()">Test Push Notifications</button>
+        <div id="pushStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Offline Test</h2>
+        <p>Test offline functionality (requires going offline first).</p>
+        <button class="test-button" onclick="testOffline()">Test Offline</button>
+        <div id="offlineStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Open PWA</h2>
+        <p>Open the main PWA application.</p>
+        <a href="refportal-pwa.html" class="test-button" style="text-decoration: none; display: inline-block;">Open RefPortal PWA</a>
+    </div>
+
+    <script>
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function testInstallation() {
+            try {
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    showStatus('installStatus', '✅ PWA features are supported on this device', 'success');
+                } else {
+                    showStatus('installStatus', '❌ PWA features are not supported on this device', 'error');
+                }
+            } catch (error) {
+                showStatus('installStatus', `❌ Error testing installation: ${error.message}`, 'error');
+            }
+        }
+
+        async function testServiceWorker() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        showStatus('swStatus', `✅ Service Worker is registered: ${registration.scope}`, 'success');
+                    } else {
+                        showStatus('swStatus', '⚠️ Service Worker is not registered. Try opening the main PWA first.', 'info');
+                    }
+                } else {
+                    showStatus('swStatus', '❌ Service Workers are not supported', 'error');
+                }
+            } catch (error) {
+                showStatus('swStatus', `❌ Error testing service worker: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPushNotifications() {
+            try {
+                if ('Notification' in window) {
+                    if (Notification.permission === 'granted') {
+                        showStatus('pushStatus', '✅ Push notifications are already enabled', 'success');
+                    } else if (Notification.permission === 'denied') {
+                        showStatus('pushStatus', '❌ Push notifications are denied. Please enable in browser settings.', 'error');
+                    } else {
+                        showStatus('pushStatus', '⚠️ Push notifications not yet requested. Open the main PWA to enable.', 'info');
+                    }
+                } else {
+                    showStatus('pushStatus', '❌ Push notifications are not supported', 'error');
+                }
+            } catch (error) {
+                showStatus('pushStatus', `❌ Error testing push notifications: ${error.message}`, 'error');
+            }
+        }
+
+        async function testOffline() {
+            try {
+                if (navigator.onLine) {
+                    showStatus('offlineStatus', '⚠️ You are currently online. Go offline to test offline functionality.', 'info');
+                } else {
+                    showStatus('offlineStatus', '✅ You are offline. Testing offline functionality...', 'success');
+                    
+                    // Test if we can access cached resources
+                    try {
+                        const response = await fetch('refportal-pwa.html');
+                        if (response.ok) {
+                            showStatus('offlineStatus', '✅ Offline functionality working - cached resources accessible', 'success');
+                        } else {
+                            showStatus('offlineStatus', '⚠️ Offline functionality limited - some resources not cached', 'info');
+                        }
+                    } catch (error) {
+                        showStatus('offlineStatus', '❌ Offline functionality not working - cannot access cached resources', 'error');
+                    }
+                }
+            } catch (error) {
+                showStatus('offlineStatus', `❌ Error testing offline functionality: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            testInstallation();
+            testServiceWorker();
+            testPushNotifications();
+            testOffline();
+        });
+
+        // Listen for online/offline changes
+        window.addEventListener('online', () => {
+            showStatus('offlineStatus', '✅ Connection restored', 'success');
+        });
+
+        window.addEventListener('offline', () => {
+            showStatus('offlineStatus', '⚠️ Connection lost - testing offline mode', 'info');
+        });
+    </script>
+</body>
+</html>

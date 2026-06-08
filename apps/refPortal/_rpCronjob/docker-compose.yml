@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  cronjob-client:
+    build:
+      context: ..
+      dockerfile: rpCronjob/Dockerfile
+    container_name: refportal-cronjob-client
+    environment:
+      - TZ=Asia/Jerusalem
+      - PYTHONPATH=/app:/shared:/newServiceArchitecture
+      - PYTHONUNBUFFERED=1
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME}
+      - REDIS_URL=${REDIS_URL}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
+      - DESCOPE_PROJECT_ID=${DESCOPE_PROJECT_ID}
+      - DESCOPE_MANAGEMENT_KEY=${DESCOPE_MANAGEMENT_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ../shared:/shared:ro
+      - ../newServiceArchitecture:/newServiceArchitecture:ro
+      - ./logs:/var/log/cronjob
+    restart: unless-stopped
+    networks:
+      - refportal-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "supervisorctl", "status", "cronjob-client"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    ports:
+      - "8080:8080"  # For health checks
+
+  redis:
+    image: redis:7-alpine
+    container_name: refportal-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - refportal-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Local DynamoDB for development
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: refportal-dynamodb-local
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    environment:
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+    networks:
+      - refportal-network
+    profiles:
+      - development
+
+volumes:
+  redis_data:
+
+networks:
+  refportal-network:
+    driver: bridge

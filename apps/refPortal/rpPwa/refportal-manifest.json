@@ -1,0 +1,151 @@
+{
+  "name": "RefereeX PWA - ניהול שופטים ומשחקים",
+  "short_name": "RefereeX PWA",
+  "description": "מערכת ניהול שופטים ומשחקים מתקדמת",
+  "start_url": "/refportal-pwa.html",
+  "display": "standalone",
+  "background_color": "#2563eb",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./images/RefereeX_final_640x640.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX_transparent.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../images/RefereeX.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["sports", "business", "productivity"],
+  "screenshots": [
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "דשבורד ראשי"
+    },
+    {
+      "src": "./images/RefereeX.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "מסך משחקים"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "דשבורד",
+      "short_name": "דשבורד",
+      "description": "פתח את הדשבורד הראשי",
+      "url": "/refportal-pwa.html#dashboard",
+      "icons": [
+        {
+          "src": "../images/RefereeX.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "שיבוצים",
+      "short_name": "שיבוצים",
+      "description": "צפה בשיבוצים",
+      "url": "/refportal-pwa.html#games",
+      "icons": [
+        {
+          "src": "../images/RefereeX.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "צ'אט",
+      "short_name": "צ'אט",
+      "description": "פתח צ'אט שופטים",
+      "url": "/refportal-pwa.html#chat",
+      "icons": [
+        {
+          "src": "../images/RefereeX.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    {
+      "protocol": "web+refportal",
+      "url": "/refportal-pwa.html?action=%s"
+    }
+  ]
+}

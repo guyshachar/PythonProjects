@@ -1,0 +1,247 @@
+version: '3.8'
+services:
+  app1:
+    image: guyshacharacc/refportalservice:latest
+    tty: true
+    environment:
+      - TZ=Asia/Jerusalem
+      - logLevel=INFO
+      - logHistoryRetention=12
+      - fileVersion=v8
+      - swLevel=debug
+      - approveGames=True
+      - alwaysClosePage=True
+      - mqttPublish=True
+      - loadInterval=500
+      - openWindowReminder=20
+      - checkGames=True
+      - checkReviews=True
+      - concurrentPages=6
+      - useTwilio=True
+      - twilioServiceId=MG7ec40f0e4baff9a172ad9e78cbc3d269
+      - twilioFromMobile1=+14155238886
+      - twilioFromMobile=+972533932474
+      - twilioUseTemplate=True
+      - twilioAddMedia=False
+      - twilioOpenWindow=HX9cca11d6aba6c462ef0da97ef9d55d90
+      - twilioNewGameContentSid=HX6d2a2ffb8ec1c6f624785fc86b54e7fa
+      - twilioGameUpdateContentSid=HXeec30e4d3d8375c64efe3352bf19045c
+      - twilioGameNoticeContentSid1=HXc9438c8dad32dfd6aea090352d34b736
+      - twilioNewReviewContentSid=HX9047136eb2b6743d57eee044790b176c
+      - twilioReviewUpdateContentSid1=HX37c74e9d872d4ac5aee40f53dbb98bc8
+      - browserHeadless=True
+      - alwaysRenewPages=True
+      - apiServiceUrlBase=https://api.refereex.com:24501/api/
+      - twilioServiceUrlBase=https://api.refereex.com:24501/twilio/
+      - timeout=20000
+      - descopeProjectId=P2rMfchUiS31ARASEQsuEuf08UME
+      - timezone=Asia/Jerusalem
+      - APP_REPLICAS=2
+      - REPLICA_SLOT=1
+      - mainInstance=True
+      - useGreenApi=False
+      - alwaysCreateChatGroup=False
+      - greenApiInstanceId=7105199630
+      - greenApiUrlBase=https://7105.api.greenapi.com/
+      - apiKey=5a15b3a5-0358-4c63-84e4-315cbe499456
+      - generateReports=True
+      - app=APP1
+      - redisHost=192.168.1.45
+      - redisPort=6379
+      - redisDb=1
+      - env=prod
+      # Set to route browser traffic through a residential/Israeli proxy on EC2
+      # (ref.football.org.il blocks AWS datacenter IPs)
+      # Format: http://user:pass@host:port  or  socks5://host:port
+      - PROXY_SERVER=${PROXY_SERVER:-}
+      # Set to 1 to bypass proxy if ERR_PROXY_CONNECTION_FAILED (fix proxy or use direct)
+      - DISABLE_BROWSER_PROXY=${DISABLE_BROWSER_PROXY:-}
+    secrets:
+      - password_key
+      - twilio_account_sid
+      - twilio_auth_token
+      - mqtt_broker
+      - mqtt_username
+      - mqtt_password
+      - google_maps_api_key_client
+      - google_maps_api_key_server
+      - descope_mgmt_key
+      - greenApi_auth_token
+    volumes:
+      - /home/guy/refPortalService/data:/run/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: "1g"
+          cpus: "2.0"
+
+  app2:
+    image: guyshacharacc/refportalservice:latest
+    tty: true
+    environment:
+      - TZ=Asia/Jerusalem
+      - logLevel=INFO
+      - logHistoryRetention=12
+      - fileVersion=v8
+      - swLevel=debug
+      - approveGames=True
+      - alwaysClosePage=True
+      - mqttPublish=True
+      - loadInterval=500
+      - openWindowReminder=20
+      - checkGames=True
+      - checkReviews=True
+      - concurrentPages=6
+      - useTwilio=True
+      - twilioServiceId=MG7ec40f0e4baff9a172ad9e78cbc3d269
+      - twilioFromMobile1=+14155238886
+      - twilioFromMobile=+972533932474
+      - twilioUseTemplate=True
+      - twilioAddMedia=False
+      - twilioOpenWindow=HX9cca11d6aba6c462ef0da97ef9d55d90
+      - twilioNewGameContentSid=HX6d2a2ffb8ec1c6f624785fc86b54e7fa
+      - twilioGameUpdateContentSid=HXeec30e4d3d8375c64efe3352bf19045c
+      - twilioGameNoticeContentSid1=HXc9438c8dad32dfd6aea090352d34b736
+      - twilioNewReviewContentSid=HX9047136eb2b6743d57eee044790b176c
+      - twilioReviewUpdateContentSid1=HX37c74e9d872d4ac5aee40f53dbb98bc8
+      - browserHeadless=True
+      - alwaysRenewPages=True
+      - apiServiceUrlBase=https://api.refereex.com:24501/api/
+      - twilioServiceUrlBase=https://api.refereex.com:24501/twilio/
+      - timeout=20000
+      - descopeProjectId=P2rMfchUiS31ARASEQsuEuf08UME
+      - timezone=Asia/Jerusalem
+      - APP_REPLICAS=2
+      - REPLICA_SLOT=2
+      - mainInstance=False
+      - useGreenApi=False
+      - alwaysCreateChatGroup=False
+      - greenApiInstanceId=7105199630
+      - greenApiUrlBase=https://7105.api.greenapi.com/
+      - apiKey=5a15b3a5-0358-4c63-84e4-315cbe499456
+      - generateReports=True
+      - app=APP2
+      - redisHost=192.168.1.45
+      - redisPort=6379
+      - redisDb=1
+      - env=prod
+      - PROXY_SERVER=${PROXY_SERVER:-}
+      - DISABLE_BROWSER_PROXY=${DISABLE_BROWSER_PROXY:-}
+    secrets:
+      - password_key
+      - twilio_account_sid
+      - twilio_auth_token
+      - mqtt_broker
+      - mqtt_username
+      - mqtt_password
+      - google_maps_api_key_client
+      - google_maps_api_key_server
+      - descope_mgmt_key
+      - greenApi_auth_token
+    volumes:
+      - /home/guy/refPortalService/data:/run/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: "1g"
+          cpus: "2.0"
+
+  app3:
+    image: guyshacharacc/refportalservice:20250305
+    tty: true
+    environment:
+      - TZ=Asia/Jerusalem
+      - logLevel=INFO
+      - logHistoryRetention=12
+      - fileVersion=v8
+      - swLevel=debug
+      - approveGames=True
+      - alwaysClosePage=True
+      - mqttPublish=False
+      - loadInterval=500
+      - openWindowReminder=20
+      - checkGames=True
+      - checkReviews=True
+      - concurrentPages=6
+      - useTwilio=False
+      - twilioServiceId=MG7ec40f0e4baff9a172ad9e78cbc3d269
+      - twilioFromMobile1=+14155238886
+      - twilioFromMobile=+972533932474
+      - twilioUseTemplate=True
+      - twilioAddMedia=False
+      - twilioOpenWindow=HX9cca11d6aba6c462ef0da97ef9d55d90
+      - twilioNewGameContentSid=HX6d2a2ffb8ec1c6f624785fc86b54e7fa
+      - twilioGameUpdateContentSid=HXeec30e4d3d8375c64efe3352bf19045c
+      - twilioGameNoticeContentSid1=HXc9438c8dad32dfd6aea090352d34b736
+      - twilioNewReviewContentSid=HX9047136eb2b6743d57eee044790b176c
+      - twilioReviewUpdateContentSid1=HX37c74e9d872d4ac5aee40f53dbb98bc8
+      - browserHeadless=True
+      - alwaysRenewPages=True
+      - apiServiceUrlBase=https://api.refereex.com:24501/api/
+      - twilioServiceUrlBase=https://api.refereex.com:24501/twilio/
+      - timeout=20000
+      - descopeProjectId=P2rMfchUiS31ARASEQsuEuf08UME
+      - timezone=Asia/Jerusalem
+      - refIdsPartition1=0,1,2,3,4,5,6,7,8,9
+      - refIdsPartition2=54,79
+      - mainInstance=False
+      - useGreenApi=False
+      - alwaysCreateChatGroup=False
+      - greenApiInstanceId=7105199630
+      - greenApiUrlBase=https://7105.api.greenapi.com/
+      - apiKey=5a15b3a5-0358-4c63-84e4-315cbe499456
+      - generateReports=False
+      - redisHost=192.168.1.45
+      - redisPort=6379
+      - redisDb=1
+      - app=APP_NEW
+      - env=prod
+    secrets:
+      - password_key
+      - twilio_account_sid
+      - twilio_auth_token
+      - mqtt_broker
+      - mqtt_username
+      - mqtt_password
+      - google_maps_api_key_client
+      - google_maps_api_key_server
+      - descope_mgmt_key
+      - greenApi_auth_token
+    volumes:
+      - /home/guy/refPortalService/data:/run/data
+    deploy:
+      replicas: 0
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: "1g"
+          cpus: "2.5"
+
+secrets:
+  password_key:
+    external: true
+  twilio_account_sid:
+    external: true
+  twilio_auth_token:
+    external: true
+  mqtt_broker:
+    external: true
+  mqtt_username:
+    external: true
+  mqtt_password:
+    external: true
+  google_maps_api_key_client:
+    external: true
+  google_maps_api_key_server:
+    external: true
+  descope_mgmt_key:
+    external: true
+  greenApi_auth_token:
+    external: true

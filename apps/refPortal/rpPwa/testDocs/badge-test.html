@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badge Test - RefereeX PWA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .badge-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 80px;
+        }
+        .status {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2563eb;
+        }
+        .error {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+        }
+        .success {
+            background: #f0fdf4;
+            border-left-color: #22c55e;
+        }
+        .info {
+            background: #f8fafc;
+            border-left-color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ Badge API Test - RefereeX PWA</h1>
+        
+        <div id="status" class="status info">
+            <strong>Status:</strong> <span id="statusText">Initializing...</span>
+        </div>
+
+        <div class="badge-controls">
+            <h3>Badge Controls</h3>
+            
+            <div class="control-group">
+                <label for="badgeValue">Badge Value (0-99):</label>
+                <input type="number" id="badgeValue" min="0" max="99" value="5">
+                <button onclick="setBadge()">Set Badge</button>
+            </div>
+
+            <div class="control-group">
+                <button onclick="setGenericBadge()">Set Generic Badge</button>
+                <button onclick="clearBadge()">Clear Badge</button>
+            </div>
+
+            <div class="control-group">
+                <button onclick="testUnreadMessages()">Test Unread Messages (15)</button>
+                <button onclick="testPendingGames()">Test Pending Games (8)</button>
+            </div>
+
+            <div class="control-group">
+                <button onclick="testCriticalNotifications()">Test Critical Notifications</button>
+                <button onclick="clearAllBadges()">Clear All Badges</button>
+            </div>
+        </div>
+
+        <div class="badge-controls">
+            <h3>Platform Information</h3>
+            <div id="platformInfo" class="status info">
+                Loading platform information...
+            </div>
+        </div>
+
+        <div class="badge-controls">
+            <h3>Instructions</h3>
+            <div class="status info">
+                <p><strong>How to test:</strong></p>
+                <ol>
+                    <li>Make sure your PWA is installed on your device</li>
+                    <li>Use the controls above to set different badge values</li>
+                    <li>Check your device's home screen to see the badge on the app icon</li>
+                    <li>On Android: Badge appears automatically with notifications</li>
+                    <li>On iOS: Badge appears on the app icon (iOS 16.4+)</li>
+                    <li>On Desktop: Badge appears in the taskbar (Chrome/Edge)</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Badge Service -->
+    <script src="./js/badgeService.js"></script>
+    
+    <script>
+        let badgeService = null;
+        let statusElement = null;
+        let statusTextElement = null;
+        let platformInfoElement = null;
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            statusElement = document.getElementById('status');
+            statusTextElement = document.getElementById('statusText');
+            platformInfoElement = document.getElementById('platformInfo');
+            
+            initializeBadgeService();
+        });
+
+        function initializeBadgeService() {
+            badgeService = window.badgeService;
+            
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            if (badgeService.isSupported) {
+                updateStatus('Badge API is supported on this platform', 'success');
+            } else {
+                updateStatus('Badge API is not supported on this platform', 'error');
+            }
+
+            // Update platform info
+            const platformInfo = badgeService.getPlatformInfo();
+            platformInfoElement.innerHTML = `
+                <strong>Platform:</strong> ${getPlatformName(platformInfo)}<br>
+                <strong>App Badge Support:</strong> ${platformInfo.supportsAppBadge ? 'Yes' : 'No'}<br>
+                <strong>Badge Behavior:</strong> ${badgeService.getBadgeBehavior()}<br>
+                <strong>Current Badge:</strong> ${badgeService.getCurrentBadge() || 'None'}
+            `;
+
+            // Subscribe to badge updates
+            badgeService.onBadgeUpdate((newValue, oldValue) => {
+                console.log(`Badge updated: ${oldValue} → ${newValue}`);
+                platformInfoElement.innerHTML = `
+                    <strong>Platform:</strong> ${getPlatformName(platformInfo)}<br>
+                    <strong>App Badge Support:</strong> ${platformInfo.supportsAppBadge ? 'Yes' : 'No'}<br>
+                    <strong>Badge Behavior:</strong> ${badgeService.getBadgeBehavior()}<br>
+                    <strong>Current Badge:</strong> ${badgeService.getCurrentBadge() || 'None'}
+                `;
+            });
+        }
+
+        function getPlatformName(platformInfo) {
+            if (platformInfo.isAndroid) return 'Android';
+            if (platformInfo.isIOS) return 'iOS';
+            if (platformInfo.isWindows) return 'Windows';
+            if (platformInfo.isMacOS) return 'macOS';
+            return 'Unknown';
+        }
+
+        function updateStatus(message, type = 'info') {
+            statusTextElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        async function setBadge() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            const value = parseInt(document.getElementById('badgeValue').value);
+            if (isNaN(value) || value < 0 || value > 99) {
+                updateStatus('Please enter a valid number between 0 and 99', 'error');
+                return;
+            }
+
+            try {
+                const success = await badgeService.setBadge(value);
+                if (success) {
+                    updateStatus(`Badge set to ${value}`, 'success');
+                } else {
+                    updateStatus('Failed to set badge', 'error');
+                }
+            } catch (error) {
+                updateStatus(`Error setting badge: ${error.message}`, 'error');
+            }
+        }
+
+        async function setGenericBadge() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            try {
+                const success = await badgeService.setGenericBadge();
+                if (success) {
+                    updateStatus('Generic badge set', 'success');
+                } else {
+                    updateStatus('Failed to set generic badge', 'error');
+                }
+            } catch (error) {
+                updateStatus(`Error setting generic badge: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearBadge() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            try {
+                const success = await badgeService.clearBadge();
+                if (success) {
+                    updateStatus('Badge cleared', 'success');
+                } else {
+                    updateStatus('Failed to clear badge', 'error');
+                }
+            } catch (error) {
+                updateStatus(`Error clearing badge: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUnreadMessages() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            try {
+                await badgeService.updateFromUnreadCount(15);
+                updateStatus('Badge updated for 15 unread messages', 'success');
+            } catch (error) {
+                updateStatus(`Error testing unread messages: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPendingGames() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            try {
+                await badgeService.updateFromPendingGames(8);
+                updateStatus('Badge updated for 8 pending games', 'success');
+            } catch (error) {
+                updateStatus(`Error testing pending games: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCriticalNotifications() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            try {
+                await badgeService.updateFromCriticalNotifications(true);
+                updateStatus('Badge updated for critical notifications', 'success');
+            } catch (error) {
+                updateStatus(`Error testing critical notifications: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearAllBadges() {
+            if (!badgeService) {
+                updateStatus('Badge service not available', 'error');
+                return;
+            }
+
+            try {
+                await badgeService.clearBadge();
+                updateStatus('All badges cleared', 'success');
+            } catch (error) {
+                updateStatus(`Error clearing badges: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+

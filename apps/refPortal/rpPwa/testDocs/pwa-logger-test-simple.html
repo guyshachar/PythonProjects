@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Logger Test - Safe Mode</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #0056CC;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .log-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 PWA Logger Test - Safe Mode</h1>
+        
+        <div class="status info">
+            <strong>Status:</strong> <span id="status">Initializing...</span>
+        </div>
+        
+        <h2>Test Safe Logger</h2>
+        <p>This test verifies the PWA Logger works without crashing the app.</p>
+        
+        <button class="test-button" onclick="testBasicLogging()">Test Basic Logging</button>
+        <button class="test-button" onclick="testErrorHandling()">Test Error Handling</button>
+        <button class="test-button" onclick="testLoggerStatus()">Check Logger Status</button>
+        <button class="test-button" onclick="enableLogger()">Enable Logger</button>
+        <button class="test-button" onclick="disableLogger()">Disable Logger</button>
+        
+        <div id="logOutput" class="log-output" style="display: none;">
+            <div id="logContent"></div>
+        </div>
+        
+        <h2>Instructions</h2>
+        <ol>
+            <li>Click "Test Basic Logging" to test console.log without logger</li>
+            <li>Click "Enable Logger" to activate the PWA Logger</li>
+            <li>Click "Test Basic Logging" again to test with logger active</li>
+            <li>Check browser console for any errors</li>
+            <li>App should not crash or freeze</li>
+        </ol>
+    </div>
+
+    <script type="module">
+        // Mock WebSocket for testing
+        const mockWebSocket = {
+            sendLog: (type, message) => {
+                console.log('📤 Mock WebSocket sendLog:', type, message);
+            }
+        };
+
+        // Import PWALogger
+        import { PWALogger } from './js/pwa-logger.js';
+        
+        let logger = null;
+        let testCount = 0;
+        
+        // Initialize logger
+        try {
+            logger = new PWALogger(mockWebSocket);
+            document.getElementById('status').textContent = 'Logger created successfully (disabled by default)';
+            document.getElementById('status').parentElement.className = 'status success';
+        } catch (error) {
+            document.getElementById('status').textContent = 'Error creating logger: ' + error.message;
+            document.getElementById('status').parentElement.className = 'status error';
+        }
+        
+        // Test functions
+        window.testBasicLogging = function() {
+            testCount++;
+            console.log(`🧪 Test log message #${testCount}`);
+            console.info(`ℹ️ Test info message #${testCount}`);
+            console.warn(`⚠️ Test warning message #${testCount}`);
+            
+            updateStatus(`Basic logging test #${testCount} completed`);
+        };
+        
+        window.testErrorHandling = function() {
+            try {
+                // This should trigger error handling
+                throw new Error('Test error for logger');
+            } catch (error) {
+                console.error('Caught test error:', error.message);
+                updateStatus('Error handling test completed');
+            }
+        };
+        
+        window.testLoggerStatus = function() {
+            if (logger) {
+                const status = {
+                    enabled: logger.isEnabled,
+                    capturing: logger.isCapturing,
+                    bufferSize: logger.logBuffer.length,
+                    maxBuffer: logger.maxBufferSize
+                };
+                console.table(status);
+                updateStatus(`Logger status: ${status.enabled ? 'Enabled' : 'Disabled'}`);
+            } else {
+                updateStatus('Logger not available');
+            }
+        };
+        
+        window.enableLogger = function() {
+            if (logger) {
+                const success = logger.enableSafely();
+                updateStatus(success ? 'Logger enabled successfully' : 'Failed to enable logger');
+            } else {
+                updateStatus('Logger not available');
+            }
+        };
+        
+        window.disableLogger = function() {
+            if (logger) {
+                logger.setEnabled(false);
+                updateStatus('Logger disabled');
+            } else {
+                updateStatus('Logger not available');
+            }
+        };
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            document.getElementById('status').parentElement.className = 'status info';
+        }
+        
+        // Monitor for crashes
+        let crashCount = 0;
+        const originalError = window.onerror;
+        window.onerror = function(message, source, lineno, colno, error) {
+            crashCount++;
+            console.error(`🚨 Crash detected #${crashCount}:`, message);
+            updateStatus(`Crash detected: ${message}`);
+            if (originalError) {
+                originalError.apply(this, arguments);
+            }
+        };
+        
+        // Test app stability
+        setInterval(() => {
+            if (crashCount > 0) {
+                updateStatus(`App crashed ${crashCount} times - Logger may be causing issues`);
+            } else {
+                updateStatus('App running stable - Logger working correctly');
+            }
+        }, 5000);
+        
+        console.log('✅ PWA Logger test page loaded successfully');
+    </script>
+</body>
+</html>
+

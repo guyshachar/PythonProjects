@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="RefereeX Watch - ניהול שופטים ומשחקים">
+    <meta http-equiv="Pragma" content="no-cache">
+
+    <title>RefereeX Watch</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="refportal-watch-manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" href="./images/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="./images/RefereeX.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./css/refportal-watch.css">
+    
+</head>
+<body>
+    <!-- Header -->
+    <header class="watch-header">
+        <div class="header-content">
+            <img src="./images/RefereeX.png" alt="RefPortal" class="watch-logo">
+            <h1>RefereeX</h1>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="watch-nav">
+        <button class="nav-btn active" data-section="games">משחקים</button>
+        <button class="nav-btn" data-section="reviews">ביקורות</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="watch-main">
+        <!-- Games Section -->
+        <section id="games" class="content-section active">
+            <div class="section-header">
+                <h2>משחקים</h2>
+                <button class="refresh-btn" id="refreshGames">🔄</button>
+            </div>
+            
+            <!-- Simple Filter -->
+            <div class="watch-filter">
+                <select id="gamesFilter" class="watch-select">
+                    <option value="">כל המשחקים</option>
+                    <option value="active">פעילים</option>
+                    <option value="completed">הושלמו</option>
+                </select>
+            </div>
+            
+            <!-- Games List -->
+            <div id="gamesList" class="watch-list">
+                <div class="loading">טוען משחקים...</div>
+            </div>
+        </section>
+
+        <!-- Reviews Section -->
+        <section id="reviews" class="content-section">
+            <div class="section-header">
+                <h2>ביקורות</h2>
+                <button class="refresh-btn" id="refreshReviews">🔄</button>
+            </div>
+            
+            <!-- Simple Filter -->
+            <div class="watch-filter">
+                <select id="reviewsFilter" class="watch-select">
+                    <option value="">כל הביקורות</option>
+                    <option value="5">5 כוכבים</option>
+                    <option value="4">4 כוכבים</option>
+                    <option value="3">3 כוכבים</option>
+                    <option value="2">2 כוכבים</option>
+                    <option value="1">1 כוכב</option>
+                </select>
+            </div>
+            
+            <!-- Reviews List -->
+            <div id="reviewsList" class="watch-list">
+                <div class="loading">טוען ביקורות...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Status Bar -->
+    <div class="watch-status">
+        <span id="connectionStatus" class="status-indicator">🟢</span>
+        <span id="lastUpdate" class="last-update">-</span>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/refportal-watch.js"></script>
+</body>
+</html>
+

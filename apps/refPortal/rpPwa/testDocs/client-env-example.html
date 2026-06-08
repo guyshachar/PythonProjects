@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Environment Variables Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .env-display {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Client Environment Variables Example</h1>
+    
+    <div class="section info">
+        <h3>📋 Instructions</h3>
+        <p>This example demonstrates how to use environment variables in client-side JavaScript.</p>
+        <p>Make sure your server is running with: <code>node start-server.js</code></p>
+    </div>
+
+    <div class="section">
+        <h3>🔧 Environment Actions</h3>
+        <button onclick="loadEnvironment()">Load Environment</button>
+        <button onclick="testApiCall()">Test API Call</button>
+        <button onclick="checkFeatures()">Check Features</button>
+        <button onclick="showEnvironmentInfo()">Show Environment Info</button>
+    </div>
+
+    <div id="status" class="section">
+        <h3>📊 Status</h3>
+        <div id="status-content">Click a button above to test environment variables.</div>
+    </div>
+
+    <div id="environment-display" class="section" style="display: none;">
+        <h3>🌍 Environment Variables</h3>
+        <div id="env-content" class="env-display"></div>
+    </div>
+
+    <div id="api-response" class="section" style="display: none;">
+        <h3>🔌 API Response</h3>
+        <div id="api-content" class="env-display"></div>
+    </div>
+
+    <!-- Load environment utilities -->
+    <script src="./js/environment-loader.js"></script>
+    <script src="./js/client-env-utils.js"></script>
+
+    <script>
+        // Example functions demonstrating environment variable usage
+        
+        async function loadEnvironment() {
+            const statusDiv = document.getElementById('status');
+            const envDiv = document.getElementById('environment-display');
+            const envContent = document.getElementById('env-content');
+            
+            try {
+                statusDiv.className = 'section info';
+                statusDiv.innerHTML = '<h3>📊 Status</h3><p>Loading environment variables...</p>';
+                
+                // Wait for environment to be ready
+                await window.clientEnv.waitForReady();
+                
+                // Get all environment variables
+                const env = window.clientEnv.getAll();
+                
+                // Display environment variables
+                envContent.textContent = JSON.stringify(env, null, 2);
+                envDiv.style.display = 'block';
+                
+                statusDiv.className = 'section success';
+                statusDiv.innerHTML = `
+                    <h3>📊 Status</h3>
+                    <p>✅ Environment loaded successfully!</p>
+                    <p><strong>App:</strong> ${window.clientEnv.getAppName()}</p>
+                    <p><strong>Version:</strong> ${window.clientEnv.getVersion()}</p>
+                    <p><strong>Environment:</strong> ${window.clientEnv.get('NODE_ENV')}</p>
+                    <p><strong>Debug Mode:</strong> ${window.clientEnv.isDebug() ? 'Enabled' : 'Disabled'}</p>
+                    <p><strong>API Base URL:</strong> ${window.clientEnv.getApiBaseUrl()}</p>
+                `;
+                
+            } catch (error) {
+                statusDiv.className = 'section error';
+                statusDiv.innerHTML = `
+                    <h3>📊 Status</h3>
+                    <p>❌ Failed to load environment: ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testApiCall() {
+            const statusDiv = document.getElementById('status');
+            const apiDiv = document.getElementById('api-response');
+            const apiContent = document.getElementById('api-content');
+            
+            try {
+                statusDiv.className = 'section info';
+                statusDiv.innerHTML = '<h3>📊 Status</h3><p>Testing API call...</p>';
+                
+                // Wait for environment to be ready
+                await window.clientEnv.waitForReady();
+                
+                // Get API base URL from environment
+                const apiBaseUrl = window.clientEnv.getApiBaseUrl();
+                
+                // Make API call to health endpoint
+                const response = await fetch(`${apiBaseUrl}/api/health`);
+                const data = await response.json();
+                
+                // Display API response
+                apiContent.textContent = JSON.stringify(data, null, 2);
+                apiDiv.style.display = 'block';
+                
+                statusDiv.className = 'section success';
+                statusDiv.innerHTML = `
+                    <h3>📊 Status</h3>
+                    <p>✅ API call successful!</p>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <p><strong>API Base URL:</strong> ${apiBaseUrl}</p>
+                    <p><strong>Response Time:</strong> ${new Date().toISOString()}</p>
+                `;
+                
+            } catch (error) {
+                statusDiv.className = 'section error';
+                statusDiv.innerHTML = `
+                    <h3>📊 Status</h3>
+                    <p>❌ API call failed: ${error.message}</p>
+                    <p>Make sure your server is running and accessible.</p>
+                `;
+            }
+        }
+        
+        function checkFeatures() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Wait for environment to be ready
+                if (!window.clientEnv.isReady()) {
+                    statusDiv.className = 'section error';
+                    statusDiv.innerHTML = '<h3>📊 Status</h3><p>❌ Environment not ready. Click "Load Environment" first.</p>';
+                    return;
+                }
+                
+                const features = {
+                    'Push Notifications': window.clientEnv.isFeatureEnabled('PUSH_NOTIFICATIONS'),
+                    'Offline Support': window.clientEnv.isFeatureEnabled('OFFLINE_SUPPORT'),
+                    'Background Sync': window.clientEnv.isFeatureEnabled('BACKGROUND_SYNC'),
+                    'Install Prompt': window.clientEnv.isFeatureEnabled('INSTALL_PROMPT'),
+                    'Chat Sync': window.clientEnv.isFeatureEnabled('CHAT_SYNC')
+                };
+                
+                let featuresHtml = '<h3>📊 Status</h3><p>✅ Feature flags checked:</p><ul>';
+                for (const [feature, enabled] of Object.entries(features)) {
+                    featuresHtml += `<li><strong>${feature}:</strong> ${enabled ? '✅ Enabled' : '❌ Disabled'}</li>`;
+                }
+                featuresHtml += '</ul>';
+                
+                statusDiv.className = 'section success';
+                statusDiv.innerHTML = featuresHtml;
+                
+            } catch (error) {
+                statusDiv.className = 'section error';
+                statusDiv.innerHTML = `
+                    <h3>📊 Status</h3>
+                    <p>❌ Failed to check features: ${error.message}</p>
+                `;
+            }
+        }
+        
+        function showEnvironmentInfo() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Wait for environment to be ready
+                if (!window.clientEnv.isReady()) {
+                    statusDiv.className = 'section error';
+                    statusDiv.innerHTML = '<h3>📊 Status</h3><p>❌ Environment not ready. Click "Load Environment" first.</p>';
+                    return;
+                }
+                
+                const info = {
+                    'App Name': window.clientEnv.getAppName(),
+                    'App Short Name': window.clientEnv.getAppShortName(),
+                    'Version': window.clientEnv.getVersion(),
+                    'Build Time': window.clientEnv.getBuildTime(),
+                    'Node Environment': window.clientEnv.get('NODE_ENV'),
+                    'Debug Mode': window.clientEnv.isDebug() ? 'Enabled' : 'Disabled',
+                    'Development Mode': window.clientEnv.isDevelopment() ? 'Yes' : 'No',
+                    'Production Mode': window.clientEnv.isProduction() ? 'Yes' : 'No',
+                    'API Base URL': window.clientEnv.getApiBaseUrl(),
+                    'PWA Base URL': window.clientEnv.getPwaBaseUrl(),
+                    'HTTP Port': window.clientEnv.get('PWA_HTTP_PORT'),
+                    'HTTPS Port': window.clientEnv.get('PWA_HTTPS_PORT'),
+                    'CORS Origin': window.clientEnv.get('CORS_ORIGIN')
+                };
+                
+                let infoHtml = '<h3>📊 Status</h3><p>✅ Environment information:</p><ul>';
+                for (const [key, value] of Object.entries(info)) {
+                    infoHtml += `<li><strong>${key}:</strong> ${value}</li>`;
+                }
+                infoHtml += '</ul>';
+                
+                statusDiv.className = 'section success';
+                statusDiv.innerHTML = infoHtml;
+                
+            } catch (error) {
+                statusDiv.className = 'section error';
+                statusDiv.innerHTML = `
+                    <h3>📊 Status</h3>
+                    <p>❌ Failed to get environment info: ${error.message}</p>
+                `;
+            }
+        }
+        
+        // Auto-load environment when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.clientEnv && window.clientEnv.isReady()) {
+                    document.getElementById('status').innerHTML = `
+                        <h3>📊 Status</h3>
+                        <p>✅ Environment auto-loaded successfully!</p>
+                        <p>Ready to test environment variables.</p>
+                    `;
+                } else {
+                    document.getElementById('status').innerHTML = `
+                        <h3>📊 Status</h3>
+                        <p>⏳ Environment loading...</p>
+                        <p>Click "Load Environment" if it doesn't load automatically.</p>
+                    `;
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

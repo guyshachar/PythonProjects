@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Reload Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Debug Reload Issue</h1>
+    
+    <div id="status" class="status info">Initializing...</div>
+    <div id="loadTime" class="status info">Load time: <span id="loadTimeValue">-</span></div>
+    <div id="reloadCount" class="status warning">Reload count: <span id="reloadCountValue">0</span></div>
+    <div id="lastReload" class="status info">Last reload: <span id="lastReloadValue">-</span></div>
+    
+    <button onclick="testServiceWorker()">Test Service Worker</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+    <button onclick="location.reload()">Manual Reload</button>
+    
+    <script>
+        let reloadCount = parseInt(localStorage.getItem('reloadCount') || '0');
+        let lastReload = localStorage.getItem('lastReload') || 'Never';
+        let loadTime = new Date().toLocaleString();
+        
+        // Increment reload count
+        reloadCount++;
+        localStorage.setItem('reloadCount', reloadCount.toString());
+        localStorage.setItem('lastReload', loadTime);
+        
+        // Update display
+        document.getElementById('loadTimeValue').textContent = loadTime;
+        document.getElementById('reloadCountValue').textContent = reloadCount;
+        document.getElementById('lastReloadValue').textContent = lastReload;
+        
+        // Check for frequent reloads
+        if (reloadCount > 5) {
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').textContent = 'WARNING: Page has reloaded ' + reloadCount + ' times!';
+        } else if (reloadCount > 2) {
+            document.getElementById('status').className = 'status warning';
+            document.getElementById('status').textContent = 'Page has reloaded ' + reloadCount + ' times';
+        } else {
+            document.getElementById('status').className = 'status success';
+            document.getElementById('status').textContent = 'Page loaded normally';
+        }
+        
+        // Monitor for page unload
+        window.addEventListener('beforeunload', () => {
+            console.log('🚪 Page unloading at:', new Date().toLocaleString());
+        });
+        
+        // Monitor for page show/hide
+        window.addEventListener('pageshow', (event) => {
+            console.log('📄 Page shown, persisted:', event.persisted);
+        });
+        
+        window.addEventListener('pagehide', (event) => {
+            console.log('📄 Page hidden, persisted:', event.persisted);
+        });
+        
+        // Test service worker
+        async function testServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    console.log('Service Worker registrations:', registrations.length);
+                    
+                    if (registrations.length > 0) {
+                        const reg = registrations[0];
+                        console.log('Active:', reg.active ? 'Yes' : 'No');
+                        console.log('Waiting:', reg.waiting ? 'Yes' : 'No');
+                        console.log('Installing:', reg.installing ? 'Yes' : 'No');
+                    }
+                } catch (error) {
+                    console.error('Service Worker test failed:', error);
+                }
+            } else {
+                console.log('Service Worker not supported');
+            }
+        }
+        
+        // Clear storage
+        function clearStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            location.reload();
+        }
+        
+        // Monitor for any errors
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled rejection:', event.reason);
+        });
+        
+        console.log('Debug page loaded at:', loadTime);
+        console.log('Reload count:', reloadCount);
+    </script>
+</body>
+</html>
+

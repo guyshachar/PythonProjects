@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RefPortalPWA Polling Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 10px; border-radius: 5px; border: none; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <h1>RefPortalPWA Polling Fix Test</h1>
+    
+    <div id="status" class="status warning">Initializing...</div>
+    
+    <div>
+        <button class="btn-primary" onclick="checkStatus()">Check Status</button>
+        <button class="btn-warning" onclick="cleanup()">Cleanup</button>
+        <button class="btn-danger" onclick="emergencyStop()">Emergency Stop</button>
+        <button onclick="testMultipleInit()">Test Multiple Init</button>
+        <button onclick="resetInstance()">Reset Instance</button>
+        <button onclick="getInstanceInfo()">Get Instance Info</button>
+    </div>
+    
+    <div id="logs" style="margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+        <strong>Console Logs:</strong><br>
+        <div id="logContent"></div>
+    </div>
+    
+    <script src="pwa-config.js"></script>
+    <script type="module" src="refportal-pwa.js"></script>
+    
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        function addLog(message, type = 'log') {
+            const logContent = document.getElementById('logContent');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            logContent.appendChild(logEntry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(`⚠️ ${args.join(' ')}`, 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(`❌ ${args.join(' ')}`, 'error');
+        };
+        
+        function checkStatus() {
+            if (typeof window.checkRefPortalPWAStatus === 'function') {
+                const status = window.checkRefPortalPWAStatus();
+                if (status) {
+                    document.getElementById('status').innerHTML = `
+                        <strong>Status:</strong><br>
+                        Initialized: ${status.isInitialized ? '✅ Yes' : '❌ No'}<br>
+                        Auth Polling: ${status.authPolling ? '🔄 Active' : '⏹️ Stopped'}<br>
+                        Push Polling: ${status.pushPolling ? '🔄 Active' : '⏹️ Stopped'}<br>
+                        Chat Sync: ${status.chatSync ? '🔄 Active' : '⏹️ Stopped'}<br>
+                        Real-time Updates: ${status.realTimeUpdates ? '🔄 Active' : '⏹️ Stopped'}
+                    `;
+                    document.getElementById('status').className = 'status success';
+                }
+            } else {
+                document.getElementById('status').innerHTML = '❌ Status check function not available';
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        function cleanup() {
+            if (typeof window.cleanupRefPortalPWA === 'function') {
+                window.cleanupRefPortalPWA();
+                document.getElementById('status').innerHTML = '🧹 Cleanup completed';
+                document.getElementById('status').className = 'status warning';
+            } else {
+                document.getElementById('status').innerHTML = '❌ Cleanup function not available';
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        function emergencyStop() {
+            if (typeof window.emergencyStopRefPortalPWA === 'function') {
+                window.emergencyStopRefPortalPWA();
+                document.getElementById('status').innerHTML = '🚨 Emergency stop completed';
+                document.getElementById('status').className = 'status error';
+            } else {
+                document.getElementById('status').innerHTML = '❌ Emergency stop function not available';
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        function testMultipleInit() {
+            document.getElementById('status').innerHTML = '🧪 Testing multiple initialization...';
+            document.getElementById('status').className = 'status warning';
+            
+            // Try to call init multiple times
+            if (window.refPortalPWA) {
+                console.log('Testing multiple init calls...');
+                // This should be prevented by the guard in init()
+                window.refPortalPWA.init();
+            }
+        }
+        
+        function resetInstance() {
+            if (typeof window.resetRefPortalPWA === 'function') {
+                window.resetRefPortalPWA();
+                document.getElementById('status').innerHTML = '🔄 Instance reset completed';
+                document.getElementById('status').className = 'status warning';
+            } else {
+                document.getElementById('status').innerHTML = '❌ Reset function not available';
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        function getInstanceInfo() {
+            if (typeof window.getRefPortalPWAInfo === 'function') {
+                const info = window.getRefPortalPWAInfo();
+                document.getElementById('status').innerHTML = `
+                    <strong>Instance Info:</strong><br>
+                    Static Instance: ${info.hasStaticInstance ? '✅ Yes' : '❌ No'}<br>
+                    Global Instance: ${info.hasGlobalInstance ? '✅ Yes' : '❌ No'}<br>
+                    Is Initializing: ${info.isInitializing ? '🔄 Yes' : '⏹️ No'}<br>
+                    Has Initialized: ${info.hasInitialized ? '✅ Yes' : '❌ No'}<br>
+                    Module Loaded: ${info.moduleLoaded ? '✅ Yes' : '❌ No'}
+                `;
+                document.getElementById('status').className = 'status success';
+                console.log('Instance Info:', info);
+            } else {
+                document.getElementById('status').innerHTML = '❌ Info function not available';
+                document.getElementById('status').className = 'status error';
+            }
+        }
+        
+        // Listen for PWA ready event
+        window.addEventListener('refPortalPWAReady', (event) => {
+            document.getElementById('status').innerHTML = '🎉 PWA Ready!';
+            document.getElementById('status').className = 'status success';
+            console.log('PWA Ready Event received:', event.detail);
+        });
+        
+        // Check status every 5 seconds
+        setInterval(checkStatus, 5000);
+        
+        // Initial status check after 2 seconds
+        setTimeout(checkStatus, 2000);
+    </script>
+</body>
+</html>

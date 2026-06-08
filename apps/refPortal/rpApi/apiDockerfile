@@ -1,0 +1,88 @@
+# Use the official Python image from the Docker Hub
+FROM python:3.13-slim
+
+VOLUME ["/run/data"]
+VOLUME ["/run/ssl"]
+VOLUME ["/run/logs"]
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install Playwright and browsers
+RUN pip install playwright
+RUN playwright install
+RUN pip install playwright-stealth
+
+# Install system dependencies for Playwright
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    procps \
+    libxss1 \
+    libnss3 \
+    libnspr4 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libatspi2.0-0 \
+    libgtk-3-0 \
+    libxshmfence1 \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*   
+
+# Copy the requirements file into the container
+COPY rpApi/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the script into the container
+RUN mkdir -p /rpApi
+RUN mkdir -p /rpService
+
+WORKDIR /app/rpApi
+RUN mkdir -p /templates
+RUN mkdir -p /static
+RUN mkdir -p /middlewares
+RUN mkdir -p /endpoints
+RUN mkdir -p /agents
+
+COPY /rpApi/*.py .
+COPY /rpApi/templates/ templates/
+COPY /rpApi/static/ static/
+COPY /rpApi/middlewares/ middlewares/
+COPY /rpApi/endpoints/ endpoints/
+COPY /rpApi/agents/ agents/
+
+#WORKDIR /app/rpService
+#COPY /rpService/*.py .
+
+WORKDIR /app/shared
+RUN mkdir -p /fonts
+COPY /shared/*.py .
+COPY /shared/db/ db/
+COPY /shared/messaging/ messaging/
+COPY /shared/orgRelated/ orgRelated/
+COPY /shared/fonts/ fonts/
+
+WORKDIR /app
+
+# Define entrypoint to start Tailscale and your app
+# Start Tailscale and your Python script
+ENV BUILD_DATE=202508161749
+ENV logLevel=INFO
+
+EXPOSE 5001
+
+# Command to run the script
+#CMD ["python", "test.py"]
+CMD ["python", "rpApi/refPortalApiDI.py"]
+# Use xvfb-run to provide virtual display for headed browsers
+#CMD ["xvfb-run", "-a", "python", "rpApi/refPortalApiDI.py"]
+#CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5001", "rpApi/refPortalApi:app"]

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="refresh" content="30">
+	<title>Multi-Year Chart</title>
+</head>
+<style>
+* {
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
+}
+body {
+	background-color: #272b34;
+	font-family: 'Khula', sans-serif;
+	font-weight: 300;
+	color: white;
+	line-height: 1em;
+	margin: 0;
+	padding: 2em 1em;
+}
+
+</style>
+<body>
+    <h2>תרשים שיבוצים (מתעדכן כל 30 שניות)</h2>
+    <h3 id="titleId">{{title | safe}}</h3>
+
+    <div id="testBarChart"></div>
+    <div id="barChart"></div>
+    <div id="multiBarsChartByDay"></div>
+    <div id="multiBarsChartBySection"></div>
+</body>
+
+<script type="module">
+	import "https://cdn.plot.ly/plotly-3.1.0.min.js"
+</script>
+<script type='text/javascript'>
+	var testGraphJSON = {{testGraphJSON | safe}};
+	Plotly.plot('testBarChart', testGraphJSON, {});
+
+	var barChartJSON = {{barChartJSON | safe}};
+	Plotly.plot('barChart', barChartJSON, {});
+</script>
+</html>

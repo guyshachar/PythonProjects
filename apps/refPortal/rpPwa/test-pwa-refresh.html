@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Auto-Refresh Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 PWA Auto-Refresh Test</h1>
+    <p>This page tests the Vite Plugin PWA auto-refresh functionality.</p>
+
+    <div class="test-section">
+        <h2>📊 PWA Status</h2>
+        <div id="pwaStatus" class="status info">Loading...</div>
+        <button class="test-button" onclick="updateStatus()">🔄 Refresh Status</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Manual Refresh Tests</h2>
+        <button class="test-button" onclick="testCSSRefresh()">🎨 Test CSS Refresh</button>
+        <button class="test-button" onclick="testJSRefresh()">📜 Test JS Refresh</button>
+        <button class="test-button" onclick="testForceReload()">🔄 Test Force Reload</button>
+        <button class="test-button" onclick="testUpdateCheck()">🔍 Test Update Check</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Event Log</h2>
+        <div id="eventLog" class="log">Waiting for events...\n</div>
+        <button class="test-button" onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h2>⚙️ Service Worker Info</h2>
+        <div id="swInfo" class="status info">Loading...</div>
+        <button class="test-button" onclick="updateSWInfo()">🔄 Refresh SW Info</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Development Tools</h2>
+        <p>Open browser console and try these commands:</p>
+        <div class="log">window.pwaRefresh.getStatus()
+window.refreshCSS()
+window.refreshJS()
+window.forceReload()
+window.pwaRefresh.checkForUpdates()</div>
+    </div>
+
+    <script type="module">
+        // Import the PWA refresh module
+        import './js/vite-pwa-refresh.js';
+        
+        // Wait for the module to load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                updateStatus();
+                updateSWInfo();
+                setupEventListeners();
+            }, 1000);
+        });
+        
+        function updateStatus() {
+            const statusDiv = document.getElementById('pwaStatus');
+            
+            if (window.pwaRefresh) {
+                const status = window.pwaRefresh.getStatus();
+                statusDiv.innerHTML = `
+                    <strong>PWA Auto-Refresh Status:</strong><br>
+                    • Update Available: ${status.isUpdateAvailable ? 'Yes' : 'No'}<br>
+                    • Workbox Registered: ${status.workboxRegistered ? 'Yes' : 'No'}<br>
+                    • Service Worker Supported: ${status.serviceWorkerSupported ? 'Yes' : 'No'}<br>
+                    • Development Mode: ${status.isDevelopment ? 'Yes' : 'No'}
+                `;
+                statusDiv.className = 'status success';
+            } else {
+                statusDiv.innerHTML = 'PWA Refresh module not loaded';
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        function updateSWInfo() {
+            const swDiv = document.getElementById('swInfo');
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        const registration = registrations[0];
+                        swDiv.innerHTML = `
+                            <strong>Service Worker Info:</strong><br>
+                            • Registered: Yes<br>
+                            • Scope: ${registration.scope}<br>
+                            • State: ${registration.active ? registration.active.state : 'N/A'}<br>
+                            • Update Available: ${registration.waiting ? 'Yes' : 'No'}
+                        `;
+                        swDiv.className = 'status success';
+                    } else {
+                        swDiv.innerHTML = 'No service workers registered';
+                        swDiv.className = 'status info';
+                    }
+                });
+            } else {
+                swDiv.innerHTML = 'Service Worker not supported';
+                swDiv.className = 'status error';
+            }
+        }
+        
+        function setupEventListeners() {
+            if (window.pwaRefresh) {
+                // Listen to PWA events
+                window.pwaRefresh.on('updateFound', (data) => {
+                    logEvent('🔄 Update Found', data);
+                });
+                
+                window.pwaRefresh.on('updateReady', (data) => {
+                    logEvent('✅ Update Ready', data);
+                });
+                
+                window.pwaRefresh.on('updateApplied', (data) => {
+                    logEvent('🎉 Update Applied', data);
+                });
+                
+                window.pwaRefresh.on('hmrUpdate', (data) => {
+                    logEvent('🔥 HMR Update', data);
+                });
+                
+                window.pwaRefresh.on('cssRefreshed', (data) => {
+                    logEvent('🎨 CSS Refreshed', data);
+                });
+                
+                window.pwaRefresh.on('jsRefreshed', (data) => {
+                    logEvent('📜 JS Refreshed', data);
+                });
+            }
+        }
+        
+        function logEvent(type, data) {
+            const logDiv = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const message = `[${timestamp}] ${type}: ${JSON.stringify(data, null, 2)}\n`;
+            logDiv.textContent += message;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('eventLog').textContent = 'Log cleared...\n';
+        }
+        
+        // Test functions
+        window.testCSSRefresh = function() {
+            if (window.refreshCSS) {
+                window.refreshCSS();
+                logEvent('🧪 Manual CSS Refresh', 'Triggered');
+            } else {
+                logEvent('❌ CSS Refresh', 'Function not available');
+            }
+        };
+        
+        window.testJSRefresh = function() {
+            if (window.refreshJS) {
+                window.refreshJS();
+                logEvent('🧪 Manual JS Refresh', 'Triggered');
+            } else {
+                logEvent('❌ JS Refresh', 'Function not available');
+            }
+        };
+        
+        window.testForceReload = function() {
+            if (window.forceReload) {
+                logEvent('🧪 Force Reload', 'Triggered in 2 seconds...');
+                setTimeout(() => {
+                    window.forceReload();
+                }, 2000);
+            } else {
+                logEvent('❌ Force Reload', 'Function not available');
+            }
+        };
+        
+        window.testUpdateCheck = function() {
+            if (window.pwaRefresh && window.pwaRefresh.checkForUpdates) {
+                window.pwaRefresh.checkForUpdates();
+                logEvent('🧪 Update Check', 'Triggered');
+            } else {
+                logEvent('❌ Update Check', 'Function not available');
+            }
+        };
+        
+        // Initial log
+        logEvent('🚀 Test Page', 'Loaded and ready');
+    </script>
+</body>
+</html>

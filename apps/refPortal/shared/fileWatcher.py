@@ -41,11 +41,5 @@ def watchFileChange(file_to_watch, callback):
 
     return observer
 
-    try:
-        print(f"Watching for changes in {path_to_watch}...")
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Stopping file watcher...")
-        observer.stop()
-    observer.join()
+def stopWatcher(watcher):
+    watcher.stop()

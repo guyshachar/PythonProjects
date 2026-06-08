@@ -1,0 +1,42 @@
+{
+  "name": "refportal-push-server",
+  "version": "1.0.0",
+  "description": "Push notification server for RefPortal PWA",
+  "main": "push-notification-server.js",
+  "scripts": {
+    "pwa-dev:https": "node dev-server.js --https --port 8446 --host pwa-dev.refereex.com",
+    "start": "node ./js/push-notification-server.cjs",
+    "start:https": "node start-server.js",
+    "start:http": "node start-server.js --http-only",
+    "dev": "vite",
+    "dev:https": "node dev-server.js --https",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:pwa": "vite build --mode pwa",
+    "preview:pwa": "vite preview --mode pwa",
+    "ssl:generate": "node manage-ssl.js generate",
+    "ssl:validate": "node manage-ssl.js validate",
+    "ssl:info": "node manage-ssl.js info",
+    "ssl:clean": "node manage-ssl.js clean",
+    "ssl:help": "node manage-ssl.js help",
+    "install-deps": "npm install web-push vite-plugin-pwa workbox-window",
+    "env:generate": "node generate-client-env.js",
+    "env:test": "node -e \"const {generateClientEnv} = require('./generate-client-env.js'); console.log(JSON.stringify(generateClientEnv(), null, 2))\""
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "web-push": "^3.6.6"
+  },
+  "keywords": [
+    "pwa",
+    "push-notifications",
+    "refportal"
+  ],
+  "author": "RefereeX Team",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.4.19",
+    "vite-plugin-pwa": "^1.0.3",
+    "workbox-window": "^7.3.0"
+  }
+}

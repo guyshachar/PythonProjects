@@ -1,0 +1,1478 @@
+{
+    "extraction_timestamp": "2025-10-02T16:37:09.867314",
+    "page_url": "https://handballisr.co.il/mgmt/Game.asp?GameId=19978&cYear=2025&TabId=0",
+    "select_tags": {
+        "CompId": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "CompId",
+            "index": 1,
+            "multiple": false,
+            "name": "CompId",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "בחר מסגרת",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "גביע winner שופטים ע\"ש מויזס רש",
+                    "value": "397"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": false,
+                    "text": "WINNER",
+                    "value": "403"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "גביע המדינה נערות",
+                    "value": "404"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": false,
+                    "text": "גביע המדינה ילדים ח",
+                    "value": "405"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "גביע המדינה ילדות  ח",
+                    "value": "406"
+                },
+                {
+                    "disabled": false,
+                    "index": 6,
+                    "selected": false,
+                    "text": "גביע הליגה ע\"ש רונית שטייגר",
+                    "value": "407"
+                },
+                {
+                    "disabled": false,
+                    "index": 7,
+                    "selected": false,
+                    "text": "גביע המדינה WINNER",
+                    "value": "408"
+                },
+                {
+                    "disabled": false,
+                    "index": 8,
+                    "selected": false,
+                    "text": "גביע המדינה נוער ע\"ש מוקסיי",
+                    "value": "409"
+                },
+                {
+                    "disabled": false,
+                    "index": 9,
+                    "selected": false,
+                    "text": "גביע המדינה נערים",
+                    "value": "410"
+                },
+                {
+                    "disabled": false,
+                    "index": 10,
+                    "selected": false,
+                    "text": "גביע המדינה אתנה נשים",
+                    "value": "411"
+                },
+                {
+                    "disabled": false,
+                    "index": 11,
+                    "selected": false,
+                    "text": "גביע המדינה ע\"ש ברנר",
+                    "value": "412"
+                },
+                {
+                    "disabled": false,
+                    "index": 12,
+                    "selected": false,
+                    "text": "נוער צפון",
+                    "value": "413"
+                },
+                {
+                    "disabled": false,
+                    "index": 13,
+                    "selected": false,
+                    "text": "נוער דרום",
+                    "value": "414"
+                },
+                {
+                    "disabled": false,
+                    "index": 14,
+                    "selected": false,
+                    "text": "ליגה נערות",
+                    "value": "415"
+                },
+                {
+                    "disabled": false,
+                    "index": 15,
+                    "selected": false,
+                    "text": "נוער מחוזי",
+                    "value": "416"
+                },
+                {
+                    "disabled": false,
+                    "index": 16,
+                    "selected": false,
+                    "text": "גביע המדינה נערות י'",
+                    "value": "420"
+                },
+                {
+                    "disabled": false,
+                    "index": 17,
+                    "selected": false,
+                    "text": "נערים צפון",
+                    "value": "421"
+                },
+                {
+                    "disabled": false,
+                    "index": 18,
+                    "selected": false,
+                    "text": "נערים דרום",
+                    "value": "422"
+                },
+                {
+                    "disabled": false,
+                    "index": 19,
+                    "selected": false,
+                    "text": "לאומית גברים",
+                    "value": "423"
+                },
+                {
+                    "disabled": false,
+                    "index": 20,
+                    "selected": false,
+                    "text": "ליגת על אתנה נשים",
+                    "value": "425"
+                },
+                {
+                    "disabled": false,
+                    "index": 21,
+                    "selected": false,
+                    "text": "ארצית צפון",
+                    "value": "426"
+                },
+                {
+                    "disabled": false,
+                    "index": 22,
+                    "selected": false,
+                    "text": "ארצית דרום",
+                    "value": "427"
+                },
+                {
+                    "disabled": false,
+                    "index": 23,
+                    "selected": false,
+                    "text": "ילדים ו",
+                    "value": "428"
+                },
+                {
+                    "disabled": false,
+                    "index": 24,
+                    "selected": false,
+                    "text": "ילדות ו",
+                    "value": "429"
+                },
+                {
+                    "disabled": false,
+                    "index": 25,
+                    "selected": false,
+                    "text": "ילדים ה",
+                    "value": "430"
+                },
+                {
+                    "disabled": false,
+                    "index": 26,
+                    "selected": false,
+                    "text": "נערים ט צפון",
+                    "value": "431"
+                },
+                {
+                    "disabled": false,
+                    "index": 27,
+                    "selected": false,
+                    "text": "נערים ט דרום",
+                    "value": "432"
+                },
+                {
+                    "disabled": false,
+                    "index": 28,
+                    "selected": false,
+                    "text": "נערות י'",
+                    "value": "434"
+                },
+                {
+                    "disabled": false,
+                    "index": 29,
+                    "selected": false,
+                    "text": "נערות ט'",
+                    "value": "435"
+                },
+                {
+                    "disabled": false,
+                    "index": 30,
+                    "selected": false,
+                    "text": "ילדים ח צפון",
+                    "value": "437"
+                },
+                {
+                    "disabled": false,
+                    "index": 31,
+                    "selected": false,
+                    "text": "ילדים ח מרכז",
+                    "value": "438"
+                },
+                {
+                    "disabled": false,
+                    "index": 32,
+                    "selected": false,
+                    "text": "ילדים ח דרום",
+                    "value": "439"
+                },
+                {
+                    "disabled": false,
+                    "index": 33,
+                    "selected": false,
+                    "text": "ילדות  ח' צפון",
+                    "value": "440"
+                },
+                {
+                    "disabled": false,
+                    "index": 34,
+                    "selected": true,
+                    "text": "ילדים  ז צפון",
+                    "value": "441"
+                },
+                {
+                    "disabled": false,
+                    "index": 35,
+                    "selected": false,
+                    "text": "ילדים ז מרכז",
+                    "value": "442"
+                },
+                {
+                    "disabled": false,
+                    "index": 36,
+                    "selected": false,
+                    "text": "ילדים ז דרום",
+                    "value": "443"
+                },
+                {
+                    "disabled": false,
+                    "index": 37,
+                    "selected": false,
+                    "text": "ילדים ז דן",
+                    "value": "444"
+                },
+                {
+                    "disabled": false,
+                    "index": 38,
+                    "selected": false,
+                    "text": "ילדות  ז צפון",
+                    "value": "445"
+                },
+                {
+                    "disabled": false,
+                    "index": 39,
+                    "selected": false,
+                    "text": "ילדות ז' דרום",
+                    "value": "446"
+                },
+                {
+                    "disabled": false,
+                    "index": 40,
+                    "selected": false,
+                    "text": "ילדים ז' גוש דן",
+                    "value": "447"
+                },
+                {
+                    "disabled": false,
+                    "index": 41,
+                    "selected": false,
+                    "text": "ילדות  ז' מרכז",
+                    "value": "448"
+                },
+                {
+                    "disabled": false,
+                    "index": 42,
+                    "selected": false,
+                    "text": "גביע winner שופטים ע\"ש מויזס רש בית א'",
+                    "value": "454"
+                },
+                {
+                    "disabled": false,
+                    "index": 43,
+                    "selected": false,
+                    "text": "גביע winner שופטים ע\"ש מויזס רש בית ב'",
+                    "value": "455"
+                },
+                {
+                    "disabled": false,
+                    "index": 44,
+                    "selected": false,
+                    "text": "גביע winner שופטים ע\"ש מויזס רש בית ג'",
+                    "value": "456"
+                },
+                {
+                    "disabled": false,
+                    "index": 45,
+                    "selected": false,
+                    "text": "גביע winner שופטים ע\"ש מויזס רש בית ד'",
+                    "value": "457"
+                },
+                {
+                    "disabled": false,
+                    "index": 46,
+                    "selected": false,
+                    "text": "ילדות ח' דרום",
+                    "value": "458"
+                },
+                {
+                    "disabled": false,
+                    "index": 47,
+                    "selected": false,
+                    "text": "ליגת winner משחקי בית עליון",
+                    "value": "1458"
+                },
+                {
+                    "disabled": false,
+                    "index": 48,
+                    "selected": false,
+                    "text": "ליגת winner משחקי בית תחתון",
+                    "value": "1459"
+                },
+                {
+                    "disabled": false,
+                    "index": 49,
+                    "selected": false,
+                    "text": "ליגת על אתנה בית עליון",
+                    "value": "1460"
+                },
+                {
+                    "disabled": false,
+                    "index": 50,
+                    "selected": false,
+                    "text": "ליגת על אתנה בית תחתון",
+                    "value": "1461"
+                },
+                {
+                    "disabled": false,
+                    "index": 51,
+                    "selected": false,
+                    "text": "גביע המדינה נערים ט'",
+                    "value": "1462"
+                },
+                {
+                    "disabled": false,
+                    "index": 52,
+                    "selected": false,
+                    "text": "גביע המדינה נערות ט'",
+                    "value": "1463"
+                },
+                {
+                    "disabled": false,
+                    "index": 53,
+                    "selected": false,
+                    "text": "נוער עלית",
+                    "value": "1464"
+                },
+                {
+                    "disabled": false,
+                    "index": 54,
+                    "selected": false,
+                    "text": "לאומית בית עליון",
+                    "value": "2464"
+                },
+                {
+                    "disabled": false,
+                    "index": 55,
+                    "selected": false,
+                    "text": "לאומית בית תחתון",
+                    "value": "2465"
+                },
+                {
+                    "disabled": false,
+                    "index": 56,
+                    "selected": false,
+                    "text": "רבע גמר פלייאוף ליגת אתנה",
+                    "value": "2466"
+                },
+                {
+                    "disabled": false,
+                    "index": 57,
+                    "selected": false,
+                    "text": "חצי גמר פלייאוף ליגת אתנה 1-4",
+                    "value": "3466"
+                },
+                {
+                    "disabled": false,
+                    "index": 58,
+                    "selected": false,
+                    "text": "חצי גמר פלייאוף ליגת אתנה 2-3",
+                    "value": "3467"
+                },
+                {
+                    "disabled": false,
+                    "index": 59,
+                    "selected": false,
+                    "text": "חצי גמר פלייאוף WINNER",
+                    "value": "4467"
+                },
+                {
+                    "disabled": false,
+                    "index": 60,
+                    "selected": false,
+                    "text": "גמר ליגת על  אתנה",
+                    "value": "4468"
+                },
+                {
+                    "disabled": false,
+                    "index": 61,
+                    "selected": false,
+                    "text": "גמר פלייאוף winner",
+                    "value": "5466"
+                },
+                {
+                    "disabled": false,
+                    "index": 62,
+                    "selected": false,
+                    "text": "משחקי השלמה ליגת נוער",
+                    "value": "5467"
+                },
+                {
+                    "disabled": false,
+                    "index": 63,
+                    "selected": false,
+                    "text": "חצי גמר פלייאוף נוער",
+                    "value": "5468"
+                },
+                {
+                    "disabled": false,
+                    "index": 64,
+                    "selected": false,
+                    "text": "חצי גמר פלייאוף נערים ט'",
+                    "value": "6466"
+                },
+                {
+                    "disabled": false,
+                    "index": 65,
+                    "selected": false,
+                    "text": "חצי גמר פלייאוף נערים",
+                    "value": "7466"
+                },
+                {
+                    "disabled": false,
+                    "index": 66,
+                    "selected": false,
+                    "text": "גמר פלייאוף נוער",
+                    "value": "8466"
+                },
+                {
+                    "disabled": false,
+                    "index": 67,
+                    "selected": false,
+                    "text": "משחקי השלמה ליגת נערות",
+                    "value": "9466"
+                },
+                {
+                    "disabled": false,
+                    "index": 68,
+                    "selected": false,
+                    "text": "גמר פלייאוף נערים ט'",
+                    "value": "9467"
+                },
+                {
+                    "disabled": false,
+                    "index": 69,
+                    "selected": false,
+                    "text": "גמר פלייאוף נערים",
+                    "value": "9468"
+                }
+            ],
+            "selected_texts": [
+                "ילדים  ז צפון"
+            ],
+            "selected_values": [
+                "441"
+            ]
+        },
+        "GN": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "GN",
+            "index": 4,
+            "multiple": false,
+            "name": "GN",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "-",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": true,
+                    "text": "1",
+                    "value": "1"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": false,
+                    "text": "2",
+                    "value": "2"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "3",
+                    "value": "3"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": false,
+                    "text": "4",
+                    "value": "4"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "5",
+                    "value": "5"
+                },
+                {
+                    "disabled": false,
+                    "index": 6,
+                    "selected": false,
+                    "text": "6",
+                    "value": "6"
+                },
+                {
+                    "disabled": false,
+                    "index": 7,
+                    "selected": false,
+                    "text": "7",
+                    "value": "7"
+                },
+                {
+                    "disabled": false,
+                    "index": 8,
+                    "selected": false,
+                    "text": "8",
+                    "value": "8"
+                },
+                {
+                    "disabled": false,
+                    "index": 9,
+                    "selected": false,
+                    "text": "9",
+                    "value": "9"
+                },
+                {
+                    "disabled": false,
+                    "index": 10,
+                    "selected": false,
+                    "text": "10",
+                    "value": "10"
+                },
+                {
+                    "disabled": false,
+                    "index": 11,
+                    "selected": false,
+                    "text": "11",
+                    "value": "11"
+                },
+                {
+                    "disabled": false,
+                    "index": 12,
+                    "selected": false,
+                    "text": "12",
+                    "value": "12"
+                },
+                {
+                    "disabled": false,
+                    "index": 13,
+                    "selected": false,
+                    "text": "13",
+                    "value": "13"
+                },
+                {
+                    "disabled": false,
+                    "index": 14,
+                    "selected": false,
+                    "text": "14",
+                    "value": "14"
+                }
+            ],
+            "selected_texts": [
+                "1"
+            ],
+            "selected_values": [
+                "1"
+            ]
+        },
+        "assign_reason_id": {
+            "class": "form-control",
+            "disabled": false,
+            "id": "assign_reason_id",
+            "index": 7,
+            "multiple": false,
+            "name": "assign_reason_id",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "בחר סיבה לדחיית השיבוץ",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "אינני יכול להגיע לאולם זה",
+                    "value": "46"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": false,
+                    "text": "אינני יכול לשפוט את אחת הקבוצות",
+                    "value": "56"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "אינני פנוי בשעה זו - מאוחר מדי",
+                    "value": "55"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": false,
+                    "text": "אינני פנוי בשעה זו - מוקדם מדי",
+                    "value": "54"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "אינני פנוי בתאריך זה",
+                    "value": "45"
+                }
+            ],
+            "selected_texts": [],
+            "selected_values": []
+        },
+        "cYear": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "cYear",
+            "index": 0,
+            "multiple": false,
+            "name": "cYear",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "-",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "2025-26",
+                    "value": "2026"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": true,
+                    "text": "2024-25",
+                    "value": "2025"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "2023-24",
+                    "value": "2024"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": false,
+                    "text": "2022-23",
+                    "value": "2023"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "2021-22",
+                    "value": "2022"
+                },
+                {
+                    "disabled": false,
+                    "index": 6,
+                    "selected": false,
+                    "text": "2020-21",
+                    "value": "2021"
+                },
+                {
+                    "disabled": false,
+                    "index": 7,
+                    "selected": false,
+                    "text": "2019-20",
+                    "value": "2020"
+                }
+            ],
+            "selected_texts": [
+                "2024-25"
+            ],
+            "selected_values": [
+                "2025"
+            ]
+        },
+        "game_arena": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "game_arena",
+            "index": 6,
+            "multiple": false,
+            "name": "game_arena",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "-",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "אחר...",
+                    "value": "10"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": false,
+                    "text": "(מקיף ו')- אשדוד",
+                    "value": "31"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "אולם עירוני הרצליה",
+                    "value": "16"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": true,
+                    "text": "אורנים- רמה\"ש",
+                    "value": "5"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "זיסמן-עירוני ר\"ג",
+                    "value": "8"
+                },
+                {
+                    "disabled": false,
+                    "index": 6,
+                    "selected": false,
+                    "text": "מגרש -מקיף ע\"ש רבין- ב\"ש",
+                    "value": "21"
+                },
+                {
+                    "disabled": false,
+                    "index": 7,
+                    "selected": false,
+                    "text": "מלחה (גולדנברג)- ירושלים",
+                    "value": "81"
+                },
+                {
+                    "disabled": false,
+                    "index": 8,
+                    "selected": false,
+                    "text": "מקיף ה' אולם-  אשקלון",
+                    "value": "44"
+                },
+                {
+                    "disabled": false,
+                    "index": 9,
+                    "selected": false,
+                    "text": "סביון",
+                    "value": "25"
+                },
+                {
+                    "disabled": false,
+                    "index": 10,
+                    "selected": false,
+                    "text": "ציינין- קרית אונו",
+                    "value": "19"
+                },
+                {
+                    "disabled": false,
+                    "index": 11,
+                    "selected": false,
+                    "text": "קרית שרת  (פ. וספורט)- חולון",
+                    "value": "9"
+                },
+                {
+                    "disabled": false,
+                    "index": 12,
+                    "selected": false,
+                    "text": "אוהל שם- רמת גן",
+                    "value": "20"
+                },
+                {
+                    "disabled": false,
+                    "index": 13,
+                    "selected": false,
+                    "text": "אולם בגין  אילת",
+                    "value": "22"
+                },
+                {
+                    "disabled": false,
+                    "index": 14,
+                    "selected": false,
+                    "text": "אולם הי\"א  מכון וינגייט",
+                    "value": "24"
+                },
+                {
+                    "disabled": false,
+                    "index": 15,
+                    "selected": false,
+                    "text": "אולם הפועל- ערד",
+                    "value": "26"
+                },
+                {
+                    "disabled": false,
+                    "index": 16,
+                    "selected": false,
+                    "text": "אולם הפייס דימונה",
+                    "value": "34"
+                },
+                {
+                    "disabled": false,
+                    "index": 17,
+                    "selected": false,
+                    "text": "אולם חדש (יעקב כהן)- קרית אונו",
+                    "value": "74"
+                },
+                {
+                    "disabled": false,
+                    "index": 18,
+                    "selected": false,
+                    "text": "אולם חט. ביניים ק. חיים-",
+                    "value": "15"
+                },
+                {
+                    "disabled": false,
+                    "index": 19,
+                    "selected": false,
+                    "text": "אולם רועים",
+                    "value": "1086"
+                },
+                {
+                    "disabled": false,
+                    "index": 20,
+                    "selected": false,
+                    "text": "אוניברסיטה (עלית)- ת\"א",
+                    "value": "6"
+                },
+                {
+                    "disabled": false,
+                    "index": 21,
+                    "selected": false,
+                    "text": "אוניברסיטה- באר  שבע",
+                    "value": "42"
+                },
+                {
+                    "disabled": false,
+                    "index": 22,
+                    "selected": false,
+                    "text": "אליאנס (בי\"ס)- ת\"א",
+                    "value": "50"
+                },
+                {
+                    "disabled": false,
+                    "index": 23,
+                    "selected": false,
+                    "text": "אלנור חורה",
+                    "value": "45"
+                },
+                {
+                    "disabled": false,
+                    "index": 24,
+                    "selected": false,
+                    "text": "אמסטרדם (עירוני) - פ\"ת",
+                    "value": "14"
+                },
+                {
+                    "disabled": false,
+                    "index": 25,
+                    "selected": false,
+                    "text": "אשלים ע\"ש רוזנשטיין- ראשל\"צ",
+                    "value": "7"
+                },
+                {
+                    "disabled": false,
+                    "index": 26,
+                    "selected": false,
+                    "text": "בי'ס העמית ראשל\"צ",
+                    "value": "33"
+                },
+                {
+                    "disabled": false,
+                    "index": 27,
+                    "selected": false,
+                    "text": "ביה\"ס למצוינות",
+                    "value": "53"
+                },
+                {
+                    "disabled": false,
+                    "index": 28,
+                    "selected": false,
+                    "text": "בית דני- ת\"א",
+                    "value": "55"
+                },
+                {
+                    "disabled": false,
+                    "index": 29,
+                    "selected": false,
+                    "text": "בית מכבי- ראשל\"צ",
+                    "value": "52"
+                },
+                {
+                    "disabled": false,
+                    "index": 30,
+                    "selected": false,
+                    "text": "בית צחי (חט\"ב זאב)- הרצליה",
+                    "value": "84"
+                },
+                {
+                    "disabled": false,
+                    "index": 31,
+                    "selected": false,
+                    "text": "בן גוריון - נעמי שמר- נתניה",
+                    "value": "46"
+                },
+                {
+                    "disabled": false,
+                    "index": 32,
+                    "selected": false,
+                    "text": "בראל- באר יעקב",
+                    "value": "85"
+                },
+                {
+                    "disabled": false,
+                    "index": 33,
+                    "selected": false,
+                    "text": "ברזילי- רחובות",
+                    "value": "13"
+                },
+                {
+                    "disabled": false,
+                    "index": 34,
+                    "selected": false,
+                    "text": "גבעת ברנר",
+                    "value": "18"
+                },
+                {
+                    "disabled": false,
+                    "index": 35,
+                    "selected": false,
+                    "text": "גבעת ושינגטון",
+                    "value": "38"
+                },
+                {
+                    "disabled": false,
+                    "index": 36,
+                    "selected": false,
+                    "text": "גולדה- פ\"ת",
+                    "value": "76"
+                },
+                {
+                    "disabled": false,
+                    "index": 37,
+                    "selected": false,
+                    "text": "גושן- קרית מוצקין",
+                    "value": "11"
+                },
+                {
+                    "disabled": false,
+                    "index": 38,
+                    "selected": false,
+                    "text": "גליל ים ע\"ש יוני נתניהו- הרצליה",
+                    "value": "29"
+                },
+                {
+                    "disabled": false,
+                    "index": 39,
+                    "selected": false,
+                    "text": "גן נחום עירוני- ראשל\"צ",
+                    "value": "12"
+                },
+                {
+                    "disabled": false,
+                    "index": 40,
+                    "selected": false,
+                    "text": "דרייב אין-  היכל שלמה- ת\"א",
+                    "value": "68"
+                },
+                {
+                    "disabled": false,
+                    "index": 41,
+                    "selected": false,
+                    "text": "הדר יוסף ת\"א",
+                    "value": "23"
+                },
+                {
+                    "disabled": false,
+                    "index": 42,
+                    "selected": false,
+                    "text": "היכל הספורט (קציר)- רחובות",
+                    "value": "65"
+                },
+                {
+                    "disabled": false,
+                    "index": 43,
+                    "selected": false,
+                    "text": "הקונכיה- ב\"ש",
+                    "value": "66"
+                },
+                {
+                    "disabled": false,
+                    "index": 44,
+                    "selected": false,
+                    "text": "הראשונים- הרצליה",
+                    "value": "17"
+                },
+                {
+                    "disabled": false,
+                    "index": 45,
+                    "selected": false,
+                    "text": "חורב- טכניון  חיפה",
+                    "value": "83"
+                },
+                {
+                    "disabled": false,
+                    "index": 46,
+                    "selected": false,
+                    "text": "חסן עראפה (בי\"ס)- יפו ת\"א",
+                    "value": "71"
+                },
+                {
+                    "disabled": false,
+                    "index": 47,
+                    "selected": false,
+                    "text": "טרם נקבע",
+                    "value": "30"
+                },
+                {
+                    "disabled": false,
+                    "index": 48,
+                    "selected": false,
+                    "text": "יטבתה",
+                    "value": "57"
+                },
+                {
+                    "disabled": false,
+                    "index": 49,
+                    "selected": false,
+                    "text": "לב המושבה- נ\"צ",
+                    "value": "58"
+                },
+                {
+                    "disabled": false,
+                    "index": 50,
+                    "selected": false,
+                    "text": "מגרש בי\"ס רשיש-(אמסטרדם) פ\"ת",
+                    "value": "54"
+                },
+                {
+                    "disabled": false,
+                    "index": 51,
+                    "selected": false,
+                    "text": "מגרש מכבי  חדש  ראשל\"צ",
+                    "value": "37"
+                },
+                {
+                    "disabled": false,
+                    "index": 52,
+                    "selected": false,
+                    "text": "מגרש- מתנ\"ס רמות- ב\"ש",
+                    "value": "63"
+                },
+                {
+                    "disabled": false,
+                    "index": 53,
+                    "selected": false,
+                    "text": "מגרש פתוח- אוהל שם ר\"ג",
+                    "value": "59"
+                },
+                {
+                    "disabled": false,
+                    "index": 54,
+                    "selected": false,
+                    "text": "מגרש פתוח-קציר חולון",
+                    "value": "49"
+                },
+                {
+                    "disabled": false,
+                    "index": 55,
+                    "selected": false,
+                    "text": "מגרש-קיבוץ כפר מנחם",
+                    "value": "56"
+                },
+                {
+                    "disabled": false,
+                    "index": 56,
+                    "selected": false,
+                    "text": "מכללת קיי אולם- ב\"ש",
+                    "value": "69"
+                },
+                {
+                    "disabled": false,
+                    "index": 57,
+                    "selected": false,
+                    "text": "מקיף ט'- אשדוד",
+                    "value": "64"
+                },
+                {
+                    "disabled": false,
+                    "index": 58,
+                    "selected": false,
+                    "text": "מקיף י\"א  חדש אשדוד",
+                    "value": "86"
+                },
+                {
+                    "disabled": false,
+                    "index": 59,
+                    "selected": false,
+                    "text": "מרום נווה- רמת גן",
+                    "value": "27"
+                },
+                {
+                    "disabled": false,
+                    "index": 60,
+                    "selected": false,
+                    "text": "מרכז פיס נצרת",
+                    "value": "47"
+                },
+                {
+                    "disabled": false,
+                    "index": 61,
+                    "selected": false,
+                    "text": "מרכז קהילתי נצרת",
+                    "value": "79"
+                },
+                {
+                    "disabled": false,
+                    "index": 62,
+                    "selected": false,
+                    "text": "נוף אדום- יטבתה",
+                    "value": "80"
+                },
+                {
+                    "disabled": false,
+                    "index": 63,
+                    "selected": false,
+                    "text": "נחלת יהודה 360- ראשל\"צ",
+                    "value": "73"
+                },
+                {
+                    "disabled": false,
+                    "index": 64,
+                    "selected": false,
+                    "text": "נעם חיים דימונה",
+                    "value": "78"
+                },
+                {
+                    "disabled": false,
+                    "index": 65,
+                    "selected": false,
+                    "text": "סיטי - אשדוד",
+                    "value": "41"
+                },
+                {
+                    "disabled": false,
+                    "index": 66,
+                    "selected": false,
+                    "text": "סליגסברג-ירושלים",
+                    "value": "82"
+                },
+                {
+                    "disabled": false,
+                    "index": 67,
+                    "selected": false,
+                    "text": "עירוני רעננה",
+                    "value": "32"
+                },
+                {
+                    "disabled": false,
+                    "index": 68,
+                    "selected": false,
+                    "text": "צימרמן החדש- נס ציונה",
+                    "value": "70"
+                },
+                {
+                    "disabled": false,
+                    "index": 69,
+                    "selected": false,
+                    "text": "קציר- חולון",
+                    "value": "36"
+                },
+                {
+                    "disabled": false,
+                    "index": 70,
+                    "selected": false,
+                    "text": "קרית החינוך (אשכול פיס)- נ\"צ",
+                    "value": "40"
+                },
+                {
+                    "disabled": false,
+                    "index": 71,
+                    "selected": false,
+                    "text": "רביבים- ראשל\"צ",
+                    "value": "61"
+                },
+                {
+                    "disabled": false,
+                    "index": 72,
+                    "selected": false,
+                    "text": "רמות (אולם חדש)- ב\"ש",
+                    "value": "77"
+                },
+                {
+                    "disabled": false,
+                    "index": 73,
+                    "selected": false,
+                    "text": "רמת הכובש",
+                    "value": "67"
+                },
+                {
+                    "disabled": false,
+                    "index": 74,
+                    "selected": false,
+                    "text": "תיכון אביב- רעננה",
+                    "value": "43"
+                },
+                {
+                    "disabled": false,
+                    "index": 75,
+                    "selected": false,
+                    "text": "תיכונט- ת\"א",
+                    "value": "62"
+                }
+            ],
+            "selected_texts": [
+                "אורנים- רמה\"ש"
+            ],
+            "selected_values": [
+                "5"
+            ]
+        },
+        "liveOn": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "liveOn",
+            "index": 5,
+            "multiple": false,
+            "name": "liveOn",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "-",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "ספורט 5",
+                    "value": "1"
+                }
+            ],
+            "selected_texts": [],
+            "selected_values": []
+        },
+        "team1": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "team1",
+            "index": 2,
+            "multiple": false,
+            "name": "team1",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "-",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "357 - הפועל קרית אונו 2",
+                    "value": "4449"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": true,
+                    "text": "734 - א.ס. רמת השרון",
+                    "value": "4448"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "1029 - בני הרצליה",
+                    "value": "4451"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": false,
+                    "text": "4009 - מכבי תל אביב",
+                    "value": "4454"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "712 - אס\"א  תל אביב",
+                    "value": "4452"
+                },
+                {
+                    "disabled": false,
+                    "index": 6,
+                    "selected": false,
+                    "text": "531 - מכבי רעננה",
+                    "value": "4453"
+                },
+                {
+                    "disabled": false,
+                    "index": 7,
+                    "selected": false,
+                    "text": "1030 - בני הרצליה 2",
+                    "value": "5627"
+                }
+            ],
+            "selected_texts": [
+                "734 - א.ס. רמת השרון"
+            ],
+            "selected_values": [
+                "4448"
+            ]
+        },
+        "team2": {
+            "class": "form-control",
+            "disabled": true,
+            "id": "team2",
+            "index": 3,
+            "multiple": false,
+            "name": "team2",
+            "options": [
+                {
+                    "disabled": false,
+                    "index": 0,
+                    "selected": false,
+                    "text": "-",
+                    "value": "0"
+                },
+                {
+                    "disabled": false,
+                    "index": 1,
+                    "selected": false,
+                    "text": "357 - הפועל קרית אונו 2",
+                    "value": "4449"
+                },
+                {
+                    "disabled": false,
+                    "index": 2,
+                    "selected": false,
+                    "text": "734 - א.ס. רמת השרון",
+                    "value": "4448"
+                },
+                {
+                    "disabled": false,
+                    "index": 3,
+                    "selected": false,
+                    "text": "1029 - בני הרצליה",
+                    "value": "4451"
+                },
+                {
+                    "disabled": false,
+                    "index": 4,
+                    "selected": true,
+                    "text": "4009 - מכבי תל אביב",
+                    "value": "4454"
+                },
+                {
+                    "disabled": false,
+                    "index": 5,
+                    "selected": false,
+                    "text": "712 - אס\"א  תל אביב",
+                    "value": "4452"
+                },
+                {
+                    "disabled": false,
+                    "index": 6,
+                    "selected": false,
+                    "text": "531 - מכבי רעננה",
+                    "value": "4453"
+                },
+                {
+                    "disabled": false,
+                    "index": 7,
+                    "selected": false,
+                    "text": "1030 - בני הרצליה 2",
+                    "value": "5627"
+                }
+            ],
+            "selected_texts": [
+                "4009 - מכבי תל אביב"
+            ],
+            "selected_values": [
+                "4454"
+            ]
+        }
+    },
+    "total_selects": 8
+}

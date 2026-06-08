@@ -1,10 +1,11 @@
 {
 	"folders": [
 		{
-			"path": "../../../../../../../Volumes/GuyMacExternal/Users/guyshachar/Projects/Python/PythonProjects/apps/refPortal"
+			"name": "refPortal",
+			"path": "."
 		},
 		{
-			"path": "../tzevaAdom"
+			"path": "../CV"
 		}
 	],
 	"settings": {}

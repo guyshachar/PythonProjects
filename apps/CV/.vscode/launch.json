@@ -30,6 +30,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
+                "MY_CONFIG_FOLDER": "./config",
                 "GEMINI_API_KEY": "AIzaSyD85QY9ugmEvweK3TcoJETNvAF6ZxCIf5w",
             }
         }

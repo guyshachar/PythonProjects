@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  app:
+    image: guyshacharacc/refportalfastapi:latest-prod
+    tty: true
+    env_file:
+      - ../refPortalShared/env
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - HTTP_PORT=${API_HTTP_PORT:-5001}
+      - HTTPS_PORT=${API_HTTPS_PORT:-5002}
+    ports:
+      - "${API_HTTP_PORT:-5001}:${API_HTTP_PORT:-5001}"  # HTTP port
+      - "${API_HTTPS_PORT:-5002}:${API_HTTPS_PORT:-5002}"  # HTTPS port
+    volumes:
+      - /home/ec2-user/refPortalService/data:/run/data
+      - /home/ec2-user/refPortalApi/ssl:/run/ssl
+      - /var/run/docker.sock:/var/run/docker.sock
+    #command: uvicorn rpApi.refPortalFastApiDI:app --host 0.0.0.0 --port ${API_HTTP_PORT:-5001} --ssl-keyfile /run/ssl/refereex.api.twilio.key --ssl-certfile /run/ssl/refereex.api.twilio.crt
+    command: uvicorn rpApi.refPortalFastApiDI:app --host 0.0.0.0 --port ${API_HTTPS_PORT:-5002} --proxy-headers --forwarded-allow-ips='*'
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - refportal_shared
+
+networks:
+  refportal_shared:
+    external: true
+    driver: bridge

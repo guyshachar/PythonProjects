@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Monitor Test - RefPortal PWA</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .status-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 5px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+        
+        .speed-value {
+            font-size: 2em;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .speed-value.exceeding {
+            color: #ff5722;
+            animation: pulse 1s infinite;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .log-info {
+            background: rgba(33, 150, 243, 0.2);
+            color: #81d4fa;
+        }
+        
+        .log-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #fff176;
+        }
+        
+        .log-error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ffcdd2;
+        }
+        
+        .log-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #c8e6c9;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .permission-notice {
+            background: rgba(255, 193, 7, 0.3);
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .permission-notice h3 {
+            margin: 0 0 10px 0;
+            color: #ffc107;
+        }
+        
+        .permission-notice p {
+            margin: 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Speed Monitor Test</h1>
+        
+        <div class="permission-notice" id="permissionNotice" style="display: none;">
+            <h3>⚠️ Location Permission Required</h3>
+            <p>This test requires location permission to monitor your speed. Please allow location access when prompted.</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn" onclick="startSpeedMonitoring()">Start Monitoring</button>
+            <button class="btn btn-danger" id="stopBtn" onclick="stopSpeedMonitoring()" disabled>Stop Monitoring</button>
+            <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+            <button class="btn btn-secondary" onclick="testNavigation()">Test Navigation</button>
+        </div>
+        
+        <div class="status-card">
+            <h3>🏟️ Game Field Navigation</h3>
+            <div class="status-item">
+                <span class="status-label">Next Game Field URL</span>
+                <span class="status-value" id="gameFieldUrl">Not set</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Navigation Status</span>
+                <span class="status-value" id="navigationStatus">Ready</span>
+            </div>
+            <div style="margin-top: 15px;">
+                <input type="url" id="wazeUrlInput" placeholder="Enter Waze URL (e.g., https://waze.com/ul?q=stadium)" 
+                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px;">
+                <button class="btn btn-secondary" onclick="setGameFieldUrl()">Set Game Field URL</button>
+                <button class="btn btn-secondary" onclick="clearGameFieldUrl()">Clear URL</button>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <h3>⏰ Game Scheduling</h3>
+            <div class="status-item">
+                <span class="status-label">Next Game Time</span>
+                <span class="status-value" id="nextGameTime">Not scheduled</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Service Start Time</span>
+                <span class="status-value" id="serviceStartDateTime">Not scheduled</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Time Until Start</span>
+                <span class="status-value" id="timeUntilStart">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Arrival Status</span>
+                <span class="status-value" id="arrivalStatus">Not arrived</span>
+            </div>
+            <div style="margin-top: 15px;">
+                <input type="datetime-local" id="gameTimeInput" 
+                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px;">
+                <input type="text" id="gameTitleInput" placeholder="Game Title (e.g., Team A vs Team B)" 
+                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px;">
+                <input type="text" id="fieldNameInput" placeholder="Field Name (e.g., Central Stadium)" 
+                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px;">
+                <input type="number" id="fieldLatInput" placeholder="Latitude (e.g., 32.0853)" step="0.000001"
+                       style="width: 48%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px; margin-right: 2%;">
+                <input type="number" id="fieldLngInput" placeholder="Longitude (e.g., 34.7818)" step="0.000001"
+                       style="width: 48%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; margin-bottom: 10px;">
+            <button class="btn btn-primary" onclick="scheduleNextGame()">Schedule Next Game</button>
+            <button class="btn btn-secondary" onclick="clearSchedule()">Clear Schedule</button>
+            <button class="btn btn-secondary" onclick="testHeaderDisplay()">Test Header Display</button>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <div class="status-item">
+                <span class="status-label">Current Speed</span>
+                <span class="status-value speed-value" id="currentSpeed">0.0 km/h</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Speed Threshold</span>
+                <span class="status-value" id="speedThreshold">10.0 km/h</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Monitoring Status</span>
+                <span class="status-value" id="monitoringStatus">Stopped</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Permission Status</span>
+                <span class="status-value" id="permissionStatus">Unknown</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Alert Count</span>
+                <span class="status-value" id="alertCount">0</span>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <h3>Activity Log</h3>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry log-info">Ready to start speed monitoring...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { SpeedMonitorService } from './js/speed-monitor-service.js';
+        import { SpeedAlertComponent } from './js/speed-alert-component.js';
+        
+        // Initialize services
+        const speedMonitor = new SpeedMonitorService({
+            speedThreshold: 10, // km/h
+            updateInterval: 1000, // ms
+            enableHighAccuracy: true
+        });
+        
+        const speedAlert = new SpeedAlertComponent({
+            showToast: true,
+            showModal: true,
+            showBadge: true,
+            autoHideToast: 5000
+        });
+        
+        let alertCount = 0;
+        
+        // Set up event handlers
+        speedMonitor.on('onSpeedExceeded', (data) => {
+            alertCount++;
+            updateStatus();
+            
+            if (data.navigationTriggered) {
+                addLog(`🚗 Navigation triggered to game field: ${data.wazeUrl}`, 'success');
+                updateGameFieldDisplay();
+            } else {
+                addLog(`⚠️ Speed exceeded: ${data.speed.toFixed(1)} km/h (no navigation URL set)`, 'warning');
+            }
+        });
+        
+        speedMonitor.on('onArrival', (data) => {
+            addLog(`🏟️ Arrived at field: ${data.fieldName} (${data.distance.toFixed(0)}m away)`, 'success');
+            updateScheduleDisplay();
+        });
+        
+        speedMonitor.on('onSpeedChanged', (data) => {
+            updateSpeedDisplay(data.speed);
+            if (data.speed > 0) {
+                addLog(`🚗 Speed: ${data.speed.toFixed(1)} km/h`, 'info');
+            }
+        });
+        
+        speedMonitor.on('onError', (error) => {
+            addLog(`❌ Error: ${error.message}`, 'error');
+            updateStatus();
+        });
+        
+        // Global functions for buttons
+        window.startSpeedMonitoring = async () => {
+            try {
+                addLog('🚀 Starting speed monitoring...', 'info');
+                await speedMonitor.startMonitoring();
+                updateStatus();
+                addLog('✅ Speed monitoring started', 'success');
+                
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+            } catch (error) {
+                addLog(`❌ Failed to start: ${error.message}`, 'error');
+                document.getElementById('permissionNotice').style.display = 'block';
+            }
+        };
+        
+        window.stopSpeedMonitoring = () => {
+            speedMonitor.stopMonitoring();
+            updateStatus();
+            addLog('🛑 Speed monitoring stopped', 'info');
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        };
+        
+        window.clearLog = () => {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('📝 Log cleared', 'info');
+        };
+        
+        window.testNavigation = () => {
+            const testData = {
+                speed: 15.5,
+                threshold: 10,
+                position: { latitude: 0, longitude: 0 },
+                timestamp: Date.now(),
+                navigationTriggered: true,
+                wazeUrl: speedMonitor.getNextGameFieldUrl()
+            };
+            
+            if (testData.wazeUrl) {
+                addLog('🧪 Testing navigation...', 'info');
+                speedMonitor.triggerNavigation();
+            } else {
+                addLog('⚠️ No game field URL set. Set a URL first.', 'warning');
+            }
+        };
+        
+        window.setGameFieldUrl = () => {
+            const url = document.getElementById('wazeUrlInput').value;
+            if (url) {
+                speedMonitor.setNextGameFieldUrl(url);
+                updateGameFieldDisplay();
+                addLog(`🏟️ Game field URL set: ${url}`, 'success');
+            } else {
+                addLog('⚠️ Please enter a valid Waze URL', 'warning');
+            }
+        };
+        
+        window.clearGameFieldUrl = () => {
+            speedMonitor.clearNextGameFieldUrl();
+            updateGameFieldDisplay();
+            document.getElementById('wazeUrlInput').value = '';
+            addLog('🏟️ Game field URL cleared', 'info');
+        };
+        
+        window.scheduleNextGame = () => {
+            const gameTime = document.getElementById('gameTimeInput').value;
+            const gameTitle = document.getElementById('gameTitleInput').value;
+            const fieldName = document.getElementById('fieldNameInput').value;
+            const fieldLatitude = parseFloat(document.getElementById('fieldLatInput').value);
+            const fieldLongitude = parseFloat(document.getElementById('fieldLngInput').value);
+            const wazeUrl = document.getElementById('wazeUrlInput').value;
+            
+            if (!gameTime || !fieldName || isNaN(fieldLatitude) || isNaN(fieldLongitude)) {
+                addLog('⚠️ Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            const fieldLocation = {
+                latitude: fieldLatitude,
+                longitude: fieldLongitude,
+                name: fieldName
+            };
+            
+            speedMonitor.setNextGame(gameTime, fieldLocation, wazeUrl || null, gameTitle || null);
+            updateScheduleDisplay();
+            addLog(`🏟️ Next game scheduled: ${new Date(gameTime).toLocaleString()} - ${gameTitle || 'Game'} at ${fieldName}`, 'success');
+        };
+        
+        window.clearSchedule = () => {
+            speedMonitor.clearNextGame();
+            updateScheduleDisplay();
+            // Clear input fields
+            document.getElementById('gameTimeInput').value = '';
+            document.getElementById('gameTitleInput').value = '';
+            document.getElementById('fieldNameInput').value = '';
+            document.getElementById('fieldLatInput').value = '';
+            document.getElementById('fieldLngInput').value = '';
+            addLog('⏰ Game schedule cleared', 'info');
+        };
+        
+        // Update functions
+        function updateSpeedDisplay(speed) {
+            const speedElement = document.getElementById('currentSpeed');
+            speedElement.textContent = `${speed.toFixed(1)} km/h`;
+            
+            if (speed > 10) {
+                speedElement.classList.add('exceeding');
+            } else {
+                speedElement.classList.remove('exceeding');
+            }
+        }
+        
+        function updateStatus() {
+            const status = speedMonitor.getStatus();
+            
+            document.getElementById('monitoringStatus').textContent = status.isMonitoring ? 'Active' : 'Stopped';
+            document.getElementById('permissionStatus').textContent = status.permissionStatus;
+            document.getElementById('alertCount').textContent = alertCount;
+            document.getElementById('speedThreshold').textContent = `${status.speedThreshold} km/h`;
+        }
+        
+        function updateGameFieldDisplay() {
+            const url = speedMonitor.getNextGameFieldUrl();
+            const urlElement = document.getElementById('gameFieldUrl');
+            const statusElement = document.getElementById('navigationStatus');
+            
+            if (url) {
+                urlElement.textContent = url.length > 50 ? url.substring(0, 50) + '...' : url;
+                statusElement.textContent = 'Ready for navigation';
+                statusElement.className = 'status-value status-granted';
+            } else {
+                urlElement.textContent = 'Not set';
+                statusElement.textContent = 'No URL set';
+                statusElement.className = 'status-value status-unknown';
+            }
+        }
+        
+        function updateScheduleDisplay() {
+            const schedule = speedMonitor.getScheduleStatus();
+            const gameTimeElement = document.getElementById('nextGameTime');
+            const startTimeElement = document.getElementById('serviceStartDateTime');
+            const timeUntilElement = document.getElementById('timeUntilStart');
+            const arrivalElement = document.getElementById('arrivalStatus');
+            
+            if (schedule && schedule.isScheduled) {
+                gameTimeElement.textContent = schedule.nextGameTime ? schedule.nextGameTime.toLocaleString() : 'Not set';
+                startTimeElement.textContent = schedule.serviceStartDateTime ? schedule.serviceStartDateTime.toLocaleString() : 'Not set';
+                
+                if (schedule.timeUntilStart !== null) {
+                    const hours = Math.floor(schedule.timeUntilStart / (1000 * 60 * 60));
+                    const minutes = Math.floor((schedule.timeUntilStart % (1000 * 60 * 60)) / (1000 * 60));
+                    timeUntilElement.textContent = `${hours}h ${minutes}m`;
+                    timeUntilElement.className = schedule.timeUntilStart > 0 ? 'status-value status-granted' : 'status-value status-denied';
+                } else {
+                    timeUntilElement.textContent = '-';
+                    timeUntilElement.className = 'status-value status-unknown';
+                }
+                
+                arrivalElement.textContent = schedule.arrivalDetected ? 'Arrived' : 'Not arrived';
+                arrivalElement.className = schedule.arrivalDetected ? 'status-value status-granted' : 'status-value status-unknown';
+            } else {
+                gameTimeElement.textContent = 'Not scheduled';
+                startTimeElement.textContent = 'Not scheduled';
+                timeUntilElement.textContent = '-';
+                arrivalElement.textContent = 'Not arrived';
+                gameTimeElement.className = 'status-value status-unknown';
+                startTimeElement.className = 'status-value status-unknown';
+                timeUntilElement.className = 'status-value status-unknown';
+                arrivalElement.className = 'status-value status-unknown';
+            }
+        }
+        
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Initialize
+        updateStatus();
+        updateGameFieldDisplay();
+        updateScheduleDisplay();
+        addLog('🎯 Speed Monitor Test Page Loaded', 'success');
+        
+        // Update schedule display every minute
+        setInterval(updateScheduleDisplay, 60000);
+        
+        // Test header display functionality
+        window.testHeaderDisplay = () => {
+            if (window.refPortalPwa) {
+                window.refPortalPwa.updateNextGameDisplay();
+                addLog('🔄 Header display updated', 'info');
+            } else {
+                addLog('⚠️ RefPortalPWA not available', 'warning');
+            }
+        };
+    </script>
+</body>
+</html>

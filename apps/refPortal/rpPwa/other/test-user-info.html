@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test User Info CSS</title>
+    <style>
+        .user-info {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-left: auto;
+            margin-right: 1rem;
+            text-align: center;
+            background: #f0f0f0;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .user-info.paired-only.active {
+            display: flex !important;
+        }
+
+        .paired-only {
+            display: none;
+        }
+
+        .paired-only.active {
+            display: block;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            background: #333;
+            color: white;
+        }
+
+        .user-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-mobile {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-content">
+        <h1>RefereeX</h1>
+        <div class="user-info paired-only">
+            <div class="user-name" id="userName">-</div>
+            <div class="user-mobile" id="userMobile">-</div>
+        </div>
+        <div class="header-actions">
+            <button onclick="showUserInfo()">Show User Info</button>
+            <button onclick="hideUserInfo()">Hide User Info</button>
+            <button onclick="updateUserInfo()">Update User Info</button>
+        </div>
+    </div>
+
+    <script>
+        function showUserInfo() {
+            document.querySelector('.user-info').classList.add('active');
+            console.log('User info shown');
+        }
+
+        function hideUserInfo() {
+            document.querySelector('.user-info').classList.remove('active');
+            console.log('User info hidden');
+        }
+
+        function updateUserInfo() {
+            const userNameElement = document.getElementById('userName');
+            const userMobileElement = document.getElementById('userMobile');
+            
+            if (userNameElement && userMobileElement) {
+                userNameElement.textContent = 'שופט דוגמה';
+                userMobileElement.textContent = '050-1234567';
+                console.log('User info updated');
+            } else {
+                console.error('Elements not found:', {
+                    userName: !!userNameElement,
+                    userMobile: !!userMobileElement
+                });
+            }
+        }
+
+        // Test on load
+        console.log('Page loaded, testing element access...');
+        const userNameElement = document.getElementById('userName');
+        const userMobileElement = document.getElementById('userMobile');
+        console.log('Elements found:', {
+            userName: userNameElement,
+            userMobile: userMobileElement
+        });
+    </script>
+</body>
+</html>

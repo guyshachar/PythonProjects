@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  # PWA Service - Environment configurable
+  pwa:
+    image: guyshacharacc/refportalpwa:latest-${APP_ENV:-prod}
+    tty: true
+    ports:
+      - "${PWA_HTTP_PORT:-8082}:8082"  # HTTP port
+      - "${PWA_HTTPS_PORT:-8443}:8443"  # HTTPS port
+    env_file:
+      - ../env
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - HTTP_PORT=${PWA_HTTP_PORT:-8082}
+      - HTTPS_PORT=${PWA_HTTPS_PORT:-8443}
+      - APP_ENV=${APP_ENV:-prod}
+    volumes:
+      - ../ssl:/app/ssl:ro  # SSL certificates (read-only)
+      - ../logs:/app/logs    # Application logs
+    # PWA-specific command from Dockerfile
+    command: sh -c "npm run start:https || node start-server.js --https-only"
+    restart: unless-stopped
+    networks:
+      - pwa_network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8082/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Labels for better container management
+    labels:
+      - "app=refportalpwa"
+      - "environment=${APP_ENV:-prod}"
+      - "version=${TAG:-latest}"
+
+networks:
+  pwa_network:
+    driver: overlay

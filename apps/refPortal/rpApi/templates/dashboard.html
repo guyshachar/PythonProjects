@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
+    <title>מוניטור שיבוצים</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h2>תרשים שיבוצים</h2>
+    <h3 id="titleId"></h3>
+
+    <label>
+        <input type="checkbox" id="refreshCheckbox" checked>
+        לחץ כדי לרענן את הדף כל 30 שניות
+    </label>
+
+    <div id="barChart"></div>
+    <div id="multiBarsChartByDay"></div>
+    <div id="multiBarsChartBySection"></div>
+
+    <script>    
+        function updateChart() {
+            var url = "/api/dashboardLoadData";
+            var guid = "{{ guid }}";
+            var name = "{{ name }}";
+            if (guid) {
+                url = url + "/" + guid;
+            }
+            $.getJSON(url, function(data) {
+                if (guid) {
+                    title = "שיבוצים לפי ליגה ויום=" + data.gamesRefereesCount + " עבור " + name;
+                } else {
+                    title = "שיבוצים לפי ליגה ויום=" + data.gamesRefereesCount + " משחקים=" + data.gamesCount + " שופטים=" + Math.round(data.activeRefereesCount/data.totalRefereesCount*100) + "%";
+                }
+
+                $("h3#titleId").text("עודכן לאחרונה ב " + data.lastUpdated);
+
+                var barTrace = {
+                    x: data.labels,
+                    y: data.values,
+                    type: 'bar'
+                };
+                var varLayout = {
+                    title: title,
+                    xaxis: { title: 'ליגה/יום' },
+                    yaxis: { title: 'שיבוצים' }
+                };
+                Plotly.newPlot('barChart', [barTrace], varLayout);
+
+                var multiBarsTracesByDay = [];
+                // Loop through each bar in the dataset
+                data.multiBarsByDay.forEach(function(bar) {
+                    // Sort labels alphabetically and rearrange values accordingly
+                    let sortedData = bar.labels.map((label, index) => ({ label, value: bar.values[index] }))
+                                        .sort((a, b) => a.label.localeCompare(b.label));
+
+                    let sortedLabels = sortedData.map(d => d.label);
+                    let sortedValues = sortedData.map(d => d.value);
+
+                    multiBarsTracesByDay.push({
+                        x: bar.labels,
+                        y: bar.values,
+                        name: bar.name,
+                        type: 'bar'
+                    });
+                });
+
+                var multiBarsLayoutByDay = {
+                    barmode: 'group',
+                    bargap: 0,        // No gap between bars of different groups
+                    bargroupgap: 0,    // No gap between bars of the same group
+                    title: 'שיבוצים לפי ליגה ויום משחקים',
+                    xaxis: { title: 'ליגה/גביע' },
+                    yaxis: { title: 'שיבוצים' }
+                };
+                Plotly.newPlot('multiBarsChartByDay', multiBarsTracesByDay, multiBarsLayoutByDay);
+
+                var multiBarsTracesBySection = [];
+                // Loop through each bar in the dataset
+                data.multiBarsBySection.forEach(function(bar) {
+                    multiBarsTracesBySection.push({
+                        x: bar.labels,
+                        y: bar.values,
+                        name: bar.name,
+                        type: 'bar'
+                    });
+                });
+
+                var multiBarsLayoutBySection = {
+                    barmode: 'group',
+                    bargap: 0,        // No gap between bars of different groups
+                    bargroupgap: 0,    // No gap between bars of the same group
+                    title: 'שיבוצים לפי יום משחקים וליגה',
+                    xaxis: { title: 'יום' },
+                    yaxis: { title: 'שיבוצים' }
+                };
+                Plotly.newPlot('multiBarsChartBySection', multiBarsTracesBySection, multiBarsLayoutBySection);
+            });
+        }
+
+        let refreshInterval;  // to store the interval ID
+        const checkbox = document.getElementById('refreshCheckbox');
+        // Function to start auto-refresh
+        function startRefresh() {
+            // Clear any previous interval just in case
+            clearInterval(refreshInterval);
+            refreshInterval = setInterval(() => {
+                //location.reload();
+                updateChart()
+            }, 30 * 1000); // 30000 milliseconds = 30 seconds
+        }
+
+        // Function to stop auto-refresh
+        function stopRefresh() {
+            clearInterval(refreshInterval);
+        }
+
+        // Listen for changes on the checkbox
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                startRefresh();
+            } else {
+                stopRefresh();
+            }
+        });
+
+        // Refresh chart every 5 seconds
+        updateChart();
+        //setInterval(updateChart, 30 * 1000);
+    </script>
+</body>
+</html>

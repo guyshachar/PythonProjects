@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RefPortalPWA Init Test</title>
+</head>
+<body>
+    <h1>RefPortalPWA Initialization Test</h1>
+    <div id="status">Checking initialization...</div>
+    <button onclick="testPWA()">Test PWA</button>
+    <button onclick="checkGlobal()">Check Global</button>
+    
+    <script src="pwa-config.js"></script>
+    <script type="module" src="refportal-pwa.js"></script>
+    
+    <script>
+        function testPWA() {
+            if (window.refPortalPWA) {
+                document.getElementById('status').innerHTML = 
+                    '✅ PWA is available!<br>' +
+                    'Ready: ' + window.refPortalPWA.isReady() + '<br>' +
+                    'Initialized: ' + window.refPortalPWA.isInitialized;
+            } else {
+                document.getElementById('status').innerHTML = '❌ PWA is not available';
+            }
+        }
+        
+        function checkGlobal() {
+            document.getElementById('status').innerHTML = 
+                'Global check:<br>' +
+                'window.refPortalPWA: ' + (window.refPortalPWA ? '✅ Available' : '❌ Not available') + '<br>' +
+                'Type: ' + (window.refPortalPWA ? typeof window.refPortalPWA : 'N/A');
+        }
+        
+        // Listen for the PWA ready event
+        window.addEventListener('refPortalPWAReady', (event) => {
+            document.getElementById('status').innerHTML = '🎉 PWA Ready Event Fired!';
+            console.log('PWA Ready Event:', event.detail);
+        });
+        
+        // Check every second
+        setInterval(() => {
+            if (window.refPortalPWA) {
+                document.getElementById('status').innerHTML = 
+                    '✅ PWA is available!<br>' +
+                    'Ready: ' + window.refPortalPWA.isReady() + '<br>' +
+                    'Initialized: ' + window.refPortalPWA.isInitialized;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

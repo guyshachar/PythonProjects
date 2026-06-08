@@ -1,0 +1,66 @@
+version: '3.8'
+services:
+  app:
+    image: guyshacharacc/refportalapi:latest
+    tty: true
+    ports:
+      - "5001:5001"  # Maps host port 5000 to container port 5000
+    environment:
+      - TZ=Asia/Jerusalem
+      - logLevel=INFO
+      - useTwilio=True
+      - twilioServiceId=MG7ec40f0e4baff9a172ad9e78cbc3d269
+      - twilioFromMobile=+972533932474
+      - apiServiceUrlBase=https://api.refereex.com:24501/api/
+      - twilioServiceUrlBase=https://api.refereex.com:24501/twilio/
+      - twilioOpenWindow=HX9cca11d6aba6c462ef0da97ef9d55d90
+      - openWindowReminder=20
+      - twilioOnBoardingJoinConfirmation=HX21592a8c9818fbd77d4a2b26717f30c4
+      - twilioOnBoardingRegistration=HX847e204b3cb4e383b4db6f82b01638c2
+      - twilioOnBoardingActivate=HXeef50e5476b996520b37d3eaf77c6ab5
+      - twilioOnBoardingAdminMobile=+972547799979
+      - limitPerMin=20
+      - flaskDebug=False
+      - fileVersion=v8
+      - MY_SSL_FILE=/run/ssl/refereex.api.twilio
+      - MY_SSL_FILE1=/run/live/twilio.refereex.com/
+      - port=5001
+    secrets:
+      - password_key
+      - twilio_account_sid
+      - twilio_auth_token
+      - mqtt_broker
+      - mqtt_username
+      - mqtt_password
+      - google_maps_api_key_client
+      - google_maps_api_key_server
+      - descope_mgmt_key
+    volumes:
+      - /home/guy/refPortalService/data:/run/data
+      - /home/guy/refPortalApi/ssl:/run/ssl
+      - /var/run/docker.sock:/var/run/docker.sock  # Allow monitor to access Docker
+      - /etc/letsencrypt/live:/run/live
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+secrets:
+  password_key:
+    external: true
+  twilio_account_sid:
+    external: true
+  twilio_auth_token:
+    external: true
+  mqtt_broker:
+    external: true
+  mqtt_username:
+    external: true
+  mqtt_password:
+    external: true
+  google_maps_api_key_client:
+    external: true
+  google_maps_api_key_server:
+    external: true
+  descope_mgmt_key:
+    external: true

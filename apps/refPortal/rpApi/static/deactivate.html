@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/favicon.png" type="image/png">
+    <title>ביטול שופט ממערכת התראות מהפורטל</title>
+</head>
+<body>
+    <h1>הכנס פרטים</h1>
+    <base href="https://api.refereex.com">
+    <form action="/api/deactivate" method="POST">
+        <label for="refId">קוד שופט:</label>
+        <input type="number" id="refId" name="refId"><br><br>
+
+        <button type="submit">בטל</button>
+    </form>
+</body>
+</html>

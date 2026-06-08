@@ -1,0 +1,43 @@
+# Core dependencies
+boto3>=1.26.0
+botocore>=1.29.0
+
+# Cronjob specific dependencies
+schedule>=1.2.0
+psutil>=5.9.0
+
+# Async support
+asyncio-mqtt>=0.13.0
+
+# Database and messaging
+redis>=4.5.0
+paho-mqtt>=1.6.0
+
+# Firebase
+firebase-admin>=6.2.0
+
+# Twilio for messaging
+twilio>=8.0.0
+
+# Web scraping and HTML processing
+beautifulsoup4>=4.11.0
+html2text>=2020.1.16
+
+# Geocoding
+geopy>=2.3.0
+
+# Dependency injection
+dependency-injector>=4.41.0
+
+# WhatsApp API
+whatsapp-api-client-python>=1.0.0
+
+# Authentication
+descope>=1.0.0
+
+# Utilities
+colorama>=0.4.6
+watchdog>=3.0.0
+
+# AWS Lambda runtime
+awslambdaric>=2.0.0

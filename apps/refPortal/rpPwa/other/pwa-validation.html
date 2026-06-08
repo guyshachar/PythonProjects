@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RefPortal PWA Validation & Testing</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            direction: rtl;
+            background-color: #f8fafc;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border-radius: 12px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-section h2 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        
+        .test-button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .status.success { 
+            background: #dcfce7; 
+            color: #166534; 
+            border: 1px solid #bbf7d0;
+        }
+        
+        .status.error { 
+            background: #fef2f2; 
+            color: #991b1b; 
+            border: 1px solid #fecaca;
+        }
+        
+        .status.info { 
+            background: #dbeafe; 
+            color: #1e40af; 
+            border: 1px solid #bfdbfe;
+        }
+        
+        .status.warning { 
+            background: #fef3c7; 
+            color: #92400e; 
+            border: 1px solid #fde68a;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .feature-card {
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .feature-card h3 {
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+        
+        .feature-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-working { background: #dcfce7; color: #166534; }
+        .status-partial { background: #fef3c7; color: #92400e; }
+        .status-broken { background: #fef2f2; color: #991b1b; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #1d4ed8);
+            transition: width 0.3s ease;
+        }
+        
+        .log-container {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .log-time { color: #64748b; }
+        .log-level.info { color: #60a5fa; }
+        .log-level.success { color: #34d399; }
+        .log-level.warning { color: #fbbf24; }
+        .log-level.error { color: #f87171; }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 RefPortal PWA Validation & Testing</h1>
+        <p>בדיקה מקיפה של כל תכונות ה-PWA</p>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 סטטוס כללי</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" id="overallProgress" style="width: 0%"></div>
+        </div>
+        <p>התקדמות הבדיקה: <span id="progressText">0%</span></p>
+        
+        <div class="action-buttons">
+            <button class="test-button" onclick="runAllTests()">הפעל את כל הבדיקות</button>
+            <button class="test-button" onclick="clearResults()">נקה תוצאות</button>
+            <button class="btn-secondary" onclick="exportResults()">ייצא תוצאות</button>
+        </div>
+    </div>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h3>🔧 תמיכה בסיסית</h3>
+            <div class="feature-status status-working" id="basicSupport">בדיקה...</div>
+            <p>בדיקת תמיכה בסיסית ב-PWA בדפדפן</p>
+            <button class="test-button" onclick="testBasicSupport()">בדוק</button>
+        </div>
+
+        <div class="feature-card">
+            <h3>📱 התקנה</h3>
+            <div class="feature-status status-working" id="installation">בדיקה...</div>
+            <p>בדיקת יכולת התקנת האפליקציה</p>
+            <button class="test-button" onclick="testInstallation()">בדוק</button>
+        </div>
+
+        <div class="feature-card">
+            <h3>🔔 התראות דחיפה</h3>
+            <div class="feature-status status-working" id="pushNotifications">בדיקה...</div>
+            <p>בדיקת התראות דחיפה</p>
+            <button class="test-button" onclick="testPushNotifications()">בדוק</button>
+        </div>
+
+        <div class="feature-card">
+            <h3>📡 Service Worker</h3>
+            <div class="feature-status status-working" id="serviceWorker">בדיקה...</div>
+            <p>בדיקת Service Worker</p>
+            <button class="test-button" onclick="testServiceWorker()">בדוק</button>
+        </div>
+
+        <div class="feature-card">
+            <h3>🚫 עבודה ללא אינטרנט</h3>
+            <div class="feature-status status-working" id="offlineSupport">בדיקה...</div>
+            <p>בדיקת תמיכה בעבודה ללא אינטרנט</p>
+            <button class="test-button" onclick="testOfflineSupport()">בדוק</button>
+        </div>
+
+        <div class="feature-card">
+            <h3>📋 Manifest</h3>
+            <div class="feature-status status-working" id="manifest">בדיקה...</div>
+            <p>בדיקת קובץ ה-Manifest</p>
+            <button class="test-button" onclick="testManifest()">בדוק</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 בדיקות מתקדמות</h2>
+        <div class="action-buttons">
+            <button class="test-button" onclick="testCacheStrategies()">בדוק אסטרטגיות Cache</button>
+            <button class="test-button" onclick="testBackgroundSync()">בדוק סנכרון ברקע</button>
+            <button class="test-button" onclick="testPerformance()">בדוק ביצועים</button>
+            <button class="test-button" onclick="testAccessibility()">בדוק נגישות</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 יומן בדיקות</h2>
+        <div class="log-container" id="testLog">
+            <div class="log-entry">
+                <span class="log-time">[00:00:00]</span>
+                <span class="log-level info">INFO</span>
+                <span>מערכת הבדיקה מוכנה</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 קישורים מהירים</h2>
+        <div class="action-buttons">
+            <a href="refportal-pwa.html" class="test-button" style="text-decoration: none;">פתח PWA ראשי</a>
+            <a href="pwa-test.html" class="test-button" style="text-decoration: none;">בדיקה בסיסית</a>
+            <a href="pwa-config.js" class="btn-secondary" style="text-decoration: none;">הגדרות PWA</a>
+        </div>
+    </div>
+
+    <script>
+        class PWAValidator {
+            constructor() {
+                this.testResults = {};
+                this.totalTests = 0;
+                this.passedTests = 0;
+                this.init();
+            }
+
+            init() {
+                this.log('מערכת הבדיקה מוכנה', 'info');
+                this.updateProgress();
+            }
+
+            log(message, level = 'info') {
+                const logContainer = document.getElementById('testLog');
+                const timestamp = new Date().toLocaleTimeString('he-IL');
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `
+                    <span class="log-time">[${timestamp}]</span>
+                    <span class="log-level ${level}">${level.toUpperCase()}</span>
+                    <span>${message}</span>
+                `;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+
+            updateProgress() {
+                const progress = this.totalTests > 0 ? (this.passedTests / this.totalTests) * 100 : 0;
+                document.getElementById('overallProgress').style.width = `${progress}%`;
+                document.getElementById('progressText').textContent = `${Math.round(progress)}%`;
+            }
+
+            updateFeatureStatus(featureId, status, message) {
+                const element = document.getElementById(featureId);
+                element.className = `feature-status status-${status}`;
+                element.textContent = message;
+                
+                if (status === 'working') {
+                    this.passedTests++;
+                }
+                this.totalTests++;
+                this.updateProgress();
+            }
+
+            async testBasicSupport() {
+                this.log('מתחיל בדיקת תמיכה בסיסית...', 'info');
+                
+                const features = {
+                    serviceWorker: 'serviceWorker' in navigator,
+                    pushManager: 'PushManager' in window,
+                    notifications: 'Notification' in window,
+                    manifest: 'manifest' in document.createElement('link'),
+                    cache: 'caches' in window
+                };
+
+                const supportedFeatures = Object.values(features).filter(Boolean).length;
+                const totalFeatures = Object.keys(features).length;
+                const supportPercentage = (supportedFeatures / totalFeatures) * 100;
+
+                if (supportPercentage >= 80) {
+                    this.updateFeatureStatus('basicSupport', 'working', `${Math.round(supportPercentage)}% תמיכה`);
+                    this.log(`תמיכה בסיסית: ${supportedFeatures}/${totalFeatures} תכונות נתמכות`, 'success');
+                } else if (supportPercentage >= 50) {
+                    this.updateFeatureStatus('basicSupport', 'partial', `${Math.round(supportPercentage)}% תמיכה`);
+                    this.log(`תמיכה חלקית: ${supportedFeatures}/${totalFeatures} תכונות נתמכות`, 'warning');
+                } else {
+                    this.updateFeatureStatus('basicSupport', 'broken', `${Math.round(supportPercentage)}% תמיכה`);
+                    this.log(`תמיכה נמוכה: ${supportedFeatures}/${totalFeatures} תכונות נתמכות`, 'error');
+                }
+
+                this.testResults.basicSupport = { features, supportPercentage };
+            }
+
+            async testInstallation() {
+                this.log('מתחיל בדיקת התקנה...', 'info');
+                
+                let installable = false;
+                let reason = '';
+
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    try {
+                        const manifest = await this.getManifest();
+                        if (manifest && manifest.name && manifest.short_name) {
+                            installable = true;
+                            reason = 'כל הדרישות מתקיימות';
+                        } else {
+                            reason = 'Manifest לא תקין';
+                        }
+                    } catch (error) {
+                        reason = `שגיאה בבדיקת Manifest: ${error.message}`;
+                    }
+                } else {
+                    reason = 'Service Worker או Push Manager לא נתמכים';
+                }
+
+                if (installable) {
+                    this.updateFeatureStatus('installation', 'working', 'ניתן להתקין');
+                    this.log('האפליקציה ניתנת להתקנה', 'success');
+                } else {
+                    this.updateFeatureStatus('installation', 'broken', 'לא ניתן להתקין');
+                    this.log(`לא ניתן להתקין: ${reason}`, 'error');
+                }
+
+                this.testResults.installation = { installable, reason };
+            }
+
+            async testPushNotifications() {
+                this.log('מתחיל בדיקת התראות דחיפה...', 'info');
+                
+                let supported = false;
+                let reason = '';
+
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    if (Notification.permission === 'granted') {
+                        supported = true;
+                        reason = 'הרשאות כבר ניתנו';
+                    } else if (Notification.permission === 'default') {
+                        supported = true;
+                        reason = 'ניתן לבקש הרשאות';
+                    } else {
+                        reason = 'הרשאות נדחו';
+                    }
+                } else {
+                    reason = 'התראות דחיפה לא נתמכות';
+                }
+
+                if (supported) {
+                    this.updateFeatureStatus('pushNotifications', 'working', 'נתמך');
+                    this.log('התראות דחיפה נתמכות', 'success');
+                } else {
+                    this.updateFeatureStatus('pushNotifications', 'broken', 'לא נתמך');
+                    this.log(`התראות דחיפה לא נתמכות: ${reason}`, 'error');
+                }
+
+                this.testResults.pushNotifications = { supported, reason };
+            }
+
+            async testServiceWorker() {
+                this.log('מתחיל בדיקת Service Worker...', 'info');
+                
+                let working = false;
+                let reason = '';
+
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const registration = await navigator.serviceWorker.getRegistration();
+                        if (registration && registration.active) {
+                            working = true;
+                            reason = 'Service Worker פעיל';
+                        } else if (registration) {
+                            working = true;
+                            reason = 'Service Worker רשום';
+                        } else {
+                            reason = 'Service Worker לא רשום';
+                        }
+                    } catch (error) {
+                        reason = `שגיאה בבדיקת Service Worker: ${error.message}`;
+                    }
+                } else {
+                    reason = 'Service Worker לא נתמך';
+                }
+
+                if (working) {
+                    this.updateFeatureStatus('serviceWorker', 'working', 'עובד');
+                    this.log('Service Worker עובד', 'success');
+                } else {
+                    this.updateFeatureStatus('serviceWorker', 'broken', 'לא עובד');
+                    this.log(`Service Worker לא עובד: ${reason}`, 'error');
+                }
+
+                this.testResults.serviceWorker = { working, reason };
+            }
+
+            async testOfflineSupport() {
+                this.log('מתחיל בדיקת תמיכה ללא אינטרנט...', 'info');
+                
+                let supported = false;
+                let reason = '';
+
+                if ('caches' in window && 'serviceWorker' in navigator) {
+                    try {
+                        const cache = await caches.open('test-cache');
+                        await cache.put('/test', new Response('test'));
+                        await cache.delete('/test');
+                        supported = true;
+                        reason = 'Cache API עובד';
+                    } catch (error) {
+                        reason = `Cache API לא עובד: ${error.message}`;
+                    }
+                } else {
+                    reason = 'Cache API לא נתמך';
+                }
+
+                if (supported) {
+                    this.updateFeatureStatus('offlineSupport', 'working', 'נתמך');
+                    this.log('תמיכה ללא אינטרנט עובדת', 'success');
+                } else {
+                    this.updateFeatureStatus('offlineSupport', 'broken', 'לא נתמך');
+                    this.log(`תמיכה ללא אינטרנט לא עובדת: ${reason}`, 'error');
+                }
+
+                this.testResults.offlineSupport = { supported, reason };
+            }
+
+            async testManifest() {
+                this.log('מתחיל בדיקת Manifest...', 'info');
+                
+                let valid = false;
+                let reason = '';
+
+                try {
+                    const manifest = await this.getManifest();
+                    if (manifest && manifest.name && manifest.short_name && manifest.start_url) {
+                        valid = true;
+                        reason = 'Manifest תקין';
+                    } else {
+                        reason = 'Manifest חסר מגרשים חובה';
+                    }
+                } catch (error) {
+                    reason = `שגיאה בבדיקת Manifest: ${error.message}`;
+                }
+
+                if (valid) {
+                    this.updateFeatureStatus('manifest', 'working', 'תקין');
+                    this.log('Manifest תקין', 'success');
+                } else {
+                    this.updateFeatureStatus('manifest', 'broken', 'לא תקין');
+                    this.log(`Manifest לא תקין: ${reason}`, 'error');
+                }
+
+                this.testResults.manifest = { valid, reason };
+            }
+
+            async getManifest() {
+                const manifestLink = document.querySelector('link[rel="manifest"]');
+                if (manifestLink && manifestLink.href) {
+                    const response = await fetch(manifestLink.href);
+                    return await response.json();
+                }
+                return null;
+            }
+
+            async runAllTests() {
+                this.log('מתחיל את כל הבדיקות...', 'info');
+                
+                await this.testBasicSupport();
+                await this.testInstallation();
+                await this.testPushNotifications();
+                await this.testServiceWorker();
+                await this.testOfflineSupport();
+                await this.testManifest();
+                
+                this.log('כל הבדיקות הושלמו!', 'success');
+            }
+
+            clearResults() {
+                this.testResults = {};
+                this.totalTests = 0;
+                this.passedTests = 0;
+                this.updateProgress();
+                
+                // Reset all feature statuses
+                const features = ['basicSupport', 'installation', 'pushNotifications', 'serviceWorker', 'offlineSupport', 'manifest'];
+                features.forEach(feature => {
+                    this.updateFeatureStatus(feature, 'working', 'בדיקה...');
+                });
+                
+                // Clear log
+                document.getElementById('testLog').innerHTML = `
+                    <div class="log-entry">
+                        <span class="log-time">[${new Date().toLocaleTimeString('he-IL')}]</span>
+                        <span class="log-level info">INFO</span>
+                        <span>תוצאות נוקו</span>
+                    </div>
+                `;
+                
+                this.log('תוצאות נוקו', 'info');
+            }
+
+            exportResults() {
+                const data = {
+                    timestamp: new Date().toISOString(),
+                    results: this.testResults,
+                    summary: {
+                        totalTests: this.totalTests,
+                        passedTests: this.passedTests,
+                        successRate: this.totalTests > 0 ? (this.passedTests / this.totalTests) * 100 : 0
+                    }
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pwa-validation-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.log('תוצאות יוצאו לקובץ JSON', 'success');
+            }
+        }
+
+        // Initialize validator
+        const validator = new PWAValidator();
+
+        // Global functions for button clicks
+        function runAllTests() {
+            validator.runAllTests();
+        }
+
+        function clearResults() {
+            validator.clearResults();
+        }
+
+        function exportResults() {
+            validator.exportResults();
+        }
+
+        function testBasicSupport() {
+            validator.testBasicSupport();
+        }
+
+        function testInstallation() {
+            validator.testInstallation();
+        }
+
+        function testPushNotifications() {
+            validator.testPushNotifications();
+        }
+
+        function testServiceWorker() {
+            validator.testServiceWorker();
+        }
+
+        function testOfflineSupport() {
+            validator.testOfflineSupport();
+        }
+
+        function testManifest() {
+            validator.testManifest();
+        }
+
+        function testCacheStrategies() {
+            validator.log('בדיקת אסטרטגיות Cache - לא מיושם עדיין', 'warning');
+        }
+
+        function testBackgroundSync() {
+            validator.log('בדיקת סנכרון ברקע - לא מיושם עדיין', 'warning');
+        }
+
+        function testPerformance() {
+            validator.log('בדיקת ביצועים - לא מיושם עדיין', 'warning');
+        }
+
+        function testAccessibility() {
+            validator.log('בדיקת נגישות - לא מיושם עדיין', 'warning');
+        }
+    </script>
+</body>
+</html>

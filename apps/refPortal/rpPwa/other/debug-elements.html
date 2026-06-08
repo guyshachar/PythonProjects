@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Elements</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .user-info { display: none; }
+        .user-info.paired-only.active { display: flex !important; }
+        .paired-only.active { display: block; }
+        button { margin: 5px; padding: 10px; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Debug User Info Elements</h1>
+    
+    <div class="debug-section">
+        <h3>Test 1: Basic Element Access</h3>
+        <button onclick="testBasicAccess()">Test Basic Access</button>
+        <div id="result1" class="result"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Test 2: CSS Class Changes</h3>
+        <button onclick="testCSSChanges()">Test CSS Changes</button>
+        <div id="result2" class="result"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Test 3: Simulate Authentication Flow</h3>
+        <button onclick="simulateAuth()">Simulate Auth</button>
+        <div id="result3" class="result"></div>
+    </div>
+    
+    <!-- Header with user info (same structure as PWA) -->
+    <header style="background: #333; color: white; padding: 20px; margin: 20px 0;">
+        <div style="display: flex; align-items: center;">
+            <h2 style="margin: 0;">RefereeX</h2>
+            <div class="user-info paired-only" id="userInfoContainer">
+                <div class="user-name" id="userName">-</div>
+                <div class="user-mobile" id="userMobile">-</div>
+            </div>
+            <div style="margin-left: auto;">
+                <button onclick="toggleUserInfo()">Toggle User Info</button>
+            </div>
+        </div>
+    </header>
+    
+    <script>
+        function testBasicAccess() {
+            const result = document.getElementById('result1');
+            const userName = document.getElementById('userName');
+            const userMobile = document.getElementById('userMobile');
+            const userInfo = document.querySelector('.user-info');
+            
+            result.innerHTML = `
+                <strong>Element Access Results:</strong><br>
+                userName: ${userName ? 'FOUND' : 'NULL'} (${userName})<br>
+                userMobile: ${userMobile ? 'FOUND' : 'NULL'} (${userMobile})<br>
+                userInfo: ${userInfo ? 'FOUND' : 'NULL'} (${userInfo})<br>
+                <br>
+                <strong>Current Classes:</strong><br>
+                userInfo classes: ${userInfo ? userInfo.className : 'N/A'}<br>
+                userInfo display: ${userInfo ? window.getComputedStyle(userInfo).display : 'N/A'}
+            `;
+        }
+        
+        function testCSSChanges() {
+            const result = document.getElementById('result2');
+            const userInfo = document.querySelector('.user-info');
+            
+            if (!userInfo) {
+                result.innerHTML = '❌ User info element not found';
+                return;
+            }
+            
+            // Test adding active class
+            userInfo.classList.add('active');
+            
+            setTimeout(() => {
+                const display = window.getComputedStyle(userInfo).display;
+                result.innerHTML = `
+                    <strong>CSS Change Results:</strong><br>
+                    After adding 'active' class:<br>
+                    Classes: ${userInfo.className}<br>
+                    Display: ${display}<br>
+                    <br>
+                    <strong>Element State:</strong><br>
+                    userName: ${document.getElementById('userName') ? 'FOUND' : 'NULL'}<br>
+                    userMobile: ${document.getElementById('userMobile') ? 'FOUND' : 'NULL'}
+                `;
+            }, 50);
+        }
+        
+        function simulateAuth() {
+            const result = document.getElementById('result3');
+            const userInfo = document.querySelector('.user-info');
+            
+            if (!userInfo) {
+                result.innerHTML = '❌ User info element not found';
+                return;
+            }
+            
+            // Simulate the authentication flow
+            console.log('🔍 Starting auth simulation...');
+            
+            // Step 1: Add active class
+            userInfo.classList.add('active');
+            console.log('✅ Added active class');
+            
+            // Step 2: Wait for CSS to take effect
+            setTimeout(() => {
+                console.log('⏳ CSS should be applied now');
+                
+                // Step 3: Try to access elements
+                const userName = document.getElementById('userName');
+                const userMobile = document.getElementById('userMobile');
+                
+                console.log('🔍 Elements found:', { userName, userMobile });
+                
+                if (userName && userMobile) {
+                    // Step 4: Update content
+                    userName.textContent = 'שופט דוגמה';
+                    userMobile.textContent = '050-1234567';
+                    console.log('✅ User info updated');
+                    
+                    result.innerHTML = `
+                        <strong>Auth Simulation Results:</strong><br>
+                        ✅ Authentication successful<br>
+                        ✅ User info updated in header<br>
+                        <br>
+                        <strong>Current Values:</strong><br>
+                        Name: ${userName.textContent}<br>
+                        Mobile: ${userMobile.textContent}<br>
+                        <br>
+                        <strong>Element States:</strong><br>
+                        userName: ${userName ? 'FOUND' : 'NULL'}<br>
+                        userMobile: ${userMobile ? 'FOUND' : 'NULL'}<br>
+                        Display: ${window.getComputedStyle(userInfo).display}
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <strong>Auth Simulation Results:</strong><br>
+                        ❌ Elements still not found after CSS changes<br>
+                        <br>
+                        <strong>Debug Info:</strong><br>
+                        userName: ${userName ? 'FOUND' : 'NULL'}<br>
+                        userMobile: ${userMobile ? 'FOUND' : 'NULL'}<br>
+                        userInfo classes: ${userInfo.className}<br>
+                        userInfo display: ${window.getComputedStyle(userInfo).display}
+                    `;
+                }
+            }, 100);
+        }
+        
+        function toggleUserInfo() {
+            const userInfo = document.querySelector('.user-info');
+            if (userInfo) {
+                userInfo.classList.toggle('active');
+                console.log('🔄 Toggled user info visibility');
+                console.log('Current classes:', userInfo.className);
+                console.log('Current display:', window.getComputedStyle(userInfo).display);
+            }
+        }
+        
+        // Test on page load
+        window.addEventListener('load', () => {
+            console.log('🚀 Page loaded, testing element access...');
+            testBasicAccess();
+        });
+    </script>
+</body>
+</html>

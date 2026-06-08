@@ -1,0 +1,1424 @@
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="RefereeX - ניהול שופטים ומשחקים">
+    <meta http-equiv="Pragma" content="no-cache">
+    <!-- Bump app-asset-version when you change app JS/CSS so browsers load fresh bundles (with SW HTML network-first). -->
+    <meta name="app-asset-version" content="19">
+
+    <title>RefereeX</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="refportal-manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" href="./images/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="./images/RefereeX.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./css/refportal-pwa.css?v=19">
+    
+    <!-- Inline script for video autoplay - must run immediately -->
+    <script>
+        // Video autoplay fix for all browsers - runs immediately when DOM is ready
+        (function() {
+            function initVideoAutoplay() {
+                const video = document.getElementById('splashVideo');
+                if (!video) return;
+                
+                // Ensure video is muted and set up for autoplay
+                video.muted = true;
+                video.volume = 0;
+                video.playsInline = true;
+                video.setAttribute('playsinline', '');
+                video.setAttribute('webkit-playsinline', '');
+                video.setAttribute('x-webkit-airplay', 'allow');
+                
+                // Detect Safari/iOS
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || 
+                                /iPad|iPhone|iPod/.test(navigator.userAgent);
+                
+                // Function to attempt playing the video
+                const tryPlayVideo = () => {
+                    // Ensure video is muted before playing
+                    video.muted = true;
+                    video.volume = 0;
+                    
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log('✅ Video autoplay started successfully');
+                        }).catch(err => {
+                            console.log('⚠️ Autoplay prevented:', err.message);
+                            // Add click/touch handler to entire screen for user interaction
+                            const playOnInteraction = () => {
+                                video.muted = true;
+                                video.volume = 0;
+                                video.play().catch(e => console.warn('Video play failed:', e));
+                                document.removeEventListener('touchstart', playOnInteraction);
+                                document.removeEventListener('click', playOnInteraction);
+                                document.removeEventListener('mousedown', playOnInteraction);
+                            };
+                            document.addEventListener('touchstart', playOnInteraction, { once: true, passive: true });
+                            document.addEventListener('click', playOnInteraction, { once: true });
+                            document.addEventListener('mousedown', playOnInteraction, { once: true });
+                        });
+                    }
+                };
+                
+                // Try to play immediately if video is already loaded
+                if (video.readyState >= 1) {
+                    tryPlayVideo();
+                } else {
+                    // Wait for video to be ready
+                    const events = ['loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough'];
+                    events.forEach(event => {
+                        video.addEventListener(event, tryPlayVideo, { once: true });
+                    });
+                }
+                
+                // Also try when video becomes ready (fallback)
+                if (video.readyState === 0) {
+                    video.load();
+                }
+            }
+            
+            // Try immediately if DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initVideoAutoplay);
+            } else {
+                initVideoAutoplay();
+            }
+            
+            // Also try on window load (fallback)
+            window.addEventListener('load', initVideoAutoplay, { once: true });
+            
+            // Try on first user interaction (if autoplay was blocked)
+            const tryOnInteraction = () => {
+                const video = document.getElementById('splashVideo');
+                if (video && video.paused) {
+                    video.muted = true;
+                    video.volume = 0;
+                    video.play().catch(() => {});
+                }
+                document.removeEventListener('touchstart', tryOnInteraction);
+                document.removeEventListener('click', tryOnInteraction);
+                document.removeEventListener('mousedown', tryOnInteraction);
+            };
+            document.addEventListener('touchstart', tryOnInteraction, { once: true, passive: true });
+            document.addEventListener('click', tryOnInteraction, { once: true });
+            document.addEventListener('mousedown', tryOnInteraction, { once: true });
+        })();
+    </script>
+    
+</head>
+<body>
+    <!-- Splash Video Screen - Shows until user is authenticated -->
+    <div id="splashVideoScreen" class="splash-video-screen" style="background-color: #000;">
+        <video id="splashVideo" class="splash-video" autoplay muted loop playsinline preload="auto" webkit-playsinline x-webkit-airplay="allow">
+            <source src="./videos/RefereeX.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="splash-overlay"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <!-- User Info - Top Left -->
+            <div class="header-left">
+                <div class="user-info paired-only">
+                    <div class="user-name" id="userName">-</div>
+                    <div class="user-mobile" id="userMobile" style="direction:ltr">-</div>
+                    <button id="unpairBtn" class="unpair-btn" title="התנתק">
+                    </span>🚪</span>
+                    </button>               
+                </div>
+                <div class="speed-badge-container" id="speedBadgeContainer" style="display: none;">
+                    <!-- Speed badge will be inserted here by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Next Game Info - Center -->
+            <div class="next-game-info paired-only" id="nextGameInfo">
+                <div class="next-game-title" id="nextGameTitle">-</div>
+                <div class="next-game-schedule" id="nextGameSchedule">
+                    <div class="next-game-datetime" id="nextGameDateTime">-</div>
+                    <div class="next-game-status" id="nextGameStatus">-</div>
+                </div>
+            </div>
+            
+            <!-- Logo and Notification - Top Right -->
+            <div class="header-right">
+                <div class="app-logo">
+                    <img src="./images/RefereeX.png" alt="RefPortal" class="app-logo">
+                </div>
+                <button id="notificationBtn" class="notification-btn force-touch-indicator1" title="הרשאות התראות">
+                    🔔
+                    <span class="badge-indicator" id="badgeIndicator" style="display: none;">0</span>
+                </button>
+            </div>
+            
+         </div>
+    </header>
+
+    <!-- Pair Section (legacy overlay - kept for backward compat, hidden) -->
+    <div id="pairSection" class="pair-section" style="display:none;"></div>
+
+    <!-- Navigation Menu -->
+    <nav class="app-nav">
+        <div class="nav-container">
+            <button class="nav-item active" data-section="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">דשבורד</span>
+            </button>
+            <button class="nav-item" data-section="games">
+                <span class="nav-icon">⚽🏀🏐</span>
+                <span class="nav-text">שיבוצים</span>
+            </button>
+            <button class="nav-item" data-section="reviews">
+                <span class="nav-icon">📝</span>
+                <span class="nav-text">ביקורות</span>
+            </button>
+            <button class="nav-item" data-section="login">
+                <span class="nav-icon">🔐</span>
+                <span class="nav-text">התחברות</span>
+            </button>
+            <button class="nav-item" data-section="publicTables">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">טבלאות</span>
+            </button>
+            <button class="nav-item" data-section="publicGames">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-text">משחקים</span>
+            </button>
+            <button class="nav-item" data-section="messages">
+                <span class="nav-icon">📨</span>
+                <span class="nav-text">הודעות</span>
+            </button>
+            <button class="nav-item" data-section="fields">
+                <span class="nav-icon">🏟️</span>
+                <span class="nav-text">מגרשים</span>
+            </button>
+            <button class="nav-item" data-section="availability">
+                <span class="nav-icon">📅</span>
+                <span class="nav-text">זמינות</span>
+            </button>
+            <button class="nav-item" data-section="documents">
+                <span class="nav-icon">📄</span>
+                <span class="nav-text">מסמכים</span>
+            </button>
+            <button class="nav-item" data-section="rules">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">חוקה</span>
+            </button>
+            <button class="nav-item" data-section="chat">
+                <span class="nav-icon">💬</span>
+                <span class="nav-text">צ'אט</span>
+            </button>
+            <button class="nav-item" data-section="userDetails">
+                <span class="nav-icon">👤</span>
+                <span class="nav-text">פרטי משתמש</span>
+            </button>
+            <button class="nav-item" data-section="admin">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">ניהול</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Not Paired In State (hidden - replaced by login section) -->
+        <div id="notPairedInState" class="not-paired-in-state" style="display:none;"></div>
+
+        <!-- Login Section -->
+        <section id="login" class="content-section">
+            <div class="pair-container">
+                <div class="pair-content">
+                    <img src="./images/RefereeX.png" alt="RefereeX" class="not-paired-in-logo">
+                    <h2>ברוכים הבאים למערכת RefereeX</h2>
+                    <p>לחץ על הכפתור למטה כדי לקבל הודעת WhatsApp לאימות מספר הנייד שלך</p>
+                    <button id="pairBtn" class="btn-primary pair-btn">
+                        <span class="btn-icon">📱</span>
+                        <span>שלח הודעת הזדהות</span>
+                    </button>
+                    <div id="pairStatus" class="pair-status"></div>
+                    <button id="manualAuthCheckBtn" class="btn-secondary" style="margin-top:1rem;">
+                        <span class="btn-icon">🔄</span>
+                        <span>בדוק מצב התחברות</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="content-section active paired-only">
+            <!-- Dashboard Logo Section -->
+            <div class="dashboard-logo-section">
+                <img src="./images/RefereeX.png" alt="RefereeX" class="dashboard-logo">
+                <h2>מערכת ניהול שופטים ומשחקים</h2>
+                <p class="dashboard-subtitle">מערכת ניהול שופטים ומשחקים מתקדמת</p>
+            </div>
+            <div class="dashboard-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>משחקים היום</h3>
+                        <div id="gamesCount" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>שופטים פעילים</h3>
+                        <div id="activeReferees" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>שיבוצים</h3>
+                        <div id="assignmentsCount" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>שיבוצים ב-24 שעות האחרונות</h3>
+                        <div id="assignments24HrsCount" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>אישורי משחקים ב-24 שעות האחרונות</h3>
+                        <div id="gameApprovals24HrsCount" class="stat-value">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>עדכוני תוצאות ב-24 שעות האחרונות</h3>
+                        <div id="gameResultUpdates24HrsCount" class="stat-value">-</div>
+                    </div>
+                </div>
+                <div id="dashboardChart" class="chart-container"></div>
+            </div>
+        </section>
+
+        <!-- Games Section -->
+        <section id="games" class="content-section paired-only">
+            <h2>ניהול משחקים</h2>
+            <p id="gamesSyncMeta" class="section-sync-meta" hidden></p>
+            <div class="games-content">
+                <div class="games-filters">
+                    <!-- Compact row: Season, League, and Date filters -->
+                    <div class="filter-row compact">
+                        <div class="filter-group">
+                            <select id="gamesTenantFilter" class="filter-select compact">
+                                <option value="">כל העונות</option>
+                            </select>
+                            <select id="gamesSectionFilter" class="filter-select compact">
+                                <option value="">כל הקטגוריות</option>
+                            </select>
+                            <select id="gamesLeagueFilter" class="filter-select compact">
+                                <option value="">כל הליגות</option>
+                            </select>
+                            <select id="gamesRoleFilter" class="filter-select compact">
+                                <option value="">כל התפקידים</option>
+                            </select>
+                        </div>
+                        <div class="date-group">
+                            <div class="date-filter compact">
+                                <label for="gamesFromDateFilter">מתאריך:</label>
+                                <input type="date" id="gamesFromDateFilter">
+                            </div>
+                            <div class="date-filter compact">
+                                <label for="gamesToDateFilter">עד תאריך:</label>
+                                <input type="date" id="gamesToDateFilter">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Compact row: Checkboxes and buttons -->
+                    <div class="filter-row compact">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label compact">
+                                <input type="checkbox" id="includeArchivedGamesFilter" class="filter-checkbox">
+                                <span>משחקים שהסתיימו</span>
+                            </label>
+                            <label class="checkbox-label compact">
+                                <input type="checkbox" id="includeRemovedGamesFilter" class="filter-checkbox">
+                                <span>משחקים שהוסרו</span>
+                            </label>
+                        </div>
+                        <div class="button-group">
+                            <button id="refreshGames" class="btn-primary compact">רענן</button>
+                            <button id="clearGamesFilters" class="btn-secondary compact">נקה</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="refereeGamesList" class="games-list">
+                    <!-- Games will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Reviews Section -->
+        <section id="reviews" class="content-section paired-only">
+            <h2>ביקורות שופטים</h2>
+            <p id="reviewsSyncMeta" class="section-sync-meta" hidden></p>
+            <div class="reviews-content">
+                <div class="review-filters">
+                    <!-- First row: Season and Referees -->
+                    <div class="filter-row compact">
+                        <div class="filter-group">
+                            <select id="reviewsTenantFilter" class="filter-select compact">
+                                <option value="">כל העונות</option>
+                            </select>
+                            <select id="refereeFilter" class="filter-select compact">
+                                <option value="">כל השופטים</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Second row: Role, Rating and Clear button -->
+                    <div class="filter-row compact">
+                        <div class="filter-group">
+                            <select id="reviewsRoleFilter" class="filter-select compact">
+                                <option value="">כל התפקידים</option>
+                            </select>
+                            <select id="ratingFilter" class="filter-select compact">
+                                <option value="">כל הדירוגים</option>
+                                <option value="5">5 כוכבים</option>
+                                <option value="4">4 כוכבים</option>
+                                <option value="3">3 כוכבים</option>
+                                <option value="2">2 כוכבים</option>
+                                <option value="1">1 כוכב</option>
+                            </select>
+                        </div>
+                        <div class="button-group">
+                            <button id="clearReviewsFilters" class="btn-secondary compact">נקה</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="refereeReviewsList" class="reviews-list">
+                    <!-- Reviews will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Messages Section -->
+        <section id="messages" class="content-section paired-only">
+            <h2>הודעות</h2>
+            <div class="messages-content">
+                <!-- Filters -->
+                <div class="messages-filters">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="messagesDirectionFilter">כיוון:</label>
+                            <select id="messagesDirectionFilter" class="filter-select">
+                                <option value="both">הכל</option>
+                                <option value="to">נכנסות</option>
+                                <option value="from">יוצאות</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="messagesProviderFilter">ערוץ:</label>
+                            <select id="messagesProviderFilter" class="filter-select">
+                                <option value="all">הכל</option>
+                                <option value="whatsapp">WhatsApp</option>
+                                <option value="push">Push</option>
+                                <option value="telegram">Telegram</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="messagesSourceFilter">מקור:</label>
+                            <select id="messagesSourceFilter" class="filter-select">
+                                <option value="all">הכל</option>
+                                <option value="meta">Meta</option>
+                                <option value="greenapi">Green API</option>
+                                <!--<option value="twilio">Twilio</option>-->
+                                <option value="telegram">Telegram</option>
+                                <!--<option value="manychat">ManyChat</option>-->
+                                <option value="push">Push</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="date-group">
+                            <div class="date-filter compact">
+                                <label for="messagesFromDateFilter">מתאריך:</label>
+                                <input type="date" id="messagesFromDateFilter">
+                            </div>
+                            <div class="date-filter compact">
+                                <label for="messagesToDateFilter">עד תאריך:</label>
+                                <input type="date" id="messagesToDateFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-row messages-buttons-row">
+                        <div class="button-group">
+                            <button id="refreshMessages" class="btn-primary compact">רענן</button>
+                            <button id="clearMessagesFilters" class="btn-secondary compact">נקה</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Messages Grid -->
+                <div class="content-grid-container">
+                    <table class="content-grid" id="messagesGrid">
+                        <thead>
+                            <tr>
+                                <th>כיוון</th>
+                                <th>נוצר</th>
+                                <th>מספר טלפון</th>
+                                <th>מקור</th>
+                                <th>ערוץ</th>
+                                <th>הודעה</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messagesGridBody">
+                            <tr>
+                                <td colspan="6" class="loading-message">טוען הודעות...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fields Section -->
+        <section id="fields" class="content-section">
+            <h2>ניהול מגרשים</h2>
+            <div class="fields-content">
+                <div class="fields-filters">
+                    <div class="filter-row compact">
+                        <div class="filter-group">
+                            <input type="text" id="fieldsTextFilter" class="filter-input compact" placeholder="חיפוש מגרש...">
+                        </div>
+                        <div class="checkbox-group filter-group">
+                            <label class="checkbox-label compact">
+                                <input type="checkbox" id="showClosedFieldsFilter" class="filter-checkbox">
+                                <span>הצג מגרשים סגורים</span>
+                            </label>
+                        </div>
+                        <div class="button-group">
+                            <button id="searchFieldsBtn" class="btn-primary compact">חיפוש</button>
+                            <button id="clearFieldsFilters" class="btn-secondary compact">נקה</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="fields-list">
+                    <div id="fieldsList">
+                        <!-- Fields will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Availability Section -->
+        <section id="availability" class="content-section paired-only">
+            <h2>ניהול זמינות</h2>
+            <div class="availability-content">
+                <div class="availability-header">
+                    <div class="week-navigation">
+                        <button id="prevWeekBtn" class="week-nav-btn" title="שבוע קודם">
+                            <span>→</span>
+                        </button>
+                        <div class="week-display">
+                            <span id="weekRangeDisplay">השבוע הקרוב</span>
+                        </div>
+                        <button id="nextWeekBtn" class="week-nav-btn" title="שבוע הבא">
+                            <span>←</span>
+                        </button>
+                    </div>
+                    <button id="updateAvailabilityBtn" class="btn-primary">עדכן זמינות</button>
+                </div>
+                <div class="availability-grid" id="availabilityLoadingGrid"></div>
+                <div class="availability-grid" id="availabilityDataGrid">
+                    <!-- Availability columns will be generated here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Documents Section -->
+        <section id="documents" class="content-section">
+            <h2>מסמכים להורדה</h2>
+            <div class="documents-content">
+                <div class="documents-list" id="documentsList">
+                    <!-- Documents will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Rules Section -->
+        <section id="rules" class="content-section">
+            <h2>חוקי המשחק</h2>
+            <div class="rules-content">
+                <div class="rules-categories">
+                    <button class="rule-category active" data-category="general">חוקים כלליים</button>
+                    <button class="rule-category" data-category="fouls">עבירות</button>
+                    <button class="rule-category" data-category="penalties">עונשין</button>
+                    <button class="rule-category" data-category="offside">נבדל</button>
+                </div>
+                <div id="rulesContent" class="rules-text">
+                    <!-- Rules content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- User Details Section -->
+        <section id="userDetails" class="content-section paired-only">
+            <h2>פרטי משתמש</h2>
+            <div class="user-details-content">
+                <div class="user-details-form">
+                    <div class="form-group">
+                        <label for="userHomeAddress">כתובת מגורים:</label>
+                        <textarea 
+                            id="userHomeAddress" 
+                            class="form-input" 
+                            rows="3" 
+                            placeholder="הכנס כתובת מגורים"
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="userTelegramUsername">שם משתמש בטלגרם:</label>
+                        <input
+                            type="text"
+                            id="userTelegramUsername"
+                            class="form-input"
+                            readonly
+                        />
+                        <label for="userSendMessagesToTelegram" class="checkbox-inline">
+                            <input type="checkbox" id="userSendMessagesToTelegram" class="form-checkbox">
+                            שלח הודעות גם לטלגרם
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="messageAcceptanceLimitation">הגבלת שעות קבלת הודעות:</label>
+                        <input type="checkbox" id="messageAcceptanceLimitation" class="form-checkbox" checked>
+                        <div class="form-group">
+                            <div class="form-group">
+                                <label for="userAvailableFromHour">שעת התחלה:</label>
+                                <input type="number" id="userAvailableFromHour" class="form-input" min="0" max="24" value="7" placeholder="7">
+                            </div>
+                            <div class="form-group">
+                                <label for="userAvailableToHour">שעת הסיום:</label>
+                                <input type="number" id="userAvailableToHour" class="form-input" min="0" max="24" value="21" placeholder="21">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="userFirstGameReminderTime">זמן מראש לתזכורת משחק ראשון (שעות):</label>
+                        <input type="checkbox" id="userFirstGameReminderEnabled" class="form-checkbox" checked>
+                        <input 
+                            type="number" 
+                            id="userFirstGameReminderTime" 
+                            class="form-input" 
+                            min="0" 
+                            max="168" 
+                            value="24" 
+                            placeholder="24"
+                        />
+                        <small class="form-hint">ברירת מחדל: 24 שעות</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="userCommuteReminderTime">זמן מראש לתזכורת נסיעה (שעות):</label>
+                        <input type="checkbox" id="userCommuteReminderEnabled" class="form-checkbox" checked>
+                        <input 
+                            type="number" 
+                            id="userCommuteReminderTime" 
+                            class="form-input" 
+                            min="0" 
+                            max="48" 
+                            value="3" 
+                            placeholder="3"
+                        />
+                        <small class="form-hint">ברירת מחדל: 3 שעות</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="userArrivalTime">זמן הגעה לפני המשחק (דקות):</label>
+                        <input 
+                            type="number" 
+                            id="userArrivalTime" 
+                            class="form-input" 
+                            min="0" 
+                            max="180" 
+                            value="45" 
+                            placeholder="45"
+                        />
+                        <small class="form-hint">ברירת מחדל: 45 דקות</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="userGameLineupsAnnouncedEnabled">הפעלת תזכורת דווח קווי משחק:</label>
+                        <input type="checkbox" id="userGameLineupsAnnouncedEnabled" class="form-checkbox" checked>
+                    </div>
+                    <div class="form-group">
+                        <label for="userCalendarName">שם לוח שנה:</label>
+                        <input 
+                            type="text" 
+                            id="userCalendarName" 
+                            class="form-input" 
+                            placeholder="הכנס שם לוח שנה"
+                        />
+                        <small class="form-hint">לוח השנה לסנכרון המשחקים</small>
+                    </div>
+                    
+                    <!-- Password Fields Section (dynamically populated) -->
+                    <div id="passwordFieldsSection" class="password-fields-section" style="display: none;">
+                        <h3 style="margin-top: 20px; margin-bottom: 15px;">שינוי סיסמה</h3>
+                        <div id="passwordFieldsContainer"></div>
+                        <div class="form-actions" style="margin-top: 15px;">
+                            <input type="hidden" id="tenantRefIdsId" value="">
+                            <button id="savePasswordsBtn" class="btn-primary">
+                                <span class="btn-icon">🔐</span>
+                                <span>שמור סיסמה</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="saveUserDetailsBtn" class="btn-primary">
+                            <span class="btn-icon">💾</span>
+                            <span>שמור</span>
+                        </button>
+                    </div>
+                    <div id="userDetailsStatus" class="form-status"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Section -->
+        <section id="admin" class="content-section paired-only">
+            <h2>ניהול מערכת</h2>
+            <div class="admin-content">
+                <div class="admin-filters">
+                    <div class="filter-row compact">
+                        <div class="filter-group">
+                            <label for="adminTenantFilter" class="filter-label">בחר עונה:</label>
+                            <select id="adminTenantFilter" class="filter-select compact">
+                                <option value="">כל העונות</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="adminRefereeFilter" class="filter-label">בחר שופט:</label>
+                            <select id="adminRefereeFilter" class="filter-select compact">
+                                <option value="">כל השופטים</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-row compact">
+                        <div class="button-group">
+                            <button id="adminApplyBtn" class="btn-primary compact">
+                                <span class="btn-icon">✅</span>
+                                <span>החל</span>
+                            </button>
+                            <button id="adminResetBtn" class="btn-secondary compact">
+                                <span class="btn-icon">🔄</span>
+                                <span>איפוס</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="adminResults" class="admin-results">
+                    <!-- Admin results will be displayed here -->
+                </div>
+
+                <!-- Admin sub-tabs: Templates | Notifications -->
+                <div class="admin-subtabs" role="tablist">
+                    <button type="button" class="admin-subtab active" data-admin-tab="templates" aria-selected="true">תבניות</button>
+                    <button type="button" class="admin-subtab" data-admin-tab="notifications" aria-selected="false">התראות</button>
+                </div>
+
+                <!-- Templates subsection (admin only) -->
+                <div id="refereeTemplates" class="admin-subsection" data-admin-tab-content="templates">
+                    <h3>תבניות</h3>
+                    <div class="admin-subsection-filters">
+                        <div class="filter-row compact">
+                            <div class="filter-group">
+                                <label for="refereeTemplatesTenant" class="filter-label">עונה:</label>
+                                <select id="refereeTemplatesTenant" class="filter-select compact">
+                                    <option value="">כל העונות</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="refereeTemplatesAction" class="filter-label">פעולה:</label>
+                                <select id="refereeTemplatesAction" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                    <option value="approveGame">אישור משחק</option>
+                                    <option value="declineGame">דחיית משחק</option>
+                                    <option value="postGameUpdate">עדכון תוצאה</option>
+                                    <option value="createrefsixgame">יצירת משחק ב-RefSix</option>
+                                    <option value="gamereport">דו״ח משחק</option>
+                                    <option value="changePassword">שינוי סיסמה</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="refereeTemplatesStatus" class="filter-label">סטטוס:</label>
+                                <select id="refereeTemplatesStatus" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                    <option value="created">נוצר</option>
+                                    <option value="completed">הושלם</option>
+                                    <option value="onHold">בהמתנה</option>
+                                    <option value="deferred">מושהה</option>
+                                    <option value="cancelled">בוטל</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="refereeTemplatesMobile" class="filter-label">נייד:</label>
+                                <select id="refereeTemplatesMobile" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                </select>
+                            </div>
+                            <div class="date-group">
+                                <div class="filter-group compact">
+                                    <label for="refereeTemplatesDateType" class="filter-label">לפי:</label>
+                                    <select id="refereeTemplatesDateType" class="filter-select compact">
+                                        <option value="created">נוצר</option>
+                                        <option value="updated">עודכן</option>
+                                    </select>
+                                </div>    
+                                <div class="date-filter compact">
+                                    <label for="refereeTemplatesFromDate" class="filter-label">מתאריך:</label>
+                                    <input type="date" id="refereeTemplatesFromDate" class="filter-input compact">
+                                </div>
+                                <div class="date-filter compact">
+                                    <label for="refereeTemplatesToDate" class="filter-label">עד תאריך:</label>
+                                    <input type="date" id="refereeTemplatesToDate" class="filter-input compact">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="filter-row compact">
+                            <button id="refereeTemplatesApplyBtn" class="btn-primary compact">החל תבניות</button>
+                        </div>
+                    </div>
+                    <div id="refereeTemplatesGrid" class="admin-grid-container">
+                        <div class="admin-grid-placeholder">בחר סינון והקש "החל תבניות"</div>
+                    </div>
+                </div>
+
+                <!-- Notifications subsection (admin only) -->
+                <div id="notifications" class="admin-subsection hidden" data-admin-tab-content="notifications">
+                    <h3>התראות</h3>
+                    <div class="admin-subsection-filters">
+                        <div class="filter-row compact">
+                            <div class="filter-group">
+                                <label for="notificationsTenant" class="filter-label">עונה:</label>
+                                <select id="notificationsTenant" class="filter-select compact">
+                                    <option value="">כל העונות</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="notificationsTarget" class="filter-label">יעד:</label>
+                                <select id="notificationsTarget" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                    <option value="refereeGames">משחקי שופט</option>
+                                    <option value="tournamentGames">משחקי טורניר</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="notificationsId" class="filter-label">מזהה:</label>
+                                <select id="notificationsId" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="notificationsType" class="filter-label">סוג:</label>
+                                <select id="notificationsType" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                    <option value="gameFirstReminder">תז׳ ראשונה</option>
+                                    <option value="refereeLastReminder">תז׳ שופט אח׳</option>
+                                    <option value="gameLastReminder">תז׳ משחק אח׳</option>
+                                    <option value="addedItem">חדש</option>
+                                    <option value="updatedItem">עודכן</option>
+                                    <option value="removedItem">הוסר</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="notificationsStatus" class="filter-label">סטטוס:</label>
+                                <select id="notificationsStatus" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                    <option value="created">נוצר</option>
+                                    <option value="deferred">מושהה</option>
+                                    <option value="sent">נשלח</option>
+                                    <option value="deleted">נמחק</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="notificationsMobile" class="filter-label">נייד:</label>
+                                <select id="notificationsMobile" class="filter-select compact">
+                                    <option value="">הכל</option>
+                                </select>
+                            </div>
+                            <div class="date-group">
+                                <div class="filter-group compact">
+                                    <label for="notificationsDateType" class="filter-label">לפי:</label>
+                                    <select id="notificationsDateType" class="filter-select compact">
+                                        <option value="created">נוצר</option>
+                                        <option value="updated">עודכן</option>
+                                    </select>
+                                </div>    
+                                <div class="date-filter compact">
+                                    <label for="notificationsFromDate" class="filter-label">מתאריך:</label>
+                                    <input type="date" id="notificationsFromDate" class="filter-input compact">
+                                </div>
+                                <div class="date-filter compact">
+                                    <label for="notificationsToDate" class="filter-label">עד תאריך:</label>
+                                    <input type="date" id="notificationsToDate" class="filter-input compact">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="filter-row compact">
+                            <button id="notificationsApplyBtn" class="btn-primary compact">החל התראות</button>
+                        </div>
+                    </div>
+                    <div id="notificationsGrid" class="admin-grid-container">
+                        <div class="admin-grid-placeholder">בחר סינון והקש "החל התראות"</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat Section -->
+        <section id="chat" class="content-section paired-only">
+            <h2>צ'אט שופטים</h2>
+            <!-- Mobile Number Status Indicator -->
+            <div id="mobileNumberStatus" class="mobile-number-status" style="display: none;">
+                <div class="status-message">
+                    <span id="mobileStatusIcon">📱</span>
+                    <span id="mobileStatusText">מספר נייד נדרש לצ'אט</span>
+                </div>
+                <div class="status-actions">
+                    <button data-action="checkChatVisibility" class="btn-secondary">
+                        בדוק סטטוס צ'אט
+                    </button>
+                    <button data-action="refreshChatVisibility" class="btn-secondary" style="background: #059669;">
+                        🔄 רענן צ'אט
+                    </button>
+                </div>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages will appear here -->
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="הקלד הודעה..." maxlength="500">
+                    <button id="sendMessage" class="btn-primary">שלח</button>
+                </div>
+                <div class="chat-actions">
+                    <div class="section-header">
+                        <h4>פעולות צ'אט</h4>
+                        <button class="pin-btn" id="pinChatActions" title="נעץ/שחרר">
+                            📌
+                        </button>
+                    </div>
+                    <div class="section-content" id="chatActions">
+                        <button class="action-btn" data-action="request-assignment">בקשת שיבוץ</button>
+                        <button class="action-btn" data-action="report-issue">דיווח בעיה</button>
+                        <button class="action-btn" data-action="request-support">בקשת תמיכה</button>
+                                        <button class="action-btn" data-action="testIOSNotification" style="background: #10b981;">בדיקת התראה iOS</button>
+                <button class="action-btn" data-action="showInstallPromptAgain" style="background: #8b5cf6;">הצג התקנה שוב</button>
+                <button class="action-btn" data-action="checkInstallStatus" style="background: #f59e0b;">בדוק סטטוס התקנה</button>
+                <button class="action-btn" data-action="resetInstallPreferences" style="background: #ef4444;">אפס העדפות התקנה</button>
+                <button class="action-btn" data-action="testButtonClickability" style="background: #06b6d4;">בדוק כפתורים</button>
+                <button class="action-btn" data-action="testAutoHide" style="background: #f97316;">🧪 בדוק אוטו-הסתרה</button>
+                <button class="action-btn" data-action="forceAutoHide" style="background: #dc2626;">🎭 כפה הסתרה</button>
+                <button class="action-btn" data-action="toggleChatSectionVisibility" style="background: #7c2d12;">🔄 החלף נראות צ'אט</button>
+                <button class="action-btn" data-action="checkUserStatus" style="background: #059669;">👤 בדוק סטטוס משתמש</button>
+                <button class="action-btn" data-action="testCSSApplication" style="background: #8b5cf6;">🎨 בדוק CSS</button>
+                    </div>
+                    
+                    <!-- Chat Sync Management -->
+                    <div class="chat-sync-controls">
+                        <div class="section-header">
+                            <h4>ניהול סנכרון צ'אט</h4>
+                            <button class="pin-btn" id="pinChatSyncControls" title="נעץ/שחרר">
+                                📌
+                            </button>
+                        </div>
+                        <div class="section-content" id="chatSyncControls">
+                            <button class="action-btn sync-btn" data-sync-action="export" style="background: #059669;">
+                                📤 ייצא הודעות
+                            </button>
+                            <label for="chatImport" class="action-btn sync-btn" style="background: #7c3aed; cursor: pointer; display: inline-block;">
+                                📥 ייבא הודעות
+                            </label>
+                            <input type="file" id="chatImport" accept=".json" style="display: none;">
+                            <button class="action-btn sync-btn" data-sync-action="fetch" style="background: #0891b2;">
+                                🔄 סנכרן עם השרת
+                            </button>
+                            <button class="action-btn sync-btn" data-sync-action="start" style="background: #16a34a;">
+                                ▶️ התחל סנכרון
+                            </button>
+                            <button class="action-btn sync-btn" data-sync-action="stop" style="background: #dc2626;">
+                                ⏹️ עצור סנכרון
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tables Section (public) -->
+        <section id="publicTables" class="content-section">
+            <h2>טבלאות ליגה</h2>
+            <div class="tables-content-wrapper">
+                <div class="games-filters">
+                    <div class="filter-row compact">
+                        <div class="filter-group public-tables-filters__selects">
+                            <select id="tablesTenantFilter" class="filter-select compact" aria-label="עונה">
+                                <option value="">כל העונות</option>
+                            </select>
+                            <div id="tablesSectionCombobox" class="public-games-combobox public-tables-combobox">
+                                <input type="text" id="tablesSectionCombo" class="filter-select compact" placeholder="חיפוש קטגוריה..." autocomplete="off" spellcheck="false" aria-label="קטגוריה" aria-autocomplete="list" aria-controls="tablesSectionList" aria-expanded="false">
+                                <input type="hidden" id="tablesSectionFilter" value="">
+                                <ul id="tablesSectionList" class="public-games-combobox-list" role="listbox" hidden></ul>
+                            </div>
+                            <div id="tablesLeagueCombobox" class="public-games-combobox public-tables-combobox">
+                                <input type="text" id="tablesLeagueCombo" class="filter-select compact" placeholder="חיפוש ליגה..." autocomplete="off" spellcheck="false" aria-label="ליגה" aria-autocomplete="list" aria-controls="tablesLeagueList" aria-expanded="false">
+                                <input type="hidden" id="tablesLeagueFilter" value="">
+                                <ul id="tablesLeagueList" class="public-games-combobox-list" role="listbox" hidden></ul>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button id="tablesRefresh" class="btn-primary compact">רענן</button>
+                            <button id="tablesClear" class="btn-secondary compact">נקה</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="tablesContent" class="games-list">
+                    <!-- Tables will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Public Games / Results Section (public) -->
+        <section id="publicGames" class="content-section">
+            <header class="public-games-page-header">
+                <h2>לוח משחקים ותוצאות</h2>
+                <p class="public-games-page-header__hint">בחרו עונה, טווח תאריכים וליגה — ואז לחצו <strong>רענן</strong>.</p>
+            </header>
+            <div class="public-games-content">
+                <div class="games-filters public-games-filters">
+                    <div class="filter-row compact public-games-filters__row public-games-filters__row--season">
+                        <div class="filter-group public-games-filters__selects">
+                            <select id="publicGamesTenantFilter" class="filter-select compact" aria-label="עונה">
+                                <option value="">כל העונות</option>
+                            </select>
+                            <div id="publicGamesSectionCombobox" class="public-games-combobox">
+                                <input type="text" id="publicGamesSectionCombo" class="filter-select compact" placeholder="חיפוש קטגוריה..." autocomplete="off" spellcheck="false" aria-label="קטגוריה" aria-autocomplete="list" aria-controls="publicGamesSectionList" aria-expanded="false">
+                                <input type="hidden" id="publicGamesSectionFilter" value="">
+                                <ul id="publicGamesSectionList" class="public-games-combobox-list" role="listbox" hidden></ul>
+                            </div>
+                            <div id="publicGamesLeagueCombobox" class="public-games-combobox">
+                                <input type="text" id="publicGamesLeagueCombo" class="filter-select compact" placeholder="חיפוש ליגה..." autocomplete="off" spellcheck="false" aria-label="ליגה" aria-autocomplete="list" aria-controls="publicGamesLeagueList" aria-expanded="false">
+                                <input type="hidden" id="publicGamesLeagueFilter" value="">
+                                <ul id="publicGamesLeagueList" class="public-games-combobox-list" role="listbox" hidden></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-row compact public-games-filter-row--field-ref public-games-filters__row">
+                        <div class="filter-group public-games-filter--narrow">
+                            <label for="publicGamesFieldCombo" class="public-games-combobox-label">מגרש</label>
+                            <div id="publicGamesFieldCombobox" class="public-games-combobox">
+                                <input type="text" id="publicGamesFieldCombo" class="filter-select compact" placeholder="חיפוש מגרש..." autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-expanded="false" aria-controls="publicGamesFieldList">
+                                <ul id="publicGamesFieldList" class="public-games-combobox-list" role="listbox" hidden></ul>
+                            </div>
+                            <input type="hidden" id="publicGamesFieldValue" value="">
+                        </div>
+                        <div class="filter-group public-games-filter--narrow">
+                            <label for="publicGamesRefereeCombo" class="public-games-combobox-label">שופט</label>
+                            <div id="publicGamesRefereeCombobox" class="public-games-combobox">
+                                <input type="text" id="publicGamesRefereeCombo" class="filter-select compact" placeholder="חיפוש שופט..." autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-expanded="false" aria-controls="publicGamesRefereeList">
+                                <ul id="publicGamesRefereeList" class="public-games-combobox-list" role="listbox" hidden></ul>
+                            </div>
+                            <input type="hidden" id="publicGamesRefereeValue" value="">
+                        </div>
+                    </div>
+                    <div class="filter-row compact public-games-filters__row public-games-filters__row--dates">
+                        <div class="date-group public-games-date-group">
+                            <div class="date-filter compact public-games-date-filter">
+                                <label for="publicGamesFromDateFilter" title="מתאריך">מ-</label>
+                                <input type="date" id="publicGamesFromDateFilter">
+                            </div>
+                            <div class="date-filter compact public-games-date-filter">
+                                <label for="publicGamesToDateFilter" title="עד תאריך">עד:</label>
+                                <input type="date" id="publicGamesToDateFilter">
+                            </div>
+                            <label class="public-games-checkbox-filter">
+                                <input type="checkbox" id="publicGamesIncludeNoTime" checked>
+                                <span>כולל ללא שעה</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="filter-row compact public-games-filters__row public-games-radius-row">
+                        <div class="public-games-radius-block">
+                            <div class="public-games-radius-block__header">
+                                <span class="public-games-radius-block__icon" aria-hidden="true">📍</span>
+                                <span class="public-games-radius-block__title">מרחק מהמיקום שלך</span>
+                                <span id="publicGamesRadiusLabel" class="public-games-radius-block__value">מאמת מיקום...</span>
+                            </div>
+                            <input type="range" id="publicGamesRadiusSlider" class="public-games-radius-slider" min="0" max="5" step="1" value="5" disabled
+                                   title="נדרש שיתוף מיקום בדפדפן כדי לסנן לפי מרחק"
+                                   aria-label="רדיוס קילומטרים">
+                            <div class="public-games-radius-ticks" aria-hidden="true">
+                                <span>5</span><span>10</span><span>20</span><span>40</span><span>80</span><span>∞</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-row compact public-games-filters__row public-games-filters__row--actions">
+                        <div class="button-group public-games-filters__buttons">
+                            <button id="publicGamesRefresh" type="button" class="btn-primary compact">רענן</button>
+                            <button id="publicGamesClear" type="button" class="btn-secondary compact">נקה</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="public-games-results">
+                    <div id="publicGamesTotalCount" class="public-games-total-count" aria-live="polite" hidden></div>
+                    <div id="publicGamesList" class="games-list public-games-list">
+                        <!-- Public games will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="notificationToast" class="notification-toast">
+        <div class="toast-content">
+            <span id="toastMessage"></span>
+            <button class="toast-close">&times;</button>
+        </div>
+    </div>
+
+    <!-- Install Prompt (browser tab only; hidden when running as installed PWA) -->
+    <div id="installPrompt" class="install-prompt" role="dialog" aria-labelledby="installPromptTitle">
+        <div class="prompt-content">
+            <button type="button" id="installPromptClose" class="install-prompt-close" aria-label="סגור">×</button>
+            <div class="prompt-header">
+                <img src="./images/RefereeX.png" alt="RefereeX" class="prompt-icon">
+                <h3 id="installPromptTitle">להתקין את RefereeX כאפליקציה?</h3>
+            </div>
+            <div class="prompt-benefits">
+                <p>✅ טאבים חדשים: טבלאות ומשחקים</p>
+                <p>✅ גישה מהירה לשיבוצים וביקורות (דורש חיבור לפורטל}</p>
+                <p>✅ עבודה אופליין</p>
+                <p>✅ התראות בזמן אמת</p>
+                <p>✅ חוויה כמו אפליקציה</p>
+            </div>
+            <div class="prompt-actions">
+                <button type="button" id="installBtn" class="btn-primary">
+                    <span class="btn-icon">📱</span>
+                    כן, איך מתקינים
+                </button>
+                <button type="button" id="dismissInstall" class="btn-secondary">לא עכשיו</button>
+            </div>
+            <div class="prompt-tip">
+                <small>💡 בדפדפנים נתמכים תופיע גם התקנה מהירה מהמערכת</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Sync Status Indicator -->
+    <div id="chatSyncStatus" class="chat-sync-status">
+        <span id="chatSyncStatusText">סנכרון צ'אט</span>
+    </div>
+
+    <!-- iOS Notification Center -->
+    <div id="iosNotificationCenter" class="ios-notification-center">
+        <div class="notification-center-header">
+            <h3>מרכז ההתראות</h3>
+                            <button class="close-notification-center">×</button>
+        </div>
+        <div class="notification-center-content">
+            <!-- Notifications will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Debug Information Section -->
+    <div id="debugInfo" class="debug-info-section">
+        <div class="debug-header">
+            <h3>🔍 מידע דיבאג</h3>
+            <button class="debug-toggle">הצג/הסתר</button>
+        </div>
+        <div class="debug-content" style="display: none;">
+            <!-- Debug Actions -->
+            <div class="debug-item">
+                <div class="debug-actions">
+                    <button id="clearCacheBtn" class="debug-action-btn" title="נקה מטמון">
+                        🧹 נקה מטמון
+                    </button>
+                    <button id="refreshJSBtn" class="debug-action-btn" title="רענן קבצי JavaScript">
+                        🔄 רענן JS
+                    </button>
+                    <button id="nuclearRefreshBtn" class="debug-action-btn" title="רענן מלא - עוקף כל המטמון">
+                        ☢️ רענן מלא
+                    </button>
+                    <button id="serviceWorkerRefreshBtn" class="debug-action-btn" title="כפה עדכון Service Worker">
+                        🔄 עדכן SW
+                    </button>
+                </div>
+            </div>
+            <div class="debug-item debug-item-vertical">
+                <strong>Client Identifier:</strong>
+                <div class="debug-value-container">
+                    <span id="debugClientIdentifier">טוען...</span>
+                    <button class="debug-copy-btn" data-copy-id="debugClientIdentifier">📋</button>
+                </div>
+            </div>
+            <div class="debug-item debug-item-vertical">
+                <strong>Push Notification Endpoint:</strong>
+                <div class="debug-value-container">
+                    <span id="debugPushEndpoint">טוען...</span>
+                    <button class="debug-copy-btn" data-copy-id="debugPushEndpoint">📋</button>
+                </div>
+            </div>
+            <div class="debug-item">
+                <strong>User Agent:</strong>
+                <span id="debugUserAgent">טוען...</span>
+                <button class="debug-copy-btn" data-copy-id="debugUserAgent">📋</button>
+            </div>
+            <div class="debug-item">
+                <strong>Service Worker Status:</strong>
+                <span id="debugSWStatus">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>Service Worker Version:</strong>
+                <span id="debugSWVersion">טוען...</span>
+                <button class="debug-copy-btn" data-copy-id="debugSWVersion">📋</button>
+            </div>
+            <div class="debug-item">
+                <strong>PWA Status:</strong>
+                <span id="debugPWAStatus">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>Last Updated:</strong>
+                <span id="debugLastUpdated">-</span>
+                <button class="debug-refresh-btn" data-action="refreshDebugInfo">🔄</button>
+            </div>
+            <div class="debug-item">
+                <strong>Test Push:</strong>
+                <button class="push-notification-test">🧪 בדוק התראה</button>
+            </div>
+            
+            <!-- JWT Token Information -->
+            <div class="debug-item">
+                <strong>JWT Token Status:</strong>
+                <span id="debugJwtStatus">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT User Name:</strong>
+                <span id="debugJwtUserName">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT Mobile:</strong>
+                <span id="debugJwtMobile">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT User Role:</strong>
+                <span id="debugJwtUserRole">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT Token Age:</strong>
+                <span id="debugJwtTokenAge">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT Expires At:</strong>
+                <span id="debugJwtExpiresAt">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT Issued At:</strong>
+                <span id="debugJwtIssuedAt">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>JWT Token (Raw):</strong>
+                <span id="debugJwtTokenRaw">טוען...</span>
+                <button class="debug-copy-btn" data-copy-id="debugJwtTokenRaw">📋</button>
+            </div>
+            <div class="debug-item">
+                <strong>JWT Actions:</strong>
+                <button class="debug-refresh-btn" data-action="updateJwtDebugInfo">🔄 רענן</button>
+                <button class="debug-copy-btn" data-jwt-action="displayInConsole">📋 הצג בקונסול</button>
+                <button class="debug-copy-btn" data-jwt-action="copyFullToken">📋 העתק טוקן מלא</button>
+                <button class="debug-copy-btn" data-jwt-action="testRefresh">🧪 בדוק רענון</button>
+            </div>
+            
+            <!-- WebSocket Debug Information -->
+            <div class="debug-item">
+                <strong>WebSocket Status:</strong>
+                <span id="debugWebSocketStatus">טוען...</span>
+            </div>
+            <div class="debug-item">
+                <strong>WebSocket Actions:</strong>
+                <button class="debug-refresh-btn" data-ws-action="testPing">🧪 בדוק Ping</button>
+                <button class="debug-copy-btn" data-ws-action="restartHeartbeat">🔄 הפעל מחדש Heartbeat</button>
+                <button class="debug-copy-btn" data-ws-action="showStatus">📋 הצג סטטוס</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import "https://cdn.plot.ly/plotly-3.1.0.min.js"
+    </script>
+
+    <!-- Main app: version from app-asset-version meta (bump meta + stylesheet ?v= together). -->
+    <script type="module">
+        const v = document.querySelector('meta[name="app-asset-version"]')?.content?.trim() || '1';
+        await import(`./js/refportal-pwa.js?v=${encodeURIComponent(v)}`);
+    </script>
+    
+    <!-- Report Form Modal -->
+    <div id="reportFormModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="reportGameTitle">פתיחת דו״ח משחק</h2>
+                <button class="modal-close" onclick="refPortalPwa.closeReportForm()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <div class="report-categories">
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="goals">
+                                <span class="checkmark"></span>
+                                <span name="goals_label">תיקון מבקיעי שערים</span>
+                            </label>
+                            <textarea name="goals_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="yellow_cards">
+                                <span class="checkmark"></span>
+                                <span name="yellow_cards_label">תיקון רישום כרטיסים צהובים</span>
+                            </label>
+                            <textarea name="yellow_cards_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="red_cards">
+                                <span class="checkmark"></span>
+                                <span name="red_cards_label">תיקון רישום כרטיסים אדומים</span>
+                            </label>
+                            <textarea name="red_cards_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="incidents">
+                                <span class="checkmark"></span>
+                                <span name="incidents_label">תיקון רישום תקריות</span>
+                            </label>
+                            <textarea name="incidents_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="result">
+                                <span class="checkmark"></span>
+                                <span name="result_label">תיקון רישום תוצאה</span>
+                            </label>
+                            <textarea name="result_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="travels">
+                                <span class="checkmark"></span>
+                                <span name="travels_label">תיקון רישום נסיעות</span>
+                            </label>
+                            <textarea name="travels_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="players">
+                                <span class="checkmark"></span>
+                                <span name="players_label">תיקון רישום שחקנים</span>
+                            </label>
+                            <textarea name="players_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="substitutes">
+                                <span class="checkmark"></span>
+                                <span name="substitutes_label">תיקון מחליפים</span>
+                            </label>
+                            <textarea name="substitutes_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="manual_lists">
+                                <span class="checkmark"></span>
+                                <span name="manual_lists_label">הוספת רשימות ידניות</span>
+                            </label>
+                            <textarea name="manual_lists_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+
+                        <div class="category-item">
+                            <label class="category-checkbox">
+                                <input type="checkbox" name="category" value="other">
+                                <span class="checkmark"></span>
+                                <span name="other_label">אחר</span>
+                            </label>
+                            <textarea name="other_details" placeholder="פרטי התיקון..." rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="refPortalPwa.closeReportForm()">
+                            ביטול
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            יצירת PDF ושליחה
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Update Report Modal -->
+    <div id="gameUpdateReportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="gameUpdateReportTitle">עדכן דו״ח משחק</h2>
+                <button class="modal-close" onclick="refPortalPwa.closeGameUpdateReport()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="gameUpdateReportForm">
+                    <div id="gameUpdateReportFields" class="report-categories">
+                        <!-- Dynamic fields will be inserted here -->
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="refPortalPwa.closeGameUpdateReport()">
+                            ביטול
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            עדכן
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referee games (Games tab) — floating panel; table matches public משחקים -->
+    <div id="refereeGamesFloatingPanel" class="referee-games-floating-panel" hidden aria-hidden="true">
+        <div class="referee-games-floating-panel__backdrop" data-referee-panel-dismiss tabindex="-1"></div>
+        <div class="referee-games-floating-panel__sheet" role="dialog" aria-modal="true" aria-labelledby="refereeGamesFloatingPanelTitle">
+            <div class="referee-games-floating-panel__header">
+                <h2 id="refereeGamesFloatingPanelTitle" class="referee-games-floating-panel__title"></h2>
+                <button type="button" class="referee-games-floating-panel__close" data-referee-panel-dismiss aria-label="סגור">×</button>
+            </div>
+            <div id="refereeGamesFloatingPanelBody" class="referee-games-floating-panel__body"></div>
+        </div>
+    </div>
+
+    <!-- Public games — tournament / league: floating panel with same table as טבלאות ציבוריות -->
+    <div id="publicTournamentTableFloatingPanel" class="referee-games-floating-panel" hidden aria-hidden="true">
+        <div class="referee-games-floating-panel__backdrop" data-public-tournament-panel-dismiss tabindex="-1"></div>
+        <div class="referee-games-floating-panel__sheet" role="dialog" aria-modal="true" aria-labelledby="publicTournamentTableFloatingPanelTitle">
+            <div class="referee-games-floating-panel__header">
+                <h2 id="publicTournamentTableFloatingPanelTitle" class="referee-games-floating-panel__title"></h2>
+                <button type="button" class="referee-games-floating-panel__close" data-public-tournament-panel-dismiss aria-label="סגור">×</button>
+            </div>
+            <div id="publicTournamentTableFloatingPanelBody" class="referee-games-floating-panel__body"></div>
+        </div>
+    </div>
+
+</body>
+</html>

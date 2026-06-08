@@ -6,7 +6,6 @@ import asyncio
 import time
 import os
 import socket
-from redAlert.src.main import RedAlert
 from shared.mqttClient import MqttClient
 from shared.httpgetloop import HttpGetLoop
 import shared.helpers

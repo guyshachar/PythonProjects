@@ -6,9 +6,9 @@
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
     <title>הצג פרטי שופט במערכת התראות מהפורטל</title>
 </head>
-<body r>
+<body>
     <h1>הכנס פרטים</h1>
-    <form action="/getReferee" method="POST">
+    <form action="/api/getReferee" method="POST">
         <label for="refId">קוד שופט:</label>
         <input type="number" id="refId" name="refId"><br><br>
 

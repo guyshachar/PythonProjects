@@ -1,0 +1,16 @@
+{
+    "cronjobs": {
+        "api_health_check": {
+            "enabled": false
+        },
+        "refresh_leagues_tables": {
+            "enabled": false
+        },
+        "refresh_tournament_games": {
+            "enabled": true
+        },
+        "start_referee_processing": {
+            "enabled": false
+        }
+    }
+}

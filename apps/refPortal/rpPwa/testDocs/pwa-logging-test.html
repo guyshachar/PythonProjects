@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone PWA Logging Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #0056CC;
+        }
+        .log-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Universal PWA Console Logging Test</h1>
+        <p><strong>Compatible with:</strong> iPhone, Android, Desktop, and all PWA-capable devices</p>
+        
+        <div class="status info">
+            <strong>Status:</strong> <span id="status">Initializing...</span>
+        </div>
+        
+        <h2>Test Console Logging</h2>
+        <p>Click these buttons to test different types of console logs that will be captured and sent to your server:</p>
+        
+        <button class="test-button" onclick="testLog()">Test console.log</button>
+        <button class="test-button" onclick="testError()">Test console.error</button>
+        <button class="test-button" onclick="testWarn()">Test console.warn</button>
+        <button class="test-button" onclick="testInfo()">Test console.info</button>
+        <button class="test-button" onclick="testUnhandledError()">Test Unhandled Error</button>
+        <button class="test-button" onclick="testPromiseRejection()">Test Promise Rejection</button>
+        
+        <h2>App Visibility Tests</h2>
+        <p>Switch to another app and come back to test visibility logging:</p>
+        <button class="test-button" onclick="simulateVisibilityChange()">Simulate App Switch</button>
+        
+        <h2>Log Buffer</h2>
+        <button class="test-button" onclick="showLogBuffer()">Show Current Logs</button>
+        <button class="test-button" onclick="sendLogs()">Send Logs to Server</button>
+        <button class="test-button" onclick="clearLogs()">Clear Logs</button>
+        
+        <div id="logOutput" class="log-output" style="display: none;">
+            <div id="logContent"></div>
+        </div>
+        
+        <h2>Instructions</h2>
+        <ol>
+            <li>Open this page on any device (iPhone, Android, Desktop)</li>
+            <li>Install as PWA (Add to Home Screen on mobile, Install button on desktop)</li>
+            <li>Open the PWA and click the test buttons</li>
+            <li>Check your server logs to see the captured console logs from all platforms</li>
+            <li>Switch to another app and back to test visibility logging</li>
+        </ol>
+    </div>
+
+    <script type="module">
+        // Import your PWA classes (adjust path as needed)
+        import { RefPortalPWA } from './js/refportal-pwa.js';
+        
+        let pwa = null;
+        let logBuffer = [];
+        
+        // Initialize PWA
+        try {
+            pwa = RefPortalPWA.getInstance();
+            document.getElementById('status').textContent = 'PWA initialized successfully!';
+            document.getElementById('status').parentElement.className = 'status success';
+        } catch (error) {
+            document.getElementById('status').textContent = 'Error initializing PWA: ' + error.message;
+            document.getElementById('status').parentElement.className = 'status error';
+        }
+        
+        // Test functions
+        window.testLog = function() {
+            console.log('🧪 Test log message from iPhone PWA');
+            addToLogBuffer('LOG', 'Test log message');
+        };
+        
+        window.testError = function() {
+            console.error('❌ Test error message from iPhone PWA');
+            addToLogBuffer('ERROR', 'Test error message');
+        };
+        
+        window.testWarn = function() {
+            console.warn('⚠️ Test warning message from iPhone PWA');
+            addToLogBuffer('WARN', 'Test warning message');
+        };
+        
+        window.testInfo = function() {
+            console.info('ℹ️ Test info message from iPhone PWA');
+            addToLogBuffer('INFO', 'Test info message');
+        };
+        
+        window.testUnhandledError = function() {
+            // This will trigger the error handler
+            setTimeout(() => {
+                throw new Error('Test unhandled error from iPhone PWA');
+            }, 100);
+        };
+        
+        window.testPromiseRejection = function() {
+            // This will trigger the unhandledrejection handler
+            Promise.reject('Test promise rejection from iPhone PWA');
+        };
+        
+        window.simulateVisibilityChange = function() {
+            console.log('📱 Simulating app visibility change...');
+            // Note: You can't actually simulate visibilitychange, but this shows the concept
+            addToLogBuffer('INFO', 'App visibility change simulated');
+        };
+        
+        window.showLogBuffer = function() {
+            if (pwa && pwa.iphoneLogger) {
+                const logs = pwa.iphoneLogger.getLogBuffer();
+                displayLogs(logs);
+            } else {
+                displayLogs(logBuffer);
+            }
+        };
+        
+        window.sendLogs = function() {
+            if (pwa && pwa.iphoneLogger) {
+                pwa.iphoneLogger.sendBufferedLogs();
+                console.log('📤 Logs sent to server');
+            } else {
+                console.log('❌ PWA logger not available');
+            }
+        };
+        
+        window.clearLogs = function() {
+            if (pwa && pwa.iphoneLogger) {
+                pwa.iphoneLogger.logBuffer = [];
+                console.log('🗑️ Log buffer cleared');
+            }
+            logBuffer = [];
+            document.getElementById('logOutput').style.display = 'none';
+        };
+        
+        function addToLogBuffer(level, message) {
+            const logEntry = {
+                level,
+                message,
+                timestamp: new Date().toISOString()
+            };
+            logBuffer.push(logEntry);
+        }
+        
+        function displayLogs(logs) {
+            const logContent = document.getElementById('logContent');
+            const logOutput = document.getElementById('logOutput');
+            
+            if (logs.length === 0) {
+                logContent.innerHTML = 'No logs available';
+            } else {
+                logContent.innerHTML = logs.map(log => 
+                    `<div>[${log.timestamp}] ${log.level}: ${log.message}</div>`
+                ).join('');
+            }
+            
+            logOutput.style.display = 'block';
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        // Listen for visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('📱 App became hidden - user switched to another app');
+            } else {
+                console.log('📱 App became visible - user returned to PWA');
+            }
+        });
+        
+        // Listen for online/offline
+        window.addEventListener('online', () => {
+            console.log('🌐 Network: Online');
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('🌐 Network: Offline');
+        });
+    </script>
+</body>
+</html>

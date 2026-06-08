@@ -1,0 +1,4596 @@
+{
+	"info": {
+		"_postman_id": "805fe616-8489-4b6b-b5f2-eca88ff00ebf",
+		"name": "ManyChat API",
+		"description": "Help article is available [here](https://help.manychat.com/hc/en-us/articles/14959510331420-API-Manychat)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7053025"
+	},
+	"item": [
+		{
+			"name": "fb",
+			"item": [
+				{
+					"name": "page",
+					"item": [
+						{
+							"name": "getInfo",
+							"item": [
+								{
+									"name": "b26c074b3783eb6e888c62324b17268c",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getInfo",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getInfo"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getInfo",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getInfo"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": -47586179,\n    \"name\": \"nisi inc\",\n    \"category\": \"cillum in\",\n    \"avatar_link\": \"consequat aliqua tempor\",\n    \"username\": \"officia in sunt adipisicing\",\n    \"about\": \"esse v\",\n    \"description\": \"sint proident\",\n    \"is_pro\": true,\n    \"timezone\": \"enim\"\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "createTag",
+							"item": [
+								{
+									"name": "e964547412ede512f9534970c8e3971a",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"My tag\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/createTag",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"createTag"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"name\": \"My tag\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/createTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"createTag"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"tag\": {\n      \"id\": -10363402,\n      \"name\": \"mollit adipisicing\"\n    }\n  }\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"name\": \"My tag\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/createTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"createTag"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getTags",
+							"item": [
+								{
+									"name": "55f8b0c6040a20ba811a08eb4d92b9c2",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getTags",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getTags"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getTags",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getTags"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": 44646835,\n      \"name\": \"exercitation pariatur\"\n    },\n    {\n      \"id\": -69505610,\n      \"name\": \"dolore eiusmod e\"\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "removeTag",
+							"item": [
+								{
+									"name": "55b1d844eb0006f3c49e2a3ac524dd4e",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"tag_id\": 123\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/removeTag",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"removeTag"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second.<br>Removes specified tag from the page and the page's subscribers.<br>This action can not be undone."
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"tag_id\": 123\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/removeTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"removeTag"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"tag_id\": 123\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/removeTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"removeTag"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "removeTagByName",
+							"item": [
+								{
+									"name": "02235c5d38c1f33af18a296d331e5a35",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"tag_name\": \"MyTagName\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/removeTagByName",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"removeTagByName"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second.<br>Removes specified tag from the page and the page's subscribers.<br>This action can not be undone."
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"tag_name\": \"MyTagName\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/removeTagByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"removeTagByName"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"tag_name\": \"MyTagName\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/removeTagByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"removeTagByName"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getWidgets",
+							"item": [
+								{
+									"name": "33ec0bc6a34501ed9b4c2b6976b26bd2",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getWidgets",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getWidgets"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second.<br>Use getGrowthTools instead."
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getWidgets",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getWidgets"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": 31030820,\n      \"name\": \"ad irure culpa\",\n      \"type\": \"in ex\"\n    },\n    {\n      \"id\": 50814992,\n      \"name\": \"sed sint fugiat\",\n      \"type\": \"\"\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "createCustomField",
+							"item": [
+								{
+									"name": "1d7171252e09f4e25b5123f9484ea3c1",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"caption\": \"My custom field name\",\n  \"type\": \"text\",\n  \"description\": \"This field store my custom field name\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/createCustomField",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"createCustomField"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"caption\": \"My custom field name\",\n  \"type\": \"text\",\n  \"description\": \"This field store my custom field name\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/createCustomField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"createCustomField"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"field\": {\n      \"id\": -39090125,\n      \"name\": \"irure commodo aute magna\",\n      \"type\": \"date\",\n      \"description\": \"\"\n    }\n  }\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"caption\": \"My custom field name\",\n  \"type\": \"text\",\n  \"description\": \"This field store my custom field name\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/createCustomField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"createCustomField"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getGrowthTools",
+							"item": [
+								{
+									"name": "2ab4a2a91a0b2cb1d5084e91b281e48c",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getGrowthTools",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getGrowthTools"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getGrowthTools",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getGrowthTools"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": 31030820,\n      \"name\": \"ad irure culpa\",\n      \"type\": \"in ex\"\n    },\n    {\n      \"id\": 50814992,\n      \"name\": \"sed sint fugiat\",\n      \"type\": \"\"\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getFlows",
+							"item": [
+								{
+									"name": "6aee779784709b84bb0a734ebb42b650",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getFlows",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getFlows"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getFlows",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getFlows"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"flows\": [\n      {\n        \"ns\": \"nulla magna \",\n        \"name\": \"aute incididunt\",\n        \"folder_id\": -18676777\n      },\n      {\n        \"ns\": \"tempor est\",\n        \"name\": \"qui conse\",\n        \"folder_id\": -41074782\n      }\n    ],\n    \"folders\": [\n      {\n        \"id\": 96293041,\n        \"name\": \"id amet veniam do sunt\",\n        \"parent_id\": -2452146\n      },\n      {\n        \"id\": -8008803,\n        \"name\": \"occaecat anim dolor nisi\",\n        \"parent_id\": 53877946\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getCustomFields",
+							"item": [
+								{
+									"name": "2bc43834222da265c4c41fbd129d1392",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getCustomFields",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getCustomFields"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getCustomFields",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getCustomFields"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": -94508549,\n      \"name\": \"ex tempor est\",\n      \"type\": \"text\",\n      \"description\": \"nisi\"\n    },\n    {\n      \"id\": 91344953,\n      \"name\": \"ea\",\n      \"type\": \"datetime\",\n      \"description\": \"aliqua ut\"\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getOtnTopics",
+							"item": [
+								{
+									"name": "b62d72c6502f4f7f687558c2f7a4c2c3",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getOtnTopics",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getOtnTopics"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getOtnTopics",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getOtnTopics"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": 79842854,\n      \"name\": \"Lorem\",\n      \"description\": \"dolor\"\n    },\n    {\n      \"id\": 38829597,\n      \"name\": \"in\",\n      \"description\": \"velit\"\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getBotFields",
+							"item": [
+								{
+									"name": "dbb46d786cc1323d56b27ff7de7bcc3f",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/getBotFields",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"getBotFields"
+											]
+										},
+										"description": "***Limit:*** 100 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/getBotFields",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"getBotFields"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": -45304004,\n      \"name\": \"in\",\n      \"type\": \"date\",\n      \"description\": \"quis minim ul\",\n      \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n    },\n    {\n      \"id\": -25807971,\n      \"name\": \"anim cillum\",\n      \"type\": \"date\",\n      \"description\": \"veniam pariatur elit\",\n      \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "createBotField",
+							"item": [
+								{
+									"name": "388714b65c83021aa8b1bb78481fb983",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"My bot name\",\n  \"type\": \"text\",\n  \"description\": \"This field store my bot name\",\n  \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/createBotField",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"createBotField"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"name\": \"My bot name\",\n  \"type\": \"text\",\n  \"description\": \"This field store my bot name\",\n  \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/createBotField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"createBotField"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"field\": {\n      \"id\": -79871651,\n      \"name\": \"ut magna Ut culpa\",\n      \"type\": \"date\",\n      \"description\": \"incididunt commodo dolore quis laboris\",\n      \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n    }\n  }\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"name\": \"My bot name\",\n  \"type\": \"text\",\n  \"description\": \"This field store my bot name\",\n  \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/createBotField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"createBotField"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "setBotField",
+							"item": [
+								{
+									"name": "4032722e43e4b967e07d1b1279942254",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"field_id\": -68602288,\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/setBotField",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"setBotField"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"field_id\": -68602288,\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/setBotField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"setBotField"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"field_id\": -68602288,\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/setBotField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"setBotField"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "setBotFieldByName",
+							"item": [
+								{
+									"name": "63284ce7970087a42458d5a2c2594c1b",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"field_name\": \"nostrud non ali\",\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/setBotFieldByName",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"setBotFieldByName"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"field_name\": \"nostrud non ali\",\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/setBotFieldByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"setBotFieldByName"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"field_name\": \"nostrud non ali\",\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/setBotFieldByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"setBotFieldByName"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "setBotFields",
+							"item": [
+								{
+									"name": "327327a53f87fecaeb9f7cd69c0433af",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"fields\": [\n    {\n      \"field_id\": -22127853,\n      \"field_name\": \"fugiat\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    },\n    {\n      \"field_id\": -97521008,\n      \"field_name\": \"Excepteur cillum\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    }\n  ]\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/page/setBotFields",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"page",
+												"setBotFields"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"fields\": [\n    {\n      \"field_id\": -22127853,\n      \"field_name\": \"fugiat\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    },\n    {\n      \"field_id\": -97521008,\n      \"field_name\": \"Excepteur cillum\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    }\n  ]\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/setBotFields",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"setBotFields"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"fields\": [\n    {\n      \"field_id\": -22127853,\n      \"field_name\": \"fugiat\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    },\n    {\n      \"field_id\": -97521008,\n      \"field_name\": \"Excepteur cillum\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    }\n  ]\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/page/setBotFields",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"page",
+														"setBotFields"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "sending",
+					"item": [
+						{
+							"name": "sendContent",
+							"item": [
+								{
+									"name": "Send content to subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": 28591792,\n  \"data\": {},\n  \"message_tag\": \"ACCOUNT_UPDATE\",\n  \"otn_topic_name\": \"Сhannel news\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/sending/sendContent",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"sending",
+												"sendContent"
+											]
+										},
+										"description": "***Limit:*** 25 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 28591792,\n  \"data\": {},\n  \"message_tag\": \"ACCOUNT_UPDATE\",\n  \"otn_topic_name\": \"Сhannel news\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/sending/sendContent",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"sending",
+														"sendContent"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Possible error codes:<br>\n3011 - Content can’t be sent to subscriber without message tag. Subscriber’s last interaction was over 24h ago.<br>\n3021 - Content can’t be sent to subscriber. The subscriber has no One-Time Notification tokens for the selected t",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 28591792,\n  \"data\": {},\n  \"message_tag\": \"ACCOUNT_UPDATE\",\n  \"otn_topic_name\": \"Сhannel news\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/sending/sendContent",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"sending",
+														"sendContent"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"labore ex in\",\n  \"code\": -22937956\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "sendContentByUserRef",
+							"item": [
+								{
+									"name": "Send content to user ref",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"user_ref\": -29051708,\n  \"data\": {}\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/sending/sendContentByUserRef",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"sending",
+												"sendContentByUserRef"
+											]
+										},
+										"description": "***Limit:*** 25 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"user_ref\": -29051708,\n  \"data\": {}\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/sending/sendContentByUserRef",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"sending",
+														"sendContentByUserRef"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"user_ref\": -29051708,\n  \"data\": {}\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/sending/sendContentByUserRef",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"sending",
+														"sendContentByUserRef"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "sendFlow",
+							"item": [
+								{
+									"name": "Send Automation to subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -97937979,\n  \"flow_ns\": \"veniam amet esse ullamco consequat\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/sending/sendFlow",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"sending",
+												"sendFlow"
+											]
+										},
+										"description": "***Limit:*** 25 queries per second"
+									},
+									"response": [
+										{
+											"name": "newGameAssignment",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"subscriber_id\": {{subscriber_id}},\n    \"flow_ns\": \"content20250609160707_210201\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/sending/sendFlow",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"sending",
+														"sendFlow"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -97937979,\n  \"flow_ns\": \"veniam amet esse ullamco consequat\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/sending/sendFlow",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"sending",
+														"sendFlow"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "subscriber",
+					"item": [
+						{
+							"name": "getInfo",
+							"item": [
+								{
+									"name": "ae51a27b65b7ecf39438af38db0f27ba",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/getInfo?subscriber_id=90578784",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"getInfo"
+											],
+											"query": [
+												{
+													"key": "subscriber_id",
+													"value": "90578784",
+													"description": "(Required) Get subscriber info."
+												}
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/getInfo?subscriber_id=90578784",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"getInfo"
+													],
+													"query": [
+														{
+															"key": "subscriber_id",
+															"value": "90578784",
+															"description": "(Required) Get subscriber info."
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": \"reprehenderit qui labore ut\",\n    \"page_id\": \"adipisicing nulla labore eiu\",\n    \"user_refs\": [\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      },\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      }\n    ],\n    \"first_name\": \"Ut aliqua consequat sunt dolore\",\n    \"last_name\": \"ex proident nulla\",\n    \"name\": \"ipsum ad\",\n    \"gender\": \"commodo elit occaecat\",\n    \"profile_pic\": \"ut aliquip\",\n    \"locale\": \"esse eiusmod nostrud fugiat amet\",\n    \"language\": \"exercitation enim dolore\",\n    \"timezone\": \"ea eiusmod in\",\n    \"live_chat_url\": \"magna laboris ipsum\",\n    \"last_input_text\": \"fugiat\",\n    \"optin_phone\": true,\n    \"phone\": \"minim dolor est\",\n    \"optin_email\": false,\n    \"email\": \"nisi\",\n    \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n    \"is_followup_enabled\": true,\n    \"ig_username\": \"user_name\",\n    \"ig_id\": 6384638,\n    \"whatsapp_phone\": \"eu aliquip commodo et s\",\n    \"optin_whatsapp\": true,\n    \"custom_fields\": [\n      {\n        \"id\": 9543179,\n        \"name\": \"laborum non\",\n        \"type\": \"boolean\",\n        \"description\": \"quis anim mollit id Duis\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      },\n      {\n        \"id\": 24709724,\n        \"name\": \"quis culpa voluptate proident\",\n        \"type\": \"datetime\",\n        \"description\": \"ut adipisicing esse ex\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      }\n    ],\n    \"tags\": [\n      {\n        \"id\": 21575023,\n        \"name\": \"officia aliquip est nostrud\"\n      },\n      {\n        \"id\": -54562125,\n        \"name\": \"elit in nulla pariatur\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "findByName",
+							"item": [
+								{
+									"name": "e5c671d1661acff9be0e8bcfdd59f1e8",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/findByName?name=el",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"findByName"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "el",
+													"description": "(Required) "
+												}
+											]
+										},
+										"description": "***Limit:*** 10 queries per second.<br>This API method search subscribers by full name.<br>List is limited by 100 subscribers."
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/findByName?name=el",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"findByName"
+													],
+													"query": [
+														{
+															"key": "name",
+															"value": "el",
+															"description": "(Required) "
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": \"proident\",\n      \"page_id\": \"eu do sed elit\",\n      \"user_refs\": [\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        },\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        }\n      ],\n      \"first_name\": \"anim Duis\",\n      \"last_name\": \"sunt ad id\",\n      \"name\": \"eu\",\n      \"gender\": \"amet velit in\",\n      \"profile_pic\": \"adipisicing labore\",\n      \"locale\": \"ir\",\n      \"language\": \"quis eu cillum\",\n      \"timezone\": \"eu non \",\n      \"live_chat_url\": \"culpa Ut aliquip m\",\n      \"last_input_text\": \"sit\",\n      \"optin_phone\": true,\n      \"phone\": \"ad labore\",\n      \"optin_email\": true,\n      \"email\": \"elit\",\n      \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n      \"is_followup_enabled\": true,\n      \"ig_username\": \"user_name\",\n      \"ig_id\": 6384638,\n      \"whatsapp_phone\": \"tempor quis irure\",\n      \"optin_whatsapp\": true,\n      \"custom_fields\": [\n        {\n          \"id\": -26394524,\n          \"name\": \"Excepteur sint\",\n          \"type\": \"text\",\n          \"description\": \"nisi esse laboris voluptate\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        },\n        {\n          \"id\": -93653223,\n          \"name\": \"dol\",\n          \"type\": \"text\",\n          \"description\": \"dolor cupi\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        }\n      ],\n      \"tags\": [\n        {\n          \"id\": 226167,\n          \"name\": \"magna culpa\"\n        },\n        {\n          \"id\": -62155454,\n          \"name\": \"officia sunt\"\n        }\n      ]\n    },\n    {\n      \"id\": \"tempor\",\n      \"page_id\": \"cillum sed dolore\",\n      \"user_refs\": [\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        },\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        }\n      ],\n      \"first_name\": \"aute quis\",\n      \"last_name\": \"nulla elit id eiusmod\",\n      \"name\": \"commodo s\",\n      \"gender\": \"sit dolor reprehenderit\",\n      \"profile_pic\": \"in ullamco\",\n      \"locale\": \"cupidatat nulla tempor fugiat\",\n      \"language\": \"id Excepteur\",\n      \"timezone\": \"quis anim dolor ipsum consectetur\",\n      \"live_chat_url\": \"dolore ex co\",\n      \"last_input_text\": \"ex ut\",\n      \"optin_phone\": true,\n      \"phone\": \"commodo aliquip\",\n      \"optin_email\": true,\n      \"email\": \"irure\",\n      \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n      \"is_followup_enabled\": true,\n      \"ig_username\": \"user_name\",\n      \"ig_id\": 6384638,\n      \"whatsapp_phone\": \"commodo ut\",\n      \"optin_whatsapp\": true,\n      \"custom_fields\": [\n        {\n          \"id\": 39453861,\n          \"name\": \"do ex commodo elit\",\n          \"type\": \"date\",\n          \"description\": \"ut est ullamco adipisicing\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        },\n        {\n          \"id\": -29387459,\n          \"name\": \"pariatur deserunt esse nisi\",\n          \"type\": \"number\",\n          \"description\": \"esse\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        }\n      ],\n      \"tags\": [\n        {\n          \"id\": -64309835,\n          \"name\": \"cupidatat aliqua Ut\"\n        },\n        {\n          \"id\": -69852769,\n          \"name\": \"anim cillum\"\n        }\n      ]\n    }\n  ]\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "getInfoByUserRef",
+							"item": [
+								{
+									"name": "782cc8abe7878dc73026b6bef44f14b2",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/getInfoByUserRef?user_ref=90578784",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"getInfoByUserRef"
+											],
+											"query": [
+												{
+													"key": "user_ref",
+													"value": "90578784",
+													"description": "(Required) Ref of subscriber"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/getInfoByUserRef?user_ref=90578784",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"getInfoByUserRef"
+													],
+													"query": [
+														{
+															"key": "user_ref",
+															"value": "90578784",
+															"description": "(Required) Ref of subscriber"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": \"reprehenderit qui labore ut\",\n    \"page_id\": \"adipisicing nulla labore eiu\",\n    \"user_refs\": [\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      },\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      }\n    ],\n    \"first_name\": \"Ut aliqua consequat sunt dolore\",\n    \"last_name\": \"ex proident nulla\",\n    \"name\": \"ipsum ad\",\n    \"gender\": \"commodo elit occaecat\",\n    \"profile_pic\": \"ut aliquip\",\n    \"locale\": \"esse eiusmod nostrud fugiat amet\",\n    \"language\": \"exercitation enim dolore\",\n    \"timezone\": \"ea eiusmod in\",\n    \"live_chat_url\": \"magna laboris ipsum\",\n    \"last_input_text\": \"fugiat\",\n    \"optin_phone\": true,\n    \"phone\": \"minim dolor est\",\n    \"optin_email\": false,\n    \"email\": \"nisi\",\n    \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n    \"is_followup_enabled\": true,\n    \"ig_username\": \"user_name\",\n    \"ig_id\": 6384638,\n    \"whatsapp_phone\": \"eu aliquip commodo et s\",\n    \"optin_whatsapp\": true,\n    \"custom_fields\": [\n      {\n        \"id\": 9543179,\n        \"name\": \"laborum non\",\n        \"type\": \"boolean\",\n        \"description\": \"quis anim mollit id Duis\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      },\n      {\n        \"id\": 24709724,\n        \"name\": \"quis culpa voluptate proident\",\n        \"type\": \"datetime\",\n        \"description\": \"ut adipisicing esse ex\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      }\n    ],\n    \"tags\": [\n      {\n        \"id\": 21575023,\n        \"name\": \"officia aliquip est nostrud\"\n      },\n      {\n        \"id\": -54562125,\n        \"name\": \"elit in nulla pariatur\"\n      }\n    ]\n  }\n}"
+										},
+										{
+											"name": "Possible error codes:<br>2011 - User_ref isn't registered<br>2012 - User_ref has not been linked with subscriber_id",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/getInfoByUserRef?user_ref=90578784",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"getInfoByUserRef"
+													],
+													"query": [
+														{
+															"key": "user_ref",
+															"value": "90578784",
+															"description": "(Required) Ref of subscriber"
+														}
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"labore ex in\",\n  \"code\": -22937956\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "findByCustomField",
+							"item": [
+								{
+									"name": "9fc380dcb49bb134b9405d4269896f56",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/findByCustomField?field_id=90578784&field_value=el",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"findByCustomField"
+											],
+											"query": [
+												{
+													"key": "field_id",
+													"value": "90578784",
+													"description": "(Required) "
+												},
+												{
+													"key": "field_value",
+													"value": "el",
+													"description": "(Required) "
+												}
+											]
+										},
+										"description": "***Limit:*** 10 queries per second.<br>\nThis API method only works with Text and Number types of Custom User Fields.<br>\nResults are sorted by last Custom User Field value update for a specific user.<br>\nList is limited by 100 elements."
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/findByCustomField?field_id=90578784&field_value=el",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"findByCustomField"
+													],
+													"query": [
+														{
+															"key": "field_id",
+															"value": "90578784",
+															"description": "(Required) "
+														},
+														{
+															"key": "field_value",
+															"value": "el",
+															"description": "(Required) "
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": [\n    {\n      \"id\": \"proident\",\n      \"page_id\": \"eu do sed elit\",\n      \"user_refs\": [\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        },\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        }\n      ],\n      \"first_name\": \"anim Duis\",\n      \"last_name\": \"sunt ad id\",\n      \"name\": \"eu\",\n      \"gender\": \"amet velit in\",\n      \"profile_pic\": \"adipisicing labore\",\n      \"locale\": \"ir\",\n      \"language\": \"quis eu cillum\",\n      \"timezone\": \"eu non \",\n      \"live_chat_url\": \"culpa Ut aliquip m\",\n      \"last_input_text\": \"sit\",\n      \"optin_phone\": true,\n      \"phone\": \"ad labore\",\n      \"optin_email\": true,\n      \"email\": \"elit\",\n      \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n      \"is_followup_enabled\": true,\n      \"ig_username\": \"user_name\",\n      \"ig_id\": 6384638,\n      \"whatsapp_phone\": \"tempor quis irure\",\n      \"optin_whatsapp\": true,\n      \"custom_fields\": [\n        {\n          \"id\": -26394524,\n          \"name\": \"Excepteur sint\",\n          \"type\": \"text\",\n          \"description\": \"nisi esse laboris voluptate\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        },\n        {\n          \"id\": -93653223,\n          \"name\": \"dol\",\n          \"type\": \"text\",\n          \"description\": \"dolor cupi\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        }\n      ],\n      \"tags\": [\n        {\n          \"id\": 226167,\n          \"name\": \"magna culpa\"\n        },\n        {\n          \"id\": -62155454,\n          \"name\": \"officia sunt\"\n        }\n      ]\n    },\n    {\n      \"id\": \"tempor\",\n      \"page_id\": \"cillum sed dolore\",\n      \"user_refs\": [\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        },\n        {\n          \"user_ref\": \"-1543835812530302162\",\n          \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n        }\n      ],\n      \"first_name\": \"aute quis\",\n      \"last_name\": \"nulla elit id eiusmod\",\n      \"name\": \"commodo s\",\n      \"gender\": \"sit dolor reprehenderit\",\n      \"profile_pic\": \"in ullamco\",\n      \"locale\": \"cupidatat nulla tempor fugiat\",\n      \"language\": \"id Excepteur\",\n      \"timezone\": \"quis anim dolor ipsum consectetur\",\n      \"live_chat_url\": \"dolore ex co\",\n      \"last_input_text\": \"ex ut\",\n      \"optin_phone\": true,\n      \"phone\": \"commodo aliquip\",\n      \"optin_email\": true,\n      \"email\": \"irure\",\n      \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n      \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n      \"is_followup_enabled\": true,\n      \"ig_username\": \"user_name\",\n      \"ig_id\": 6384638,\n      \"whatsapp_phone\": \"commodo ut\",\n      \"optin_whatsapp\": true,\n      \"custom_fields\": [\n        {\n          \"id\": 39453861,\n          \"name\": \"do ex commodo elit\",\n          \"type\": \"date\",\n          \"description\": \"ut est ullamco adipisicing\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        },\n        {\n          \"id\": -29387459,\n          \"name\": \"pariatur deserunt esse nisi\",\n          \"type\": \"number\",\n          \"description\": \"esse\",\n          \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n        }\n      ],\n      \"tags\": [\n        {\n          \"id\": -64309835,\n          \"name\": \"cupidatat aliqua Ut\"\n        },\n        {\n          \"id\": -69852769,\n          \"name\": \"anim cillum\"\n        }\n      ]\n    }\n  ]\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/findByCustomField?field_id=90578784&field_value=el",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"findByCustomField"
+													],
+													"query": [
+														{
+															"key": "field_id",
+															"value": "90578784",
+															"description": "(Required) "
+														},
+														{
+															"key": "field_value",
+															"value": "el",
+															"description": "(Required) "
+														}
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "findBySystemField",
+							"item": [
+								{
+									"name": "ef59064a933ef7464083a39c520a274b",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/findBySystemField?email=el&phone=el",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"findBySystemField"
+											],
+											"query": [
+												{
+													"key": "email",
+													"value": "el",
+													"description": "E-Mail (example: test@manychat.com)"
+												},
+												{
+													"key": "phone",
+													"value": "el",
+													"description": "Phone number (example: +15400000000)"
+												}
+											]
+										},
+										"description": "***Limit:*** 50 queries per second.<br>Set one parameter: Email OR Phone."
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/findBySystemField?email=el&phone=el",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"findBySystemField"
+													],
+													"query": [
+														{
+															"key": "email",
+															"value": "el",
+															"description": "E-Mail (example: test@manychat.com)"
+														},
+														{
+															"key": "phone",
+															"value": "el",
+															"description": "Phone number (example: +15400000000)"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": \"reprehenderit qui labore ut\",\n    \"page_id\": \"adipisicing nulla labore eiu\",\n    \"user_refs\": [\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      },\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      }\n    ],\n    \"first_name\": \"Ut aliqua consequat sunt dolore\",\n    \"last_name\": \"ex proident nulla\",\n    \"name\": \"ipsum ad\",\n    \"gender\": \"commodo elit occaecat\",\n    \"profile_pic\": \"ut aliquip\",\n    \"locale\": \"esse eiusmod nostrud fugiat amet\",\n    \"language\": \"exercitation enim dolore\",\n    \"timezone\": \"ea eiusmod in\",\n    \"live_chat_url\": \"magna laboris ipsum\",\n    \"last_input_text\": \"fugiat\",\n    \"optin_phone\": true,\n    \"phone\": \"minim dolor est\",\n    \"optin_email\": false,\n    \"email\": \"nisi\",\n    \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n    \"is_followup_enabled\": true,\n    \"ig_username\": \"user_name\",\n    \"ig_id\": 6384638,\n    \"whatsapp_phone\": \"eu aliquip commodo et s\",\n    \"optin_whatsapp\": true,\n    \"custom_fields\": [\n      {\n        \"id\": 9543179,\n        \"name\": \"laborum non\",\n        \"type\": \"boolean\",\n        \"description\": \"quis anim mollit id Duis\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      },\n      {\n        \"id\": 24709724,\n        \"name\": \"quis culpa voluptate proident\",\n        \"type\": \"datetime\",\n        \"description\": \"ut adipisicing esse ex\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      }\n    ],\n    \"tags\": [\n      {\n        \"id\": 21575023,\n        \"name\": \"officia aliquip est nostrud\"\n      },\n      {\n        \"id\": -54562125,\n        \"name\": \"elit in nulla pariatur\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "addTag",
+							"item": [
+								{
+									"name": "Add tag to subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -41686169,\n  \"tag_id\": -17554710\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/addTag",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"addTag"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -41686169,\n  \"tag_id\": -17554710\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/addTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"addTag"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -41686169,\n  \"tag_id\": -17554710\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/addTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"addTag"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "addTagByName",
+							"item": [
+								{
+									"name": "Add tag to subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -43540054,\n  \"tag_name\": \"Excepteur enim in\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/addTagByName",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"addTagByName"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -43540054,\n  \"tag_name\": \"Excepteur enim in\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/addTagByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"addTagByName"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -43540054,\n  \"tag_name\": \"Excepteur enim in\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/addTagByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"addTagByName"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "removeTag",
+							"item": [
+								{
+									"name": "Remove tag from subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -41686169,\n  \"tag_id\": -17554710\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/removeTag",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"removeTag"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -41686169,\n  \"tag_id\": -17554710\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/removeTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"removeTag"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -41686169,\n  \"tag_id\": -17554710\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/removeTag",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"removeTag"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "removeTagByName",
+							"item": [
+								{
+									"name": "Remove tag from subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -43540054,\n  \"tag_name\": \"Excepteur enim in\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/removeTagByName",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"removeTagByName"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -43540054,\n  \"tag_name\": \"Excepteur enim in\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/removeTagByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"removeTagByName"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -43540054,\n  \"tag_name\": \"Excepteur enim in\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/removeTagByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"removeTagByName"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "setCustomField",
+							"item": [
+								{
+									"name": "81138a426b0903687848fdf8bdde6aa9",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -72260000,\n  \"field_id\": -77945511,\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/setCustomField",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"setCustomField"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -72260000,\n  \"field_id\": -77945511,\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/setCustomField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"setCustomField"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -72260000,\n  \"field_id\": -77945511,\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/setCustomField",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"setCustomField"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "setCustomFields",
+							"item": [
+								{
+									"name": "newGameAssignment",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": {{subscriber_id}},\n  \"fields\": [\n    {\n      \"field_name\": \"refNick\",\n      \"field_value\": \"גיא\"\n    },\n    {\n      \"field_name\": \"gameDatetime\",\n      \"field_value\": \"יום שישי 20/05/2025 14:10\"\n    },\n    {\n      \"field_name\": \"tournament\",\n      \"field_value\": \"ילדים ב שרון\"\n    },\n    {\n      \"field_name\": \"gameTitle\",\n      \"field_value\": \"נתניה-נוה יוסף\"\n    },\n    {\n      \"field_name\": \"refereePosition\",\n      \"field_value\": \"ראשי\"\n    },\n    {\n      \"field_name\": \"gameRound\",\n      \"field_value\": \"30\"\n    },\n    {\n      \"field_name\": \"gameFixture\",\n      \"field_value\": \"2\"\n    },\n    {\n      \"field_name\": \"gameField\",\n      \"field_value\": \"נתניה שפירא\"\n    },\n    {\n      \"field_name\": \"refereeStatus\",\n      \"field_value\": \"מאושר\"\n    },\n    {\n      \"field_name\": \"gameRefereeTeam\",\n      \"field_value\": \"גיא שופט ראשי\"\n    },\n    {\n      \"field_name\": \"gameId\",\n      \"field_value\": \"gm-20250604-001\"\n    }\n  ]\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/setCustomFields",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"setCustomFields"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 11302063,\n  \"fields\": [\n    {\n      \"field_id\": -15525210,\n      \"field_name\": \"anim est\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    },\n    {\n      \"field_id\": -61112904,\n      \"field_name\": \"culpa aliqua dolore nostrud nulla\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    }\n  ]\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/setCustomFields",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"setCustomFields"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 11302063,\n  \"fields\": [\n    {\n      \"field_id\": -15525210,\n      \"field_name\": \"anim est\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    },\n    {\n      \"field_id\": -61112904,\n      \"field_name\": \"culpa aliqua dolore nostrud nulla\",\n      \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n    }\n  ]\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/setCustomFields",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"setCustomFields"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "setCustomFieldByName",
+							"item": [
+								{
+									"name": "adc69e1e87197b5f31c80403a3913468",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": 16384077,\n  \"field_name\": \"proident\",\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/setCustomFieldByName",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"setCustomFieldByName"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 16384077,\n  \"field_name\": \"proident\",\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/setCustomFieldByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"setCustomFieldByName"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 16384077,\n  \"field_name\": \"proident\",\n  \"field_value\": \"'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/setCustomFieldByName",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"setCustomFieldByName"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "verifyBySignedRequest",
+							"item": [
+								{
+									"name": "b14c21e0143af0449cfc94e58731c5a8",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": -61889399,\n  \"signed_request\": \"_1SXnOuwXiUrcDRxI1D6Dvr55aiNusDNMxyHb8PQe7Y.eyJhbGdvcml0aG0iOiJIT2FDLVNIQTI1NiIsImNvbW11bml0eV9pZCI6bnVsbCwiaXNzdWVkX2F0IjoxNTU5MjE8NTQxLCJtZXRhZGF0YSI6bnVsbCwicGFnZV9pZCI6MjI4NjkwMDEyNDk2MTgxOSwicHNpZCI6IjIxNzI0OTkwNDI4Njc2MjIiLCJ0aHJlYWRfcGFydGljaXBhbnRfaWRzIjpudWxsLCJ0aHJlYWRfdHlwZSI6IlVTRVJfVE9fUEFHRSIsInRpZCI1IjIxNzI0OTkwNDI4Njc2MjIifQ\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/verifyBySignedRequest",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"verifyBySignedRequest"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": -61889399,\n  \"signed_request\": \"_1SXnOuwXiUrcDRxI1D6Dvr55aiNusDNMxyHb8PQe7Y.eyJhbGdvcml0aG0iOiJIT2FDLVNIQTI1NiIsImNvbW11bml0eV9pZCI6bnVsbCwiaXNzdWVkX2F0IjoxNTU5MjE8NTQxLCJtZXRhZGF0YSI6bnVsbCwicGFnZV9pZCI6MjI4NjkwMDEyNDk2MTgxOSwicHNpZCI6IjIxNzI0OTkwNDI4Njc2MjIiLCJ0aHJlYWRfcGFydGljaXBhbnRfaWRzIjpudWxsLCJ0aHJlYWRfdHlwZSI6IlVTRVJfVE9fUEFHRSIsInRpZCI1IjIxNzI0OTkwNDI4Njc2MjIifQ\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/verifyBySignedRequest",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"verifyBySignedRequest"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\"\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "createSubscriber",
+							"item": [
+								{
+									"name": "Create a Unified subscriber",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"first_name\": \"amet occaecat eiusmod sint deserunt\",\n  \"last_name\": \"do aliquip ut ex ut\",\n  \"phone\": \"non do officia\",\n  \"whatsapp_phone\": \"dolor proident voluptate ut enim\",\n  \"email\": \"cillum do fugiat\",\n  \"gender\": \"irure mollit\",\n  \"has_opt_in_sms\": false,\n  \"has_opt_in_email\": false,\n  \"consent_phrase\": \"aute amet Lorem\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/createSubscriber",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"createSubscriber"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"first_name\": \"amet occaecat eiusmod sint deserunt\",\n  \"last_name\": \"do aliquip ut ex ut\",\n  \"phone\": \"non do officia\",\n  \"whatsapp_phone\": \"dolor proident voluptate ut enim\",\n  \"email\": \"cillum do fugiat\",\n  \"gender\": \"irure mollit\",\n  \"has_opt_in_sms\": false,\n  \"has_opt_in_email\": false,\n  \"consent_phrase\": \"aute amet Lorem\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/createSubscriber",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"createSubscriber"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": \"reprehenderit qui labore ut\",\n    \"page_id\": \"adipisicing nulla labore eiu\",\n    \"user_refs\": [\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      },\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      }\n    ],\n    \"first_name\": \"Ut aliqua consequat sunt dolore\",\n    \"last_name\": \"ex proident nulla\",\n    \"name\": \"ipsum ad\",\n    \"gender\": \"commodo elit occaecat\",\n    \"profile_pic\": \"ut aliquip\",\n    \"locale\": \"esse eiusmod nostrud fugiat amet\",\n    \"language\": \"exercitation enim dolore\",\n    \"timezone\": \"ea eiusmod in\",\n    \"live_chat_url\": \"magna laboris ipsum\",\n    \"last_input_text\": \"fugiat\",\n    \"optin_phone\": true,\n    \"phone\": \"minim dolor est\",\n    \"optin_email\": false,\n    \"email\": \"nisi\",\n    \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n    \"is_followup_enabled\": true,\n    \"ig_username\": \"user_name\",\n    \"ig_id\": 6384638,\n    \"whatsapp_phone\": \"eu aliquip commodo et s\",\n    \"optin_whatsapp\": true,\n    \"custom_fields\": [\n      {\n        \"id\": 9543179,\n        \"name\": \"laborum non\",\n        \"type\": \"boolean\",\n        \"description\": \"quis anim mollit id Duis\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      },\n      {\n        \"id\": 24709724,\n        \"name\": \"quis culpa voluptate proident\",\n        \"type\": \"datetime\",\n        \"description\": \"ut adipisicing esse ex\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      }\n    ],\n    \"tags\": [\n      {\n        \"id\": 21575023,\n        \"name\": \"officia aliquip est nostrud\"\n      },\n      {\n        \"id\": -54562125,\n        \"name\": \"elit in nulla pariatur\"\n      }\n    ]\n  }\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"first_name\": \"amet occaecat eiusmod sint deserunt\",\n  \"last_name\": \"do aliquip ut ex ut\",\n  \"phone\": \"non do officia\",\n  \"whatsapp_phone\": \"dolor proident voluptate ut enim\",\n  \"email\": \"cillum do fugiat\",\n  \"gender\": \"irure mollit\",\n  \"has_opt_in_sms\": false,\n  \"has_opt_in_email\": false,\n  \"consent_phrase\": \"aute amet Lorem\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/createSubscriber",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"createSubscriber"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "updateSubscriber",
+							"item": [
+								{
+									"name": "3ab84a004f4a5942e7a5368c2b807d19",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "{{bearerToken}}",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"subscriber_id\": 56788609,\n  \"first_name\": \"eiusmod esse incididunt\",\n  \"last_name\": \"qui\",\n  \"phone\": \"in mollit\",\n  \"email\": \"anim amet ullamco commodo Lorem\",\n  \"gender\": \"incididunt aliqua aliq\",\n  \"has_opt_in_sms\": false,\n  \"has_opt_in_email\": false,\n  \"consent_phrase\": \"nostrud Ut laborum\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/fb/subscriber/updateSubscriber",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"fb",
+												"subscriber",
+												"updateSubscriber"
+											]
+										},
+										"description": "***Limit:*** 10 queries per second"
+									},
+									"response": [
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 56788609,\n  \"first_name\": \"eiusmod esse incididunt\",\n  \"last_name\": \"qui\",\n  \"phone\": \"in mollit\",\n  \"email\": \"anim amet ullamco commodo Lorem\",\n  \"gender\": \"incididunt aliqua aliq\",\n  \"has_opt_in_sms\": false,\n  \"has_opt_in_email\": false,\n  \"consent_phrase\": \"nostrud Ut laborum\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/updateSubscriber",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"updateSubscriber"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"success\",\n  \"data\": {\n    \"id\": \"reprehenderit qui labore ut\",\n    \"page_id\": \"adipisicing nulla labore eiu\",\n    \"user_refs\": [\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      },\n      {\n        \"user_ref\": \"-1543835812530302162\",\n        \"opted_in\": \"2018-12-03T11:17:54+00:00\"\n      }\n    ],\n    \"first_name\": \"Ut aliqua consequat sunt dolore\",\n    \"last_name\": \"ex proident nulla\",\n    \"name\": \"ipsum ad\",\n    \"gender\": \"commodo elit occaecat\",\n    \"profile_pic\": \"ut aliquip\",\n    \"locale\": \"esse eiusmod nostrud fugiat amet\",\n    \"language\": \"exercitation enim dolore\",\n    \"timezone\": \"ea eiusmod in\",\n    \"live_chat_url\": \"magna laboris ipsum\",\n    \"last_input_text\": \"fugiat\",\n    \"optin_phone\": true,\n    \"phone\": \"minim dolor est\",\n    \"optin_email\": false,\n    \"email\": \"nisi\",\n    \"subscribed\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_interaction\": \"'2018-07-02T00:00:00+02:00'\",\n    \"last_seen\": \"'2018-07-02T00:00:00+03:00'\",\n    \"is_followup_enabled\": true,\n    \"ig_username\": \"user_name\",\n    \"ig_id\": 6384638,\n    \"whatsapp_phone\": \"eu aliquip commodo et s\",\n    \"optin_whatsapp\": true,\n    \"custom_fields\": [\n      {\n        \"id\": 9543179,\n        \"name\": \"laborum non\",\n        \"type\": \"boolean\",\n        \"description\": \"quis anim mollit id Duis\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      },\n      {\n        \"id\": 24709724,\n        \"name\": \"quis culpa voluptate proident\",\n        \"type\": \"datetime\",\n        \"description\": \"ut adipisicing esse ex\",\n        \"value\": \"'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'\"\n      }\n    ],\n    \"tags\": [\n      {\n        \"id\": 21575023,\n        \"name\": \"officia aliquip est nostrud\"\n      },\n      {\n        \"id\": -54562125,\n        \"name\": \"elit in nulla pariatur\"\n      }\n    ]\n  }\n}"
+										},
+										{
+											"name": "Untitled Response",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "application/json"
+													},
+													{
+														"key": "Authorization",
+														"value": "Bearer <token>",
+														"description": "Added as a part of security scheme: bearer"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"subscriber_id\": 56788609,\n  \"first_name\": \"eiusmod esse incididunt\",\n  \"last_name\": \"qui\",\n  \"phone\": \"in mollit\",\n  \"email\": \"anim amet ullamco commodo Lorem\",\n  \"gender\": \"incididunt aliqua aliq\",\n  \"has_opt_in_sms\": false,\n  \"has_opt_in_email\": false,\n  \"consent_phrase\": \"nostrud Ut laborum\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/fb/subscriber/updateSubscriber",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"fb",
+														"subscriber",
+														"updateSubscriber"
+													]
+												}
+											},
+											"status": "Bad Request",
+											"code": 400,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"status\": \"error\",\n  \"message\": \"dolore\",\n  \"details\": {\n    \"messages\": [\n      {\n        \"message\": \"Lorem veniam\"\n      },\n      {\n        \"message\": \"esse eu officia\"\n      }\n    ]\n  }\n}"
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": ""
+		},
+		{
+			"key": "bearerToken",
+			"value": "3039282:1951c82a6dea3fc9f33de3d7bee92d84",
+			"type": "default"
+		}
+	]
+}

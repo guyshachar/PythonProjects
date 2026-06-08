@@ -1,0 +1,2430 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "ManyChat API",
+        "description": "Help article is available [here](https://help.manychat.com/hc/en-us/articles/14959510331420-API-Manychat)",
+        "version": "beta"
+    },
+    "servers": [
+        {
+            "url": ""
+        }
+    ],
+    "paths": {
+        "/fb/page/getInfo": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second",
+                "operationId": "b26c074b3783eb6e888c62324b17268c",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Page"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/createTag": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "e964547412ede512f9534970c8e3971a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "My tag"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "tag": {
+                                                    "$ref": "#/components/schemas/Tag"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getTags": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second",
+                "operationId": "55f8b0c6040a20ba811a08eb4d92b9c2",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Tag"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/removeTag": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second.<br>Removes specified tag from the page and the page's subscribers.<br>This action can not be undone.",
+                "operationId": "55b1d844eb0006f3c49e2a3ac524dd4e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tag_id"
+                                ],
+                                "properties": {
+                                    "tag_id": {
+                                        "type": "integer",
+                                        "example": 123
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/removeTagByName": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second.<br>Removes specified tag from the page and the page's subscribers.<br>This action can not be undone.",
+                "operationId": "02235c5d38c1f33af18a296d331e5a35",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tag_name"
+                                ],
+                                "properties": {
+                                    "tag_name": {
+                                        "type": "string",
+                                        "example": "MyTagName"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getWidgets": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second.<br>Use getGrowthTools instead.",
+                "operationId": "33ec0bc6a34501ed9b4c2b6976b26bd2",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Growth Tools"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "deprecated": true,
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/createCustomField": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "1d7171252e09f4e25b5123f9484ea3c1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "caption",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "caption": {
+                                        "type": "string",
+                                        "example": "My custom field name"
+                                    },
+                                    "type": {
+                                        "description": "Value from list: text, number, date, datetime, boolean",
+                                        "type": "string",
+                                        "example": "text"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "This field store my custom field name"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "field": {
+                                                    "$ref": "#/components/schemas/Custom Field"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getGrowthTools": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second",
+                "operationId": "2ab4a2a91a0b2cb1d5084e91b281e48c",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Growth Tools"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getFlows": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "6aee779784709b84bb0a734ebb42b650",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "flows": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Flow"
+                                                    }
+                                                },
+                                                "folders": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Folder"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getCustomFields": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second",
+                "operationId": "2bc43834222da265c4c41fbd129d1392",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Custom Field"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getOtnTopics": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second",
+                "operationId": "b62d72c6502f4f7f687558c2f7a4c2c3",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Otn Topic"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/getBotFields": {
+            "get": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 100 queries per second",
+                "operationId": "dbb46d786cc1323d56b27ff7de7bcc3f",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Bot Field"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/createBotField": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "388714b65c83021aa8b1bb78481fb983",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "My bot name"
+                                    },
+                                    "type": {
+                                        "description": "Value from list: text, number, date, datetime, boolean",
+                                        "type": "string",
+                                        "example": "text"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "This field store my bot name"
+                                    },
+                                    "value": {
+                                        "description": "string, integer or boolean (see method description for setBotField)",
+                                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "field": {
+                                                    "$ref": "#/components/schemas/Bot Field"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/setBotField": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "4032722e43e4b967e07d1b1279942254",
+                "requestBody": {
+                    "description": "Depending on the type of Bot Field you will need to use one of the following type of data for \"field_value\".<br>\n***For example:***<br>\nText: \"text\" (string)<br>\nNumber: 123 or 1.23 (integer or float)<br>\nBoolean: true or false (boolean)<br>\nDate: \"2018-07-18\" (string)<br>\nDate and time: \"2018-07-02T00:00:00+00:00\" (string)<br>\n<br>\nData and time format for this API method is YYYY-MM-DDTHH:MM:SSP.  Where P is user’s timezone. For example May 1st 2018 06:30:24 UTC+3:00 should be formatted as 2018-05-01T06:30:24+03:00",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "field_id",
+                                    "field_value"
+                                ],
+                                "properties": {
+                                    "field_id": {
+                                        "type": "integer"
+                                    },
+                                    "field_value": {
+                                        "description": "string, integer or boolean (see method description)",
+                                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/setBotFieldByName": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "63284ce7970087a42458d5a2c2594c1b",
+                "requestBody": {
+                    "description": "Depending on the type of Bot Field you will need to use one of the following type of data for \"field_value\".<br>\n***For example:***<br>\nText: \"text\" (string)<br>\nNumber: 123 or 1.23 (integer or float)<br>\nBoolean: true or false (boolean)<br>\nDate: \"2018-07-18\" (string)<br>\nDate and time: \"2018-07-02T00:00:00+00:00\" (string)<br>\n<br>\nData and time format for this API method is YYYY-MM-DDTHH:MM:SSP.  Where P is user’s timezone. For example May 1st 2018 06:30:24 UTC+3:00 should be formatted as 2018-05-01T06:30:24+03:00",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "field_name",
+                                    "field_value"
+                                ],
+                                "properties": {
+                                    "field_name": {
+                                        "type": "string"
+                                    },
+                                    "field_value": {
+                                        "description": "string, integer or boolean (see method description)",
+                                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/page/setBotFields": {
+            "post": {
+                "tags": [
+                    "Page"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "327327a53f87fecaeb9f7cd69c0433af",
+                "requestBody": {
+                    "description": "Set multiple bot fields.<br>\nThe number of bot fields is limited to 20 for one request.<br>\nUse **field_id** OR **field_name** to specify the field.<br>\n***For example:***<br>\n<br>\n```\"fields\": [{\"field_id\": 77777777, \"field_value\": 555}, {\"field_name\": \"count\", \"field_value\": 12}]```",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fields"
+                                ],
+                                "properties": {
+                                    "fields": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "field_id": {
+                                                    "type": "integer"
+                                                },
+                                                "field_name": {
+                                                    "type": "string"
+                                                },
+                                                "field_value": {
+                                                    "description": "string, integer or boolean (see method description)",
+                                                    "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/sending/sendContent": {
+            "post": {
+                "tags": [
+                    "Sending"
+                ],
+                "summary": "Send content to subscriber",
+                "description": "***Limit:*** 25 queries per second",
+                "operationId": "b6ae94031676b69a57eb2ad5ea1413f9",
+                "requestBody": {
+                    "description": "Data format: <https://manychat.github.io/dynamic_block_docs/><br>\nSupported message tags: <https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags#supported_tags><br>\nMore about message tags in ManyChat: <https://support.manychat.com/support/solutions/articles/36000195552-message-tags><br>\n<br>\n**Attention! After March 4, 2020 requests without message tag may cause error**",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "data"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "data": {
+                                        "type": "object"
+                                    },
+                                    "message_tag": {
+                                        "type": "string",
+                                        "example": "ACCOUNT_UPDATE"
+                                    },
+                                    "otn_topic_name": {
+                                        "type": "string",
+                                        "example": "Сhannel news"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Possible error codes:<br>\n3011 - Content can’t be sent to subscriber without message tag. Subscriber’s last interaction was over 24h ago.<br>\n3021 - Content can’t be sent to subscriber. The subscriber has no One-Time Notification tokens for the selected topic.<br>\n3031 - Content can’t be sent to subscriber without Notification Reason. Subscriber’s last interaction was more than 24 hours ago.<br>\n304X - Content can’t be sent to subscriber via specific channel.<br>",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error With Code"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/sending/sendContentByUserRef": {
+            "post": {
+                "tags": [
+                    "Sending"
+                ],
+                "summary": "Send content to user ref",
+                "description": "***Limit:*** 25 queries per second",
+                "operationId": "637120a69445b2892f725cbfeaf347ca",
+                "requestBody": {
+                    "description": "Attention! The method doesn't process actions<br>Data format <https://manychat.github.io/dynamic_block_docs/>",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_ref",
+                                    "data"
+                                ],
+                                "properties": {
+                                    "user_ref": {
+                                        "type": "integer"
+                                    },
+                                    "data": {
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/sending/sendFlow": {
+            "post": {
+                "tags": [
+                    "Sending"
+                ],
+                "summary": "Send Automation to subscriber",
+                "description": "***Limit:*** 25 queries per second",
+                "operationId": "28f1abbb07b0d4773b846dbeb3880e3c",
+                "requestBody": {
+                    "description": "Supported message tags: <https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags#supported_tags>",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "flow_ns"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "flow_ns": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/getInfo": {
+            "get": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "ae51a27b65b7ecf39438af38db0f27ba",
+                "parameters": [
+                    {
+                        "name": "subscriber_id",
+                        "in": "query",
+                        "description": "Get subscriber info.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Subscriber"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/findByName": {
+            "get": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second.<br>This API method search subscribers by full name.<br>List is limited by 100 subscribers.",
+                "operationId": "e5c671d1661acff9be0e8bcfdd59f1e8",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Subscriber"
+                                            },
+                                            "maxItems": 100
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/getInfoByUserRef": {
+            "get": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "operationId": "782cc8abe7878dc73026b6bef44f14b2",
+                "parameters": [
+                    {
+                        "name": "user_ref",
+                        "in": "query",
+                        "description": "Ref of subscriber",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Subscriber"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Possible error codes:<br>2011 - User_ref isn't registered<br>2012 - User_ref has not been linked with subscriber_id",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error With Code"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/findByCustomField": {
+            "get": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second.<br>\nThis API method only works with Text and Number types of Custom User Fields.<br>\nResults are sorted by last Custom User Field value update for a specific user.<br>\nList is limited by 100 elements.",
+                "operationId": "9fc380dcb49bb134b9405d4269896f56",
+                "parameters": [
+                    {
+                        "name": "field_id",
+                        "in": "query",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "field_value",
+                        "in": "query",
+                        "description": "",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Subscriber"
+                                            },
+                                            "maxItems": 100
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/findBySystemField": {
+            "get": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 50 queries per second.<br>Set one parameter: Email OR Phone.",
+                "operationId": "ef59064a933ef7464083a39c520a274b",
+                "parameters": [
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "description": "E-Mail (example: test@manychat.com)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "Phone number (example: +15400000000)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Subscriber"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/addTag": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "Add tag to subscriber",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "ee797ad59ec8545bed43add11390b165",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "tag_id"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "tag_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/addTagByName": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "Add tag to subscriber",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "34ad004a12043ccbfee2faf1d290d30f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "tag_name"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "tag_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/removeTag": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "Remove tag from subscriber",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "09f35f7c1e6013311f36e3965dec650c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "tag_id"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "tag_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/removeTagByName": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "Remove tag from subscriber",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "59cef9685d8978968b28376db0123be4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "tag_name"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "tag_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/setCustomField": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "81138a426b0903687848fdf8bdde6aa9",
+                "requestBody": {
+                    "description": "Depending on the type of Custom User Field you will need to use one of the following type of data for \"field_value\".<br>\n***For example:***<br>\nText: \"text\" (string)<br>\nNumber: 123 or 1.23 (integer or float)<br>\nBoolean: true or false (boolean)<br>\nDate: \"2018-07-18\" (string)<br>\nDate and time: \"2018-07-02T00:00:00+00:00\" (string)<br>\n<br>\nData and time format for this API method is YYYY-MM-DDTHH:MM:SSP.  Where P is user’s timezone. For example May 1st 2018 06:30:24 UTC+3:00 should be formatted as 2018-05-01T06:30:24+03:00",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "field_id",
+                                    "field_value"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "field_id": {
+                                        "type": "integer"
+                                    },
+                                    "field_value": {
+                                        "description": "string, integer or boolean (see method description)",
+                                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/setCustomFields": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "4d01076149250e9e47f3b8aa7dc53baa",
+                "requestBody": {
+                    "description": "Set multiple custom fields for a single subscriber.<br>\nThe number of custom fields is limited to 20 for one request.<br>\nUse **field_id** OR **field_name** to specify the field.<br>\n***For example:***<br>\n<br>\n```\"fields\": [{\"field_id\": 77777777, \"field_value\": 555}, {\"field_name\": \"count\", \"field_value\": 12}]```",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "fields"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "fields": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "field_id": {
+                                                    "type": "integer"
+                                                },
+                                                "field_name": {
+                                                    "type": "string"
+                                                },
+                                                "field_value": {
+                                                    "description": "string, integer or boolean (see method description)",
+                                                    "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/setCustomFieldByName": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "adc69e1e87197b5f31c80403a3913468",
+                "requestBody": {
+                    "description": "Depending on the type of Custom User Field you will need to use one of the following type of data for \"field_value\".<br>\n***For example:***<br>\nText: \"text\" (string)<br>\nNumber: 123 or 1.23 (integer or float)<br>\nBoolean: true or false (boolean)<br>\nDate: \"2018-07-18\" (string)<br>\nDate and time: \"2018-07-02T00:00:00+00:00\" (string)<br>\n<br>\nData and time format for this API method is YYYY-MM-DDTHH:MM:SSP.  Where P is user’s timezone. For example May 1st 2018 06:30:24 UTC+3:00 should be formatted as 2018-05-01T06:30:24+03:00",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "field_name",
+                                    "field_value"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "field_name": {
+                                        "description": "not case sensitive",
+                                        "type": "string"
+                                    },
+                                    "field_value": {
+                                        "description": "string, integer or boolean (see method description)",
+                                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T00:00:00+00:00'"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/verifyBySignedRequest": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "b14c21e0143af0449cfc94e58731c5a8",
+                "requestBody": {
+                    "description": "<https://developers.facebook.com/docs/messenger-platform/webview/>",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id",
+                                    "signed_request"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "signed_request": {
+                                        "type": "string",
+                                        "example": "_1SXnOuwXiUrcDRxI1D6Dvr55aiNusDNMxyHb8PQe7Y.eyJhbGdvcml0aG0iOiJIT2FDLVNIQTI1NiIsImNvbW11bml0eV9pZCI6bnVsbCwiaXNzdWVkX2F0IjoxNTU5MjE8NTQxLCJtZXRhZGF0YSI6bnVsbCwicGFnZV9pZCI6MjI4NjkwMDEyNDk2MTgxOSwicHNpZCI6IjIxNzI0OTkwNDI4Njc2MjIiLCJ0aHJlYWRfcGFydGljaXBhbnRfaWRzIjpudWxsLCJ0aHJlYWRfdHlwZSI6IlVTRVJfVE9fUEFHRSIsInRpZCI1IjIxNzI0OTkwNDI4Njc2MjIifQ"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/createSubscriber": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "Create a Unified subscriber",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "f42eb3580f33178fdf9d87f0c778f86e",
+                "requestBody": {
+                    "description": "",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "first_name": {
+                                        "description": "First Name",
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "description": "Last Name",
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "description": "Phone Number is required if Email and Whatsapp Phone properties are empty",
+                                        "type": "string"
+                                    },
+                                    "whatsapp_phone": {
+                                        "description": "Whatsapp Phone Number is required if Email and Phone Number properties are empty",
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "description": "Email is required if Phone Number and Whatsapp Phone properties are empty",
+                                        "type": "string"
+                                    },
+                                    "gender": {
+                                        "description": "Gender",
+                                        "type": "string"
+                                    },
+                                    "has_opt_in_sms": {
+                                        "description": "Has opt-in SMS is required if property Phone Number is not empty",
+                                        "type": "boolean"
+                                    },
+                                    "has_opt_in_email": {
+                                        "description": "Has opt-in Email is required if property Email is not empty",
+                                        "type": "boolean"
+                                    },
+                                    "consent_phrase": {
+                                        "description": "Consent phrase is required if property `has_opt_in_sms` equal true",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Subscriber"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/fb/subscriber/updateSubscriber": {
+            "post": {
+                "tags": [
+                    "Subscriber"
+                ],
+                "summary": "",
+                "description": "***Limit:*** 10 queries per second",
+                "operationId": "3ab84a004f4a5942e7a5368c2b807d19",
+                "requestBody": {
+                    "description": "",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subscriber_id"
+                                ],
+                                "properties": {
+                                    "subscriber_id": {
+                                        "type": "integer"
+                                    },
+                                    "first_name": {
+                                        "description": "First Name",
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "description": "Last Name",
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "description": "Phone Number",
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "description": "Email",
+                                        "type": "string"
+                                    },
+                                    "gender": {
+                                        "description": "Gender",
+                                        "type": "string"
+                                    },
+                                    "has_opt_in_sms": {
+                                        "description": "Has opt-in SMS is required if property Phone Number is not empty",
+                                        "type": "boolean"
+                                    },
+                                    "has_opt_in_email": {
+                                        "description": "Has opt-in Email is required if property Email is not empty",
+                                        "type": "boolean"
+                                    },
+                                    "consent_phrase": {
+                                        "description": "Consent phrase is required if property Has Opt In SMS equal true",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Subscriber"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Response Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Custom Field": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "number",
+                            "date",
+                            "datetime",
+                            "boolean"
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Bot Field": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "number",
+                            "date",
+                            "datetime",
+                            "boolean"
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "description": "string, integer or boolean",
+                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'"
+                    }
+                },
+                "type": "object"
+            },
+            "Page": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "description": "This is Facebook Page ID",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "avatar_link": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "about": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "is_pro": {
+                        "type": "boolean"
+                    },
+                    "timezone": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Subscriber Custom Field": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "number",
+                            "date",
+                            "datetime",
+                            "boolean"
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "description": "string, integer or boolean",
+                        "example": "'string', 123, true, '2018-07-18', '2018-07-02T07:45:00+03:00'"
+                    }
+                },
+                "type": "object"
+            },
+            "Subscriber Ref Field": {
+                "description": "",
+                "properties": {
+                    "user_ref": {
+                        "type": "string",
+                        "example": "-1543835812530302162"
+                    },
+                    "opted_in": {
+                        "description": "datetime in W3C format",
+                        "type": "string",
+                        "example": "2018-12-03T11:17:54+00:00"
+                    }
+                },
+                "type": "object"
+            },
+            "Tag": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Growth Tools": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Flow": {
+                "description": "",
+                "properties": {
+                    "ns": {
+                        "description": "Automation namespace - unique Automation ID",
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "folder_id": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Folder": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "parent_id": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Otn Topic": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Subscriber": {
+                "description": "",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "page_id": {
+                        "description": "This is Facebook Page ID",
+                        "type": "string"
+                    },
+                    "user_refs": {
+                        "description": "array with ref of subscriber; can be empty",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Subscriber Ref Field"
+                        },
+                        "example": "[{ 'user_ref':'-1543835812530302162', 'opted_in':'2018-12-03T11:17:54+00:00' }]"
+                    },
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string"
+                    },
+                    "profile_pic": {
+                        "type": "string"
+                    },
+                    "locale": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "timezone": {
+                        "type": "string"
+                    },
+                    "live_chat_url": {
+                        "type": "string"
+                    },
+                    "last_input_text": {
+                        "type": "string"
+                    },
+                    "optin_phone": {
+                        "type": "boolean"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "optin_email": {
+                        "type": "boolean"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "subscribed": {
+                        "description": "datetime in W3C format",
+                        "type": "string",
+                        "example": "'2018-07-02T00:00:00+02:00'"
+                    },
+                    "last_interaction": {
+                        "description": "datetime in W3C format",
+                        "type": "string",
+                        "example": "'2018-07-02T00:00:00+02:00'",
+                        "nullable": true
+                    },
+                    "last_seen": {
+                        "description": "datetime in W3C format",
+                        "type": "string",
+                        "example": "'2018-07-02T00:00:00+03:00'"
+                    },
+                    "is_followup_enabled": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ig_username": {
+                        "type": "string",
+                        "example": "user_name"
+                    },
+                    "ig_id": {
+                        "type": "integer",
+                        "example": 6384638
+                    },
+                    "whatsapp_phone": {
+                        "type": "string"
+                    },
+                    "optin_whatsapp": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "custom_fields": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Subscriber Custom Field"
+                        }
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Tag"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "Response Success": {
+                "description": "",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "success"
+                    }
+                },
+                "type": "object"
+            },
+            "Response Error": {
+                "description": "",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "error"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "properties": {
+                            "messages": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Response Error Message"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "Response Error Message": {
+                "description": "",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Response Error With Code": {
+                "description": "",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "error"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "Bearer": {
+                "type": "http",
+                "name": "Authorization",
+                "in": "header",
+                "scheme": "bearer"
+            }
+        }
+    }
+}

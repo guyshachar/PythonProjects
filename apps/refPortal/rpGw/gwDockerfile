@@ -1,0 +1,88 @@
+# Multi-arch (arm64 + amd64). Google publishes linux chrome .deb for amd64 only; on arm64 use Playwright's Chromium.
+FROM python:3.13-slim
+#FROM public.ecr.aws/lambda/python:3.13-slim
+VOLUME ["/run/data"]
+VOLUME ["/run/logs"]
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install Playwright and browsers
+RUN pip install playwright
+RUN playwright install
+RUN pip install playwright-stealth
+
+# Install system dependencies for Playwright
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    procps \
+    libxss1 \
+    libnss3 \
+    libnspr4 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libatspi2.0-0 \
+    libgtk-3-0 \
+    libxshmfence1 \
+    && rm -rf /var/lib/apt/lists/*   
+
+# Google Chrome .deb is amd64-only. arm64 images use Playwright's bundled Chromium (no PLAYWRIGHT_BROWSER_CHANNEL=chrome).
+RUN set -eux; \
+    ARCH="$(dpkg --print-architecture)"; \
+    if [ "$ARCH" = "amd64" ]; then \
+      wget -q -O /tmp/google-linux-signing-key.pub https://dl-ssl.google.com/linux/linux_signing_key.pub; \
+      gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-linux-signing-key.pub; \
+      echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list; \
+      apt-get update; \
+      apt-get install -y google-chrome-stable --no-install-recommends; \
+      rm -rf /var/lib/apt/lists/* /tmp/google-linux-signing-key.pub; \
+    else \
+      echo "dpkg arch=${ARCH}: skip google-chrome-stable; use bundled Chromium."; \
+    fi
+
+# Copy the requirements file into the container
+COPY rpGw/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install ics pytz docker 
+
+# Copy the script into the container
+RUN mkdir -p /rpGateway
+RUN mkdir -p /rpApi
+COPY rpGw/*.py rpGw/.
+#COPY rpService/fonts/ rpService/fonts/
+COPY rpApi/*.py rpApi/.
+
+# Copy shared root files and subfolders
+COPY shared/*.py shared/.
+COPY shared/db/ shared/db/
+COPY shared/messaging/ shared/messaging/
+COPY shared/orgRelated/ shared/orgRelated/
+COPY shared/fonts/ shared/fonts/
+
+# Define entrypoint to start Tailscale and your app
+# Start Tailscale and your Python script
+ENV BUILD_DATE=202508220141
+ENV logLevel=INFO
+ENV fileVersion=v5
+ENV loadInterval=30000
+ENV loadUrl=https://ref.football.org.il/login
+ENV loadUrl2=https://www.google.com/
+ENV refPortalSM=refPortal/referees2
+ENV useTwilio=False
+ENV alwaysClosePage=False
+ENV mqttPublish=True
+ENV concurrentPages=4
+
+# Command to run the script
+CMD ["python", "rpGw/refPortalGatewayDI.py"]

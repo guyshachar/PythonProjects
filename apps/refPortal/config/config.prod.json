@@ -1,0 +1,111 @@
+{
+    "env": {
+        "app_env": "prod",
+        "redisDb": "8",
+        "cacheRedisHost": "localhost",
+        "cacheRedisPort": "2000"
+    },
+    "cronjobs": {
+        "refresh_leagues_tables": {
+            "enabled": false
+        },
+        "refresh_tournament_games": {
+            "enabled": false,
+            "runOnStartup": true,
+            "tenantKeys": ["IL#football#2025-26"],
+            "tournamentName1": "גביע ילדים א' ע\"ש דוד שוויצר ז\"ל",
+            "tournamentTypes": ["league1", "cup"],
+            "fromFixture": 1,
+            "fixture1": 1,
+            "fetchGamesUrls": true,
+            "fetchGamesDetails": true,
+            "fetchReferees": true
+        },
+        "refresh_tournament_games#2": {
+            "enabled": false ,
+            "runOnStartup": true,
+            "tenantKeys": ["IL#football#2025-26"],
+            "tournamentName1": "ליגת נערים א' ארצית דרום",
+            "instance1": null,
+            "tournamentTypes": ["league", "cup"],
+            "fromFixture": 0,
+            "fixture1": 1,
+            "fetchGamesUrls": true,
+            "fetchGamesDetails": true,
+            "fetchReferees": true
+        },
+        "refresh_tournament_games#3": {
+            "enabled": false,
+            "runOnStartup": true,
+            "tenantKeys": ["IL#football#2025-26"],
+            "tournamentName1": "ליגת נערים א' ארצית דרום",
+            "tournamentTypes": ["league", "cup"],
+            "fromFixture": 0,
+            "fixture1": 1,
+            "fetchGamesUrls": true,
+            "fetchGamesDetails": true,
+            "fetchReferees": true
+        },
+        "start_referee_processing": {
+            "enabled": true,
+            "intervalMinutes": 10,
+            "tenantKeys1": ["IL#football#2025-26"],
+            "tenantKeys": ["IL#handball#2025-26"],
+            "mobileNos1": ["+972522899253", "+9725466055511"],
+            "mobileNos": ["+972506440002"]
+        },
+        "api_health_check": {
+            "enabled": false
+        }
+    },
+    "cronjobs2": {
+        "refresh_leagues_tables": {
+            "enabled": true
+        },
+        "refresh_tournament_games": {
+            "enabled": false,
+            "runOnStartup": true,
+            "tenantKeys": ["IL#football#2025-26"],
+            "tournamentName1": "גביע ילדים א' ע\"ש דוד שוויצר ז\"ל",
+            "tournamentTypes": ["league1", "cup"],
+            "fromFixture": 1,
+            "fixture1": 1,
+            "fetchGamesUrls": true,
+            "fetchGamesDetails": true,
+            "fetchReferees": true
+        },
+        "refresh_tournament_games#2": {
+            "enabled": true ,
+            "runOnStartup": true,
+            "tenantKeys": ["IL#football#2025-26"],
+            "tournamentName1": "ליגת נערים א' ארצית דרום",
+            "instance1": null,
+            "tournamentTypes": ["league", "cup"],
+            "fromFixture": 0,
+            "fixture1": 1,
+            "fetchGamesUrls": true,
+            "fetchGamesDetails": true,
+            "fetchReferees": true
+        },
+        "refresh_tournament_games#3": {
+            "enabled": true,
+            "runOnStartup": true,
+            "tenantKeys": ["IL#football#2025-26"],
+            "tournamentName1": "ליגת נערים א' ארצית דרום",
+            "tournamentTypes": ["league", "cup"],
+            "fromFixture": 0,
+            "fixture1": 1,
+            "fetchGamesUrls": true,
+            "fetchGamesDetails": true,
+            "fetchReferees": true
+        },
+        "start_referee_processing": {
+            "enabled": false,
+            "tenantKeys": ["IL#handball#2025-26"],
+            "mobileNos": ["+972522899253", "+9725466055511"]
+        },
+        "api_health_check": {
+            "enabled": false
+        }
+    }
+}

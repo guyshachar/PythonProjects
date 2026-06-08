@@ -1,7 +1,9 @@
 import logging
-from Shared.httpgetloop import HttpGetLoop
-from Shared.logger import Logger
-from TzevaAdom.validatenotifications import ValidateNotifications
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from shared.httpgetloop import HttpGetLoop
+from shared.logger import Logger
+from validatenotifications import ValidateNotifications
 from functools import reduce
 import signal
 import sys
@@ -9,7 +11,7 @@ import datetime
 import json
 from threading import Event, Thread
 import asyncio
-import Shared.convert as convert
+import shared.convert as convert
 #from  Shared.mqttClient import MqttClient
 
 class TzevaAdomApp(hass.Hass):

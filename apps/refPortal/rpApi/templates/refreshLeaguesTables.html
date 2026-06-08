@@ -6,9 +6,9 @@
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
     <title>עדכון טבלאות</title>
 </head>
-<body r>
+<body>
     <h1>הכנס פרטים</h1>
-    <form action="/refreshLeaguesTables" method="POST">
+    <form action="/api/refreshLeaguesTables" method="POST">
         <label for="leagueName">שם ליגה:</label>
         <input type="text" id="leagueName" name="leagueName"><br><br>
 

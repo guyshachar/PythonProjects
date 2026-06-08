@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RefereeX — RefPortal לשופטים; RefAlert להתראות בזמן אמת לכלל האזרחים.">
+    <link rel="icon" href="/images/favicon.png" type="image/png">
+    <title>RefereeX — RefPortal ו־RefAlert</title>
+    <style>
+        :root {
+            --bg: #f4f4f9;
+            --text: #1a1a1a;
+            --muted: #5c5c5c;
+            --card: #fff;
+            --portal: #2e7d32;
+            --portal-light: #e8f5e9;
+            --alert: #c62828;
+            --alert-light: #ffebee;
+            --header-bg: #263238;
+            --footer-bg: #333;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, "Segoe UI", sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0 0 100px;
+            background: var(--bg);
+            color: var(--text);
+        }
+        header {
+            background: var(--header-bg);
+            color: #fff;
+            padding: 28px 20px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+        header .tagline {
+            margin: 0;
+            opacity: 0.92;
+            font-size: 0.98rem;
+        }
+        .app-card .card-logo {
+            height: 48px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            display: block;
+            margin: 0 0 12px;
+        }
+        .intro {
+            max-width: 900px;
+            margin: 24px auto;
+            padding: 0 20px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .apps-grid {
+            max-width: 960px;
+            margin: 8px auto 28px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+        @media (max-width: 760px) {
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .app-card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .app-card header.card-head {
+            padding: 20px 22px 16px;
+            text-align: right;
+        }
+        .app-card.portal .card-head {
+            background: var(--portal-light);
+            border-bottom: 3px solid var(--portal);
+        }
+        .app-card.alert-app .card-head {
+            background: var(--alert-light);
+            border-bottom: 3px solid var(--alert);
+        }
+        .app-card h2 {
+            margin: 0 0 6px;
+            font-size: 1.35rem;
+            color: var(--text);
+        }
+        .app-card .subtitle {
+            margin: 0;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+        .app-card .body {
+            padding: 20px 22px 24px;
+            flex: 1;
+        }
+        .app-card ul {
+            margin: 0 0 20px;
+            padding-right: 1.2rem;
+        }
+        .app-card li {
+            margin-bottom: 8px;
+        }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: auto;
+        }
+        .btn {
+            display: inline-block;
+            padding: 11px 18px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            transition: filter 0.2s ease, transform 0.15s ease;
+        }
+        .btn:hover {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+        }
+        .btn-portal {
+            background: var(--portal);
+            color: #fff;
+        }
+        .btn-portal-secondary {
+            background: #fff;
+            color: var(--portal);
+            border: 2px solid var(--portal);
+        }
+        .btn-alert {
+            background: var(--alert);
+            color: #fff;
+        }
+        .note {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-top: 14px;
+            line-height: 1.5;
+        }
+        .contact-strip {
+            max-width: 560px;
+            margin: 32px auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+        .contact-strip a {
+            color: var(--portal);
+            font-weight: 700;
+        }
+        .cta-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .cta-row a {
+            display: inline-block;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+        .cta-mail {
+            background: var(--portal);
+            color: #fff;
+        }
+        .cta-wa {
+            background: #25d366;
+            color: #fff;
+        }
+        .cta-mail:hover, .cta-wa:hover {
+            filter: brightness(1.08);
+        }
+        footer {
+            background: var(--footer-bg);
+            color: #e0e0e0;
+            text-align: center;
+            padding: 18px 16px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            font-size: 0.85rem;
+        }
+        footer a {
+            color: #90caf9;
+        }
+        .audience-emphasis {
+            margin: 0 0 16px;
+            padding: 12px 14px;
+            background: rgba(198, 40, 40, 0.08);
+            border-radius: 8px;
+            border-right: 4px solid var(--alert);
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+        .audience-emphasis strong {
+            color: var(--alert);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>RefereeX</h1>
+        <p class="tagline">RefPortal לקהילת השופטים · RefAlert לכלל האזרחים — התראות ועדכונים בזמן אמת</p>
+    </header>
+
+    <p class="intro">
+        כאן תמצאו את שני המוצרים המרכזיים של <strong>גיא שחר פתרונות תוכנה יצירתיים</strong> תחת מתחם RefereeX:
+        <strong>RefPortal</strong> מיועד לשופטים ולניהול משימות שיפוט; <strong>RefAlert</strong> מיועד
+        <strong>לכלל האזרחים</strong> ומספק התראות ציבוריות בזמן אמת.
+    </p>
+
+    <div class="apps-grid">
+        <article class="app-card portal">
+            <header class="card-head">
+                <img class="card-logo" src="/images/RefereeX.png" width="160" height="48" alt="RefereeX — refereex.com">
+                <h2>RefPortal</h2>
+                <p class="subtitle">פורטל ושירות הודעות לשופט</p>
+            </header>
+            <div class="body">
+                <ul>
+                    <li>תזכורות והתראות לשופטי כדורגל — ממשק ו־PWA נוחים לנייד.</li>
+                    <li>מעקב אחר משחקים, עדכונים ושירותי הודעות המשולבים במערכת.</li>
+                    <li>המשך אל אפליקציית הפורטל או לעמוד הקברן של השירות.</li>
+                </ul>
+                <div class="actions">
+                    <a class="btn btn-portal" href="https://pwa.refereex.com">כניסה ל־RefPortal (PWA)</a>
+                    <a class="btn btn-portal-secondary" href="/welcome.html">עמוד פתיחה — שירות לשופט</a>
+                </div>
+                <p class="note">הקישורים מובילים לאותו מתחם (refereex.com) בהתאם להגדרות השרת שלכם.</p>
+            </div>
+        </article>
+
+        <article class="app-card alert-app">
+            <header class="card-head">
+                <img class="card-logo" src="/images/RefAlert_transparent.png" width="160" height="48" alt="RefAlert">
+                <h2>RefAlert</h2>
+                <p class="subtitle">התראות בזמן אמת לכלל האזרחים</p>
+            </header>
+            <div class="body">
+                <p class="audience-emphasis">RefAlert מיועד ל<strong>כלל האזרחים</strong> — מידע דחוף, התראות ומיקום על גבי מפה בזמן אמת.</p>
+                <ul>
+                    <li>שירות התראות ציבורי — פתוח ונגיש לכל אזרח.</li>
+                    <li>ממשק מפה להצגת אירועים ומידע דחוף בצורה ברורה.</li>
+                    <li>סביבת ייצור: <strong>refalert.refereex.com</strong>; סביבות בדיקה לפי הצורך.</li>
+                </ul>
+                <div class="actions">
+                    <a class="btn btn-alert" href="https://refalert.refereex.com" target="_blank" rel="noopener noreferrer">פתיחת RefAlert</a>
+                </div>
+                <p class="note">לפריסה בדומיין אחר או סביבת בדיקות, עדכנו את כתובת ה־URL בהתאם להקמה שלכם.</p>
+            </div>
+        </article>
+    </div>
+
+    <div class="contact-strip">
+        <p>יצירת קשר: <a href="mailto:guy@refereex.com">guy@refereex.com</a></p>
+        <div class="cta-row">
+            <a class="cta-mail" href="mailto:guy@refereex.com">צור קשר במייל</a>
+            <a class="cta-wa" href="https://wa.me/+972533932474?text=%D7%A9%D7%9C%D7%95%D7%9D%20%D7%92%D7%99%D7%90%20%D7%A9%D7%97%D7%A8%2C%20%D7%9E%D7%A2%D7%95%D7%A0%D7%99%D7%99%D7%9F%20%D7%9C%D7%A7%D7%91%D7%9C%20%D7%A4%D7%A8%D7%98%D7%99%D7%9D%20%D7%A0%D7%95%D7%A1%D7%A4%D7%99%D7%9D%20%D7%A2%D7%9C%20RefPortal%20%D7%95%20RefAlert" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 גיא שחר · RefereeX · <a href="/privacy-policy.html">מדיניות פרטיות</a></p>
+    </footer>
+</body>
+</html>

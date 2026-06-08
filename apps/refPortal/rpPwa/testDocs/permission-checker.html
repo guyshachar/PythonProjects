@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geolocation Permission Checker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .status-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+        
+        .status-granted {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+        
+        .status-denied {
+            background: rgba(244, 67, 54, 0.3);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+        
+        .status-prompt {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+        
+        .status-prompt::after {
+            content: " (Click 'Request Permission' to prompt)";
+            font-size: 0.8em;
+            font-weight: normal;
+        }
+        
+        .status-unknown {
+            background: rgba(158, 158, 158, 0.3);
+            color: #9e9e9e;
+            border: 1px solid #9e9e9e;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #ffc107;
+        }
+        
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .browser-specific {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .browser-specific h4 {
+            margin-top: 0;
+            color: #81d4fa;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .log-info {
+            background: rgba(33, 150, 243, 0.2);
+            color: #81d4fa;
+        }
+        
+        .log-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #c8e6c9;
+        }
+        
+        .log-error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ffcdd2;
+        }
+        
+        .log-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #fff176;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Geolocation Permission Checker</h1>
+        
+        <div class="status-card">
+            <div class="status-item">
+                <span class="status-label">Geolocation Support</span>
+                <span class="status-value" id="geolocationSupport">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Permission Status</span>
+                <span class="status-value" id="permissionStatus">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Current Position</span>
+                <span class="status-value" id="currentPosition">Not available</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Accuracy</span>
+                <span class="status-value" id="accuracy">N/A</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn btn-primary" onclick="requestPermission()">Request Permission</button>
+            <button class="btn btn-secondary" onclick="checkPermission()">Check Status</button>
+            <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 How to Grant Permission</h3>
+            <ol>
+                <li><strong>Click "Request Permission"</strong> above</li>
+                <li><strong>Look for the browser prompt</strong> that appears</li>
+                <li><strong>Click "Allow"</strong> in the prompt</li>
+                <li><strong>Refresh the page</strong> if needed</li>
+            </ol>
+            
+            <div class="browser-specific">
+                <h4>🌐 Browser-Specific Instructions</h4>
+                <p><strong>Chrome/Edge:</strong> Click the lock icon (🔒) in the address bar → Allow location access</p>
+                <p><strong>Firefox:</strong> Click the shield icon (🛡️) in the address bar → Allow location access</p>
+                <p><strong>Safari:</strong> Safari → Preferences → Websites → Location → Allow</p>
+                <p><strong>Mobile:</strong> Settings → Privacy → Location Services → Safari/Chrome → Allow</p>
+            </div>
+        </div>
+        
+        <div class="log-container" id="logContainer">
+            <div class="log-entry log-info">Ready to check geolocation permission...</div>
+        </div>
+    </div>
+
+    <script>
+        let permissionStatus = 'unknown';
+        
+        // Check geolocation support
+        function checkGeolocationSupport() {
+            const support = navigator.geolocation ? 'Supported' : 'Not Supported';
+            document.getElementById('geolocationSupport').textContent = support;
+            document.getElementById('geolocationSupport').className = 'status-value ' + (navigator.geolocation ? 'status-granted' : 'status-denied');
+            
+            if (!navigator.geolocation) {
+                addLog('❌ Geolocation is not supported by this browser', 'error');
+            } else {
+                addLog('✅ Geolocation is supported by this browser', 'success');
+            }
+        }
+        
+        // Check permission status
+        async function checkPermission() {
+            addLog('🔍 Checking geolocation permission...', 'info');
+            
+            if (!navigator.geolocation) {
+                addLog('❌ Geolocation not supported', 'error');
+                return;
+            }
+            
+            if (navigator.permissions) {
+                try {
+                    const permission = await navigator.permissions.query({ name: 'geolocation' });
+                    permissionStatus = permission.state;
+                    updatePermissionDisplay();
+                    addLog(`📊 Permission status: ${permissionStatus}`, 'info');
+                    
+                    // Listen for permission changes
+                    permission.onchange = () => {
+                        permissionStatus = permission.state;
+                        updatePermissionDisplay();
+                        addLog(`🔄 Permission changed to: ${permissionStatus}`, 'info');
+                    };
+                } catch (error) {
+                    addLog(`❌ Error checking permission: ${error.message}`, 'error');
+                    permissionStatus = 'unknown';
+                    updatePermissionDisplay();
+                }
+            } else {
+                addLog('⚠️ Permissions API not supported, trying direct access...', 'warning');
+                requestPermission();
+            }
+        }
+        
+        // Request permission by trying to get location
+        function requestPermission() {
+            addLog('🚀 Requesting geolocation permission...', 'info');
+            
+            if (!navigator.geolocation) {
+                addLog('❌ Geolocation not supported', 'error');
+                return;
+            }
+            
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    permissionStatus = 'granted';
+                    updatePermissionDisplay();
+                    updatePositionDisplay(position);
+                    addLog('✅ Permission granted! Location accessed successfully', 'success');
+                },
+                (error) => {
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            permissionStatus = 'denied';
+                            addLog('❌ Permission denied by user', 'error');
+                            addLog('💡 Try clicking the lock icon (🔒) in your browser\'s address bar', 'warning');
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            permissionStatus = 'prompt'; // Keep as prompt, not denied
+                            addLog('❌ Position unavailable (GPS off?)', 'error');
+                            addLog('💡 Check if GPS/Location Services are enabled on your device', 'warning');
+                            break;
+                        case error.TIMEOUT:
+                            permissionStatus = 'prompt'; // Keep as prompt, not denied
+                            addLog('⏰ Request timeout', 'error');
+                            addLog('💡 Try again in a few seconds', 'warning');
+                            break;
+                        default:
+                            permissionStatus = 'prompt'; // Keep as prompt, not denied
+                            addLog(`❌ Unknown error: ${error.message}`, 'error');
+                            break;
+                    }
+                    updatePermissionDisplay();
+                },
+                options
+            );
+        }
+        
+        // Update permission display
+        function updatePermissionDisplay() {
+            const statusElement = document.getElementById('permissionStatus');
+            statusElement.textContent = permissionStatus;
+            statusElement.className = 'status-value status-' + permissionStatus;
+        }
+        
+        // Update position display
+        function updatePositionDisplay(position) {
+            const latitude = position.coords.latitude.toFixed(6);
+            const longitude = position.coords.longitude.toFixed(6);
+            const acc = position.coords.accuracy.toFixed(0);
+            
+            document.getElementById('currentPosition').textContent = `${latitude}, ${longitude}`;
+            document.getElementById('accuracy').textContent = `${acc}m`;
+        }
+        
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Clear log
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('📝 Log cleared', 'info');
+        }
+        
+        // Initialize
+        checkGeolocationSupport();
+        checkPermission();
+        addLog('🎯 Permission checker loaded', 'success');
+    </script>
+</body>
+</html>

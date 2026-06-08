@@ -1,0 +1,17 @@
+twilio
+bs4
+html2text
+boto3
+firebase_admin
+paho-mqtt
+colorama
+watchdog
+descope
+redis
+dependency-injector
+whatsapp_api_client_python
+ics
+pytz
+watchtower
+schedule
+pillow

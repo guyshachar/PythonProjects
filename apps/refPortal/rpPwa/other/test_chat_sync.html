@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת סנכרון צ'אט - RefereeX</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+        
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        
+        .test-section h3 {
+            color: #1e293b;
+            margin-top: 0;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 0.5rem;
+        }
+        
+        .test-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .test-btn {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .test-btn.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .test-btn.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .test-btn.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .status-display {
+            background: #1e293b;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .chat-demo {
+            background: #f1f5f9;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .chat-input button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .chat-messages {
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .message {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .message.system {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .message.sent {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .message.received {
+            border-left-color: #8b5cf6;
+            background: #faf5ff;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        .sync-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+        
+        .sync-status.show {
+            display: block;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .instructions {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .instructions h3 {
+            color: #92400e;
+            margin-top: 0;
+        }
+        
+        .instructions ol {
+            color: #78350f;
+            line-height: 1.6;
+        }
+        
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 בדיקת סנכרון צ'אט</h1>
+        
+        <div class="instructions">
+            <h3>📋 הוראות בדיקה:</h3>
+            <ol>
+                <li><strong>פתח את הדף הזה בשני דפדפנים שונים</strong> (או במחשב ובטלפון)</li>
+                <li><strong>התחבר עם אותו מספר טלפון</strong> בשני המכשירים</li>
+                <li><strong>שלח הודעה</strong> באחד המכשירים</li>
+                <li><strong>בדוק שההודעה מופיעה</strong> במכשיר השני</li>
+                <li><strong>חזור על התהליך</strong> בכיוון ההפוך</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 בדיקות מערכת</h3>
+            <div class="test-buttons">
+                <button class="test-btn" onclick="testClientIdentifier()">בדוק מזהה לקוח</button>
+                <button class="test-btn" onclick="testChatSync()">בדוק סנכרון צ'אט</button>
+                <button class="test-btn" onclick="testOnlineStatus()">בדוק מצב רשת</button>
+                <button class="test-btn" onclick="clearTestData()">נקה נתוני בדיקה</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>💬 הדגמת צ'אט</h3>
+            <div class="chat-demo">
+                <div class="chat-input">
+                    <input type="text" id="testMessageInput" placeholder="הקלד הודעת בדיקה...">
+                    <button onclick="sendTestMessage()">שלח</button>
+                </div>
+                <div class="chat-messages" id="testChatMessages">
+                    <div class="message system">
+                        <div>ברוכים הבאים לבדיקת סנכרון הצ'אט!</div>
+                        <div class="message-time">עכשיו</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 סטטוס מערכת</h3>
+            <div class="status-display" id="statusDisplay">
+                טוען מידע...
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sync Status Indicator -->
+    <div id="syncStatus" class="sync-status">
+        <span id="syncStatusText">סנכרון צ'אט</span>
+    </div>
+    
+    <script>
+        // Test Chat Sync Demo
+        class TestChatSync {
+            constructor() {
+                this.messages = [];
+                this.clientIdentifier = null;
+                this.isOnline = navigator.onLine;
+                this.syncInterval = null;
+                this.init();
+            }
+            
+            async init() {
+                console.log('🧪 Initializing Test Chat Sync...');
+                
+                // Generate client identifier
+                this.clientIdentifier = this.generateTestClientId();
+                
+                // Setup online/offline handling
+                this.setupOnlineStatusHandling();
+                
+                // Start sync
+                this.startSync();
+                
+                // Update status
+                this.updateStatus();
+                
+                console.log('✅ Test Chat Sync initialized');
+            }
+            
+            generateTestClientId() {
+                // Generate a test client ID based on timestamp and random number
+                const timestamp = Date.now();
+                const random = Math.floor(Math.random() * 10000);
+                return `test_${timestamp}_${random}`;
+            }
+            
+            setupOnlineStatusHandling() {
+                window.addEventListener('online', () => {
+                    this.isOnline = true;
+                    console.log('🌐 Device is online');
+                    this.startSync();
+                    this.updateStatus();
+                });
+                
+                window.addEventListener('offline', () => {
+                    this.isOnline = false;
+                    console.log('📴 Device is offline');
+                    this.stopSync();
+                    this.updateStatus();
+                });
+            }
+            
+            startSync() {
+                if (this.syncInterval) {
+                    clearInterval(this.syncInterval);
+                }
+                
+                // Sync every 3 seconds when online
+                this.syncInterval = setInterval(() => {
+                    if (this.isOnline) {
+                        this.syncMessages();
+                    }
+                }, 3000);
+                
+                console.log('🔄 Chat sync started');
+            }
+            
+            stopSync() {
+                if (this.syncInterval) {
+                    clearInterval(this.syncInterval);
+                    this.syncInterval = null;
+                }
+                console.log('⏹️ Chat sync stopped');
+            }
+            
+            async syncMessages() {
+                try {
+                    // Simulate API call
+                    const response = await fetch(`/api/chat/messages?clientIdentifier=${this.clientIdentifier}&lastMessageId=${this.getLastMessageId()}`);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.messages && data.messages.length > 0) {
+                            console.log('📥 Received new messages:', data.messages.length);
+                            this.addMessages(data.messages);
+                        }
+                    }
+                } catch (error) {
+                    console.log('📡 Sync failed (expected in demo):', error.message);
+                }
+            }
+            
+            addMessage(type, text) {
+                const message = {
+                    id: Date.now(),
+                    type: type,
+                    text: text,
+                    timestamp: new Date().toLocaleTimeString('he-IL')
+                };
+                
+                this.messages.push(message);
+                this.displayMessages();
+                this.showSyncStatus('הודעה נשלחה', 'success');
+                
+                // Simulate sync to server
+                if (this.isOnline) {
+                    this.simulateServerSync(message);
+                }
+            }
+            
+            addMessages(newMessages) {
+                newMessages.forEach(msg => {
+                    if (!this.messages.some(existing => existing.id === msg.id)) {
+                        this.messages.push(msg);
+                    }
+                });
+                
+                this.displayMessages();
+                this.showSyncStatus(`${newMessages.length} הודעות חדשות התקבלו`, 'success');
+            }
+            
+            displayMessages() {
+                const container = document.getElementById('testChatMessages');
+                if (!container) return;
+                
+                const messagesHTML = this.messages.map(msg => `
+                    <div class="message ${msg.type}">
+                        <div>${msg.text}</div>
+                        <div class="message-time">${msg.timestamp}</div>
+                    </div>
+                `).join('');
+                
+                container.innerHTML = messagesHTML;
+                container.scrollTop = container.scrollHeight;
+            }
+            
+            getLastMessageId() {
+                if (this.messages.length === 0) return 0;
+                return Math.max(...this.messages.map(msg => msg.id));
+            }
+            
+            simulateServerSync(message) {
+                // Simulate sending message to server
+                setTimeout(() => {
+                    console.log('📤 Message synced to server:', message.text);
+                }, 500);
+            }
+            
+            showSyncStatus(message, type = 'info') {
+                const statusElement = document.getElementById('syncStatus');
+                const statusText = document.getElementById('syncStatusText');
+                
+                if (statusElement && statusText) {
+                    statusText.textContent = message;
+                    statusElement.classList.add('show');
+                    
+                    setTimeout(() => {
+                        statusElement.classList.remove('show');
+                    }, 3000);
+                }
+            }
+            
+            updateStatus() {
+                const statusDisplay = document.getElementById('statusDisplay');
+                if (!statusDisplay) return;
+                
+                const status = {
+                    clientIdentifier: this.clientIdentifier,
+                    isOnline: this.isOnline,
+                    totalMessages: this.messages.length,
+                    lastMessageId: this.getLastMessageId(),
+                    syncActive: !!this.syncInterval,
+                    timestamp: new Date().toLocaleString('he-IL')
+                };
+                
+                statusDisplay.textContent = JSON.stringify(status, null, 2);
+            }
+        }
+        
+        // Initialize test chat sync
+        const testChatSync = new TestChatSync();
+        
+        // Test functions
+        function testClientIdentifier() {
+            alert(`מזהה לקוח: ${testChatSync.clientIdentifier}`);
+        }
+        
+        function testChatSync() {
+            testChatSync.syncMessages();
+            alert('בדיקת סנכרון הושלמה - בדוק את הקונסול');
+        }
+        
+        function testOnlineStatus() {
+            alert(`מצב רשת: ${testChatSync.isOnline ? 'מחובר' : 'מנותק'}`);
+        }
+        
+        function clearTestData() {
+            testChatSync.messages = [];
+            testChatSync.displayMessages();
+            testChatSync.updateStatus();
+            alert('נתוני הבדיקה נוקו');
+        }
+        
+        function sendTestMessage() {
+            const input = document.getElementById('testMessageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                testChatSync.addMessage('sent', message);
+                input.value = '';
+                
+                // Simulate response after 1 second
+                setTimeout(() => {
+                    testChatSync.addMessage('received', `תגובה אוטומטית ל: ${message}`);
+                }, 1000);
+            }
+        }
+        
+        // Update status every 5 seconds
+        setInterval(() => {
+            testChatSync.updateStatus();
+        }, 5000);
+        
+        // Handle Enter key in chat input
+        document.getElementById('testMessageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendTestMessage();
+            }
+        });
+    </script>
+</body>
+</html>
