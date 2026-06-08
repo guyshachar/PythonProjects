@@ -24,6 +24,7 @@ from app.clients.waha_client import WahaClient
 from app.core.config import get_settings
 from app.middleware.correlation import CorrelationIdMiddleware, RequestIdFilter
 from app.routers import admin, messages, webhooks
+from app.routers.monitor_ui import router as monitor_router
 from app.services.crm_forwarder import CrmForwarder
 from app.services.redis_client import RedisClient
 from app.services.router_service import MessageRouter
@@ -117,6 +118,7 @@ def create_app() -> FastAPI:
     app.include_router(webhooks.router)
     app.include_router(messages.router)
     app.include_router(admin.router)
+    app.include_router(monitor_router)
 
     @app.get("/health", tags=["ops"])
     async def health() -> dict:

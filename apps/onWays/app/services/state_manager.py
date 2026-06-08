@@ -121,6 +121,26 @@ class StateManager:
         expires_at = datetime.fromisoformat(expires_at_str)
         return datetime.now(tz=timezone.utc) >= expires_at
 
+    async def list_all_sessions(self) -> list[dict]:
+        """
+        Return state data for every known session found in Redis.
+
+        Falls back to [default/NORMAL] if no keys exist yet (fresh install).
+        """
+        keys = await self._redis.scan_keys(f"{_KEY_PREFIX}*")
+        sessions = []
+        for key in sorted(keys):
+            session_id = key[len(_KEY_PREFIX):]
+            data = await self.get_state_data(session_id)
+            data["session_id"] = session_id
+            sessions.append(data)
+        if not sessions:
+            sessions.append({
+                "session_id": "default",
+                "state": ChannelState.NORMAL.value,
+            })
+        return sessions
+
     # -----------------------------------------------------------------------
     # Private
     # -----------------------------------------------------------------------

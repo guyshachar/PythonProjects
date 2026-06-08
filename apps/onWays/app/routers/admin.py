@@ -29,6 +29,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
+from app.core.config import get_settings
 from app.core.security import require_api_key
 from app.services.state_manager import ChannelState, StateManager
 
@@ -149,6 +150,35 @@ async def get_dead_letter(
 ) -> dict:
     entries = await crm_forwarder.get_dead_letter_entries(limit=limit)
     return {"count": len(entries), "entries": entries}
+
+
+@router.get(
+    "/monitor",
+    summary="Live monitor – all sessions, numbers, and states",
+)
+async def get_monitor(
+    request: Request,
+    state_manager: StateManager = Depends(get_state_manager),
+) -> dict:
+    """
+    Returns every known session with its routing state, the configured
+    sending numbers, and a count of customers in an active Meta conversation
+    window (messaged us within the last 24 h).
+    """
+    settings = get_settings()
+    sessions = await state_manager.list_all_sessions()
+    active_conversations = await request.app.state.redis.count_keys("meta:conv_window:*")
+
+    for s in sessions:
+        s["meta_number"] = settings.meta_phone_number_id or "not configured"
+        s["waha_session"] = s["session_id"]   # WAHA session name == session_id
+
+    return {
+        "total_sessions": len(sessions),
+        "total_banned": sum(1 for s in sessions if s.get("state") == ChannelState.BANNED.value),
+        "active_conversations": active_conversations,
+        "sessions": sessions,
+    }
 
 
 @router.get(

@@ -46,5 +46,20 @@ class RedisClient:
         # was_set is None  → key already existed      → IS  a duplicate
         return was_set is None
 
+    async def scan_keys(self, pattern: str) -> list[str]:
+        """Return all keys matching *pattern* (uses SCAN, safe for production)."""
+        keys: list[str] = []
+        cursor = 0
+        while True:
+            cursor, batch = await self._client.scan(cursor, match=pattern, count=100)
+            keys.extend(batch)
+            if cursor == 0:
+                break
+        return keys
+
+    async def count_keys(self, pattern: str) -> int:
+        """Return the number of keys matching *pattern*."""
+        return len(await self.scan_keys(pattern))
+
     async def close(self) -> None:
         await self._client.aclose()
