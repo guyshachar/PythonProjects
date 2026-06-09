@@ -46,7 +46,7 @@ log = logging.getLogger(__name__)
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-OUTPUT_FILE = Path("unified_highlights.mp4")
+RUNS_DIR    = Path("runs")
 TITLE_SECS  = 2        # title card duration in seconds
 VWIDTH      = 1920
 VHEIGHT     = 1080
@@ -562,8 +562,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds to append after the timecode point/end (default: 5)",
     )
     p.add_argument(
-        "--output", type=Path, default=OUTPUT_FILE,
-        help=f"Output file path (default: {OUTPUT_FILE})",
+        "--output", type=Path, default=None,
+        help="Override output file path (default: runs/<csv>_<run_id>/highlights_<csv>_<run_id>.mp4)",
     )
     p.add_argument(
         "--upload-gdrive", action="store_true",
@@ -608,8 +608,18 @@ def main() -> None:
         "Starting: %d clip(s), pad_before=%.1fs, pad_after=%.1fs",
         len(specs), args.pad_before, args.pad_after,
     )
-    temp_dir = Path("temp_clips") / datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_dir.mkdir(parents=True, exist_ok=True)
+    run_id   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_stem = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
+    run_dir  = RUNS_DIR / f"{csv_stem}_{run_id}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy input CSV into the run folder for reproducibility
+    shutil.copy2(args.csv_file, run_dir / args.csv_file.name)
+
+    temp_dir = run_dir / "temp"
+    temp_dir.mkdir(exist_ok=True)
+
+    output = args.output or run_dir / f"highlights_{csv_stem}_{run_id}.mp4"
 
     segments: list[Path] = []
     # Cache: url -> downloaded full-video Path (or None if download failed)
@@ -674,15 +684,15 @@ def main() -> None:
             sys.exit(1)
 
         log.info("Concatenating %d segment(s)...", len(segments))
-        if not concatenate_clips(segments, args.output):
+        if not concatenate_clips(segments, output):
             log.error("Concatenation failed.")
             sys.exit(1)
 
-        size_mb = args.output.stat().st_size / 1e6
-        log.info("Output: %s  (%.1f MB)", args.output, size_mb)
+        size_mb = output.stat().st_size / 1e6
+        log.info("Output: %s  (%.1f MB)", output, size_mb)
 
         if args.upload_gdrive:
-            link = upload_to_gdrive(args.output)
+            link = upload_to_gdrive(output)
             if link:
                 print(f"\nShareable Google Drive link:\n  {link}\n")
             else:
@@ -690,8 +700,9 @@ def main() -> None:
 
     finally:
         if not args.keep_temp:
-            log.info("Removing temp directory %s", temp_dir)
+            log.info("Removing temp dir %s", temp_dir)
             shutil.rmtree(temp_dir, ignore_errors=True)
+        log.info("Run folder: %s", run_dir)
 
     log.info("Done.")
 
