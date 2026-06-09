@@ -456,6 +456,46 @@ def read_csv(path: Path) -> list[dict]:
         ]
 
 
+def _looks_like_url(s: str) -> bool:
+    return s.startswith(("http://", "https://"))
+
+
+def _looks_like_timecode(s: str) -> bool:
+    return bool(re.fullmatch(r"[\d:.]+(\s*-\s*[\d:.]+)?", s.strip()))
+
+
+def preprocess_rows(rows: list[dict]) -> list[dict]:
+    """
+    Normalize mixed-format rows into standard {url, timecode1, timecode2, ...} dicts.
+
+    Handles two layouts — they may be mixed in the same file:
+
+      Standard (timecodes in columns):
+        url,timecode1,timecode2
+        https://…,3:25,0:05
+
+      Stacked (timecodes on their own lines below the URL):
+        url,...
+        https://…
+        2:10-2:45
+        2:58
+    """
+    result: list[dict] = []
+    for row in rows:
+        url_field = row.get("url", "")
+        if _looks_like_url(url_field):
+            result.append(dict(row))
+        elif _looks_like_timecode(url_field) and result:
+            # Stacked timecode row — attach to the most recent URL row
+            prev = result[-1]
+            i = 1
+            while prev.get(f"timecode{i}", ""):
+                i += 1
+            prev[f"timecode{i}"] = url_field
+        # else: unrecognised row (e.g. blank) — silently skip
+    return result
+
+
 def build_clip_specs(
     rows: list[dict],
     pad_before: float,
@@ -558,6 +598,7 @@ def main() -> None:
         log.error("CSV is empty or has no data rows.")
         sys.exit(1)
 
+    rows = preprocess_rows(rows)
     specs = build_clip_specs(rows, args.pad_before, args.pad_after)
     if not specs:
         log.error("No valid clip specs parsed from CSV.")
