@@ -64,7 +64,7 @@ VCRF        = 18       # visually-lossless H.264
 AUDIO_SR    = 44100    # Hz
 AUDIO_BR    = "192k"
 
-VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".mov", ".flv", ".m4v"}
+VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".avi", ".mov", ".flv", ".m4v", ".m4s"}
 
 
 # ─── Data ─────────────────────────────────────────────────────────────────────
