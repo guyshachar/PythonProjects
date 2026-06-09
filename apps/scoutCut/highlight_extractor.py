@@ -439,11 +439,14 @@ def setup_logging(verbose: bool) -> None:
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler("clip_extractor.log", encoding="utf-8"),
-        ],
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
+
+
+def add_file_logging(log_file: Path) -> None:
+    handler = logging.FileHandler(log_file, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logging.getLogger().addHandler(handler)
 
 
 def read_csv(path: Path) -> list[dict]:
@@ -612,6 +615,7 @@ def main() -> None:
     csv_stem = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
     run_dir  = RUNS_DIR / f"{csv_stem}_{run_id}"
     run_dir.mkdir(parents=True, exist_ok=True)
+    add_file_logging(run_dir / "run.log")
 
     # Copy input CSV into the run folder for reproducibility
     shutil.copy2(args.csv_file, run_dir / args.csv_file.name)
