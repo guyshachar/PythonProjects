@@ -194,42 +194,60 @@ def generate_caption_card(caption: str, output_path: Path) -> bool:
     return True
 
 
-def generate_title_card(url: str, timecodes: list[str], output_path: Path) -> bool:
+def generate_title_card(
+    url: str, timecodes: list[str], output_path: Path, caption: str = ""
+) -> bool:
     """
-    Render a 2-second black title card (one per URL) showing the URL and all
-    its timecodes. Uses Pillow to avoid ffmpeg drawtext/libfreetype dependency.
+    Render a 2-second black title card (one per URL) showing, from top to bottom:
+      - Caption / section name (large, if provided)
+      - URL (small)
+      - All timecodes joined with " | "
     """
     img  = Image.new("RGB", (VWIDTH, VHEIGHT), color="black")
     draw = ImageDraw.Draw(img)
 
-    font_url = _load_font(32)
-    font_tc  = _load_font(40)
+    font_caption = _load_font(64)
+    font_url     = _load_font(28)
+    font_tc      = _load_font(40)
 
     def _centre_text(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, y: int) -> None:
         bbox = draw.textbbox((0, 0), text, font=font)
         w = bbox[2] - bbox[0]
         draw.text(((VWIDTH - w) // 2, y), text, fill="white", font=font)
 
+    gap = 28
+
+    # Caption — large heading, optional
+    cap_lines = (textwrap.wrap(caption, width=40) or [caption]) if caption else []
+    cap_line_h = draw.textbbox((0, 0), "Ag", font=font_caption)[3] + 6
+    cap_total_h = cap_line_h * len(cap_lines)
+
     # URL — wrap to at most 2 lines
-    url_lines = textwrap.wrap(url, width=70) or [url]
+    url_lines  = textwrap.wrap(url, width=80) or [url]
     url_line_h = draw.textbbox((0, 0), "Ag", font=font_url)[3] + 4
     url_total_h = url_line_h * min(len(url_lines), 2)
 
-    # Timecodes — join with separator, wrap if needed
-    tc_str = "  |  ".join(timecodes)
-    tc_lines = textwrap.wrap(tc_str, width=60) or [tc_str]
+    # Timecodes
+    tc_str    = "  |  ".join(timecodes)
+    tc_lines  = textwrap.wrap(tc_str, width=60) or [tc_str]
     tc_line_h = draw.textbbox((0, 0), "Ag", font=font_tc)[3] + 8
     tc_total_h = tc_line_h * len(tc_lines)
 
-    gap = 24
-    total_h = url_total_h + gap + tc_total_h
+    sections = [s for s in [cap_total_h, url_total_h, tc_total_h] if s]
+    total_h  = sum(sections) + gap * (len(sections) - 1)
     y = (VHEIGHT - total_h) // 2
+
+    for line in cap_lines:
+        _centre_text(line, font_caption, y)
+        y += cap_line_h
+    if cap_lines:
+        y += gap
 
     for line in url_lines[:2]:
         _centre_text(line, font_url, y)
         y += url_line_h
-
     y += gap
+
     for line in tc_lines:
         _centre_text(line, font_tc, y)
         y += tc_line_h
@@ -797,8 +815,6 @@ def main() -> None:
     segments: list[Path] = []
     # Cache: url -> downloaded full-video Path (or None if download failed)
     url_cache: dict[str, Optional[Path]] = {}
-    # Track which URLs have already had their caption / title cards emitted
-    caption_emitted: set[str] = set()
     title_emitted: set[str] = set()
 
     unique_urls = list(dict.fromkeys(s.url for s in specs))
@@ -821,21 +837,17 @@ def main() -> None:
                 spec.url,
             )
 
-            # Once per URL: optional caption card, then title card listing all timecodes
+            # Once per URL: one title card with caption heading + URL + all timecodes
             if spec.url not in title_emitted:
-                if spec.caption and spec.url not in caption_emitted:
-                    caption_path = temp_dir / f"caption_{_url_hash(spec.url)}.mp4"
-                    log.info("  Generating caption card: %r", spec.caption)
-                    if generate_caption_card(spec.caption, caption_path):
-                        segments.append(caption_path)
-                    caption_emitted.add(spec.url)
-
-                all_tcs = url_timecodes[spec.url]
+                all_tcs    = url_timecodes[spec.url]
                 title_path = temp_dir / f"title_{_url_hash(spec.url)}.mp4"
-                log.info("  Generating title card (%d timecode(s))...", len(all_tcs))
-                if not generate_title_card(spec.url, all_tcs, title_path):
+                log.info(
+                    "  Generating title card (caption=%r, %d timecode(s))...",
+                    spec.caption, len(all_tcs),
+                )
+                if not generate_title_card(spec.url, all_tcs, title_path, caption=spec.caption):
                     log.error("  Title card failed for URL — skipping clip %d", spec.clip_num)
-                    title_emitted.add(spec.url)  # don't retry for subsequent clips
+                    title_emitted.add(spec.url)
                     continue
                 segments.append(title_path)
                 title_emitted.add(spec.url)
