@@ -1,0 +1,8 @@
+# OAuth credentials — never commit these
+credentials.json
+token.json
+
+# Output and working files
+unified_highlights.mp4
+temp_clips/
+clip_extractor.log
