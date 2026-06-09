@@ -22,6 +22,15 @@ CSV format (header row required, column names case-insensitive):
 
     Timecodes may be a single point ("MM:SS") or a range ("MM:SS-MM:SS").
     Empty timecode cells are silently ignored.
+
+    Caption rows (stacked format only) — a plain-text line before a URL becomes
+    a 2-second section title card inserted before the first clip of that URL:
+        url,...
+        Player highlights
+        https://…
+        3:25
+
+    Alternatively use a 'caption' column in the header for the same effect.
 """
 
 import argparse
@@ -68,6 +77,7 @@ class ClipSpec:
     end_secs: float    # padded extraction end
     clip_num: int      # sequential 1-based clip number across all rows
     row_num: int       # 1-based source CSV row number
+    caption: str = "" # optional section title shown before the first clip of this URL
 
 
 # ─── Timecode Helpers ─────────────────────────────────────────────────────────
@@ -144,6 +154,45 @@ def has_audio(path: Path) -> bool:
 
 
 # ─── Pipeline Steps ───────────────────────────────────────────────────────────
+
+def generate_caption_card(caption: str, output_path: Path) -> bool:
+    """Render a 2-second black card with large centred caption text."""
+    img  = Image.new("RGB", (VWIDTH, VHEIGHT), color="black")
+    draw = ImageDraw.Draw(img)
+    font = _load_font(72)
+
+    lines   = textwrap.wrap(caption, width=40) or [caption]
+    line_h  = draw.textbbox((0, 0), "Ag", font=font)[3]
+    total_h = line_h * len(lines) + 8 * (len(lines) - 1)
+    y = (VHEIGHT - total_h) // 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        w = bbox[2] - bbox[0]
+        draw.text(((VWIDTH - w) // 2, y), line, fill="white", font=font)
+        y += line_h + 8
+
+    png_path = output_path.with_suffix(".png")
+    img.save(str(png_path))
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1", "-framerate", str(VFPS), "-i", str(png_path),
+        "-f", "lavfi", "-i", f"anullsrc=channel_layout=stereo:sample_rate={AUDIO_SR}",
+        "-t", str(TITLE_SECS),
+        "-c:v", "libx264", "-crf", str(VCRF), "-preset", "fast",
+        "-c:a", "aac", "-b:a", AUDIO_BR, "-ar", str(AUDIO_SR),
+        "-pix_fmt", "yuv420p", "-shortest",
+        str(output_path),
+    ]
+    log.debug("Caption card encode cmd: %s", " ".join(cmd))
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    png_path.unlink(missing_ok=True)
+    if r.returncode != 0:
+        log.error("Caption card encoding failed:\n%s", r.stderr[-2000:])
+        return False
+    return True
+
 
 def generate_title_card(url: str, timecode: str, output_path: Path) -> bool:
     """
@@ -467,11 +516,17 @@ def _looks_like_timecode(s: str) -> bool:
     return bool(re.fullmatch(r"[\d:.]+(\s*-\s*[\d:.]+)?", s.strip()))
 
 
+def _looks_like_caption(s: str) -> bool:
+    """Non-empty text that is neither a URL nor a timecode — treated as a section caption."""
+    s = s.strip()
+    return bool(s) and not _looks_like_url(s) and not _looks_like_timecode(s)
+
+
 def preprocess_rows(rows: list[dict]) -> list[dict]:
     """
-    Normalize mixed-format rows into standard {url, timecode1, timecode2, ...} dicts.
+    Normalize mixed-format rows into standard {url, caption, timecode1, timecode2, ...} dicts.
 
-    Handles two layouts — they may be mixed in the same file:
+    Handles these layouts (may be mixed in the same file):
 
       Standard (timecodes in columns):
         url,timecode1,timecode2
@@ -482,12 +537,24 @@ def preprocess_rows(rows: list[dict]) -> list[dict]:
         https://…
         2:10-2:45
         2:58
+
+      Caption (plain text line before a URL becomes a section title card):
+        url,...
+        Player highlights
+        https://…
+        3:25
     """
     result: list[dict] = []
+    pending_caption: str = ""
     for row in rows:
         url_field = row.get("url", "")
         if _looks_like_url(url_field):
-            result.append(dict(row))
+            new_row = dict(row)
+            # Attach stacked caption if the row doesn't already have a caption column
+            if pending_caption and not new_row.get("caption", ""):
+                new_row["caption"] = pending_caption
+            pending_caption = ""
+            result.append(new_row)
         elif _looks_like_timecode(url_field) and result:
             # Stacked timecode row — attach to the most recent URL row
             prev = result[-1]
@@ -495,7 +562,9 @@ def preprocess_rows(rows: list[dict]) -> list[dict]:
             while prev.get(f"timecode{i}", ""):
                 i += 1
             prev[f"timecode{i}"] = url_field
-        # else: unrecognised row (e.g. blank) — silently skip
+        elif _looks_like_caption(url_field):
+            pending_caption = url_field
+        # else: blank row — silently skip
     return result
 
 
@@ -540,6 +609,7 @@ def build_clip_specs(
                     end_secs=end,
                     clip_num=clip_num,
                     row_num=row_num,
+                    caption=row.get("caption", ""),
                 )
             )
     return specs
@@ -628,6 +698,8 @@ def main() -> None:
     segments: list[Path] = []
     # Cache: url -> downloaded full-video Path (or None if download failed)
     url_cache: dict[str, Optional[Path]] = {}
+    # Track which URLs have already had their caption card emitted
+    caption_emitted: set[str] = set()
 
     unique_urls = list(dict.fromkeys(s.url for s in specs))
     log.info(
@@ -643,6 +715,14 @@ def main() -> None:
                 spec.raw_timecode, spec.start_secs, spec.end_secs,
                 spec.url,
             )
+
+            # 0. Caption card — emitted once per URL, before the first clip
+            if spec.caption and spec.url not in caption_emitted:
+                caption_path = temp_dir / f"caption_{spec.clip_num:03d}.mp4"
+                log.info("  [0/3] Generating caption card: %r", spec.caption)
+                if generate_caption_card(spec.caption, caption_path):
+                    segments.append(caption_path)
+                caption_emitted.add(spec.url)
 
             # 1. Title card
             title_path = temp_dir / f"title_{spec.clip_num:03d}.mp4"
