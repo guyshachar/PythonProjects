@@ -194,39 +194,46 @@ def generate_caption_card(caption: str, output_path: Path) -> bool:
     return True
 
 
-def generate_title_card(url: str, timecode: str, output_path: Path) -> bool:
+def generate_title_card(url: str, timecodes: list[str], output_path: Path) -> bool:
     """
-    Render a 2-second black title card using Pillow (avoids ffmpeg drawtext /
-    libfreetype dependency). Saves a PNG, then encodes it to video with ffmpeg.
+    Render a 2-second black title card (one per URL) showing the URL and all
+    its timecodes. Uses Pillow to avoid ffmpeg drawtext/libfreetype dependency.
     """
     img  = Image.new("RGB", (VWIDTH, VHEIGHT), color="black")
     draw = ImageDraw.Draw(img)
 
     font_url = _load_font(32)
-    font_tc  = _load_font(52)
+    font_tc  = _load_font(40)
 
-    # Wrap URL to at most 2 lines of ~70 chars each
-    url_lines = textwrap.wrap(url, width=70) or [url]
-    url_block = "\n".join(url_lines[:2])
-
-    # Measure and centre each text block
     def _centre_text(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, y: int) -> None:
         bbox = draw.textbbox((0, 0), text, font=font)
         w = bbox[2] - bbox[0]
         draw.text(((VWIDTH - w) // 2, y), text, fill="white", font=font)
 
-    # URL block (one or two lines, ~55 % up the frame)
-    url_bbox  = draw.textbbox((0, 0), url_block, font=font_url)
-    url_h     = url_bbox[3] - url_bbox[1]
-    url_y     = VHEIGHT // 2 - url_h - 30
+    # URL — wrap to at most 2 lines
+    url_lines = textwrap.wrap(url, width=70) or [url]
+    url_line_h = draw.textbbox((0, 0), "Ag", font=font_url)[3] + 4
+    url_total_h = url_line_h * min(len(url_lines), 2)
+
+    # Timecodes — join with separator, wrap if needed
+    tc_str = "  |  ".join(timecodes)
+    tc_lines = textwrap.wrap(tc_str, width=60) or [tc_str]
+    tc_line_h = draw.textbbox((0, 0), "Ag", font=font_tc)[3] + 8
+    tc_total_h = tc_line_h * len(tc_lines)
+
+    gap = 24
+    total_h = url_total_h + gap + tc_total_h
+    y = (VHEIGHT - total_h) // 2
+
     for line in url_lines[:2]:
-        _centre_text(line, font_url, url_y)
-        url_y += url_bbox[3] - url_bbox[1] + 4
+        _centre_text(line, font_url, y)
+        y += url_line_h
 
-    # Timecode below the URL block
-    _centre_text(timecode, font_tc, VHEIGHT // 2 + 10)
+    y += gap
+    for line in tc_lines:
+        _centre_text(line, font_tc, y)
+        y += tc_line_h
 
-    # Write PNG to temp, then encode to video
     png_path = output_path.with_suffix(".png")
     img.save(str(png_path))
 
@@ -698,14 +705,20 @@ def main() -> None:
     segments: list[Path] = []
     # Cache: url -> downloaded full-video Path (or None if download failed)
     url_cache: dict[str, Optional[Path]] = {}
-    # Track which URLs have already had their caption card emitted
+    # Track which URLs have already had their caption / title cards emitted
     caption_emitted: set[str] = set()
+    title_emitted: set[str] = set()
 
     unique_urls = list(dict.fromkeys(s.url for s in specs))
     log.info(
         "%d unique URL(s) across %d clip(s) — each video downloaded once.",
         len(unique_urls), len(specs),
     )
+
+    # Pre-build url -> ordered timecodes list so the title card can list them all
+    url_timecodes: dict[str, list[str]] = {}
+    for s in specs:
+        url_timecodes.setdefault(s.url, []).append(s.raw_timecode)
 
     try:
         for spec in specs:
@@ -716,28 +729,32 @@ def main() -> None:
                 spec.url,
             )
 
-            # 0. Caption card — emitted once per URL, before the first clip
-            if spec.caption and spec.url not in caption_emitted:
-                caption_path = temp_dir / f"caption_{spec.clip_num:03d}.mp4"
-                log.info("  [0/3] Generating caption card: %r", spec.caption)
-                if generate_caption_card(spec.caption, caption_path):
-                    segments.append(caption_path)
-                caption_emitted.add(spec.url)
+            # Once per URL: optional caption card, then title card listing all timecodes
+            if spec.url not in title_emitted:
+                if spec.caption and spec.url not in caption_emitted:
+                    caption_path = temp_dir / f"caption_{_url_hash(spec.url)}.mp4"
+                    log.info("  Generating caption card: %r", spec.caption)
+                    if generate_caption_card(spec.caption, caption_path):
+                        segments.append(caption_path)
+                    caption_emitted.add(spec.url)
 
-            # 1. Title card
-            title_path = temp_dir / f"title_{spec.clip_num:03d}.mp4"
-            log.info("  [1/3] Generating title card...")
-            if not generate_title_card(spec.url, spec.raw_timecode, title_path):
-                log.error("  Title card failed — skipping clip %d", spec.clip_num)
-                continue
+                all_tcs = url_timecodes[spec.url]
+                title_path = temp_dir / f"title_{_url_hash(spec.url)}.mp4"
+                log.info("  Generating title card (%d timecode(s))...", len(all_tcs))
+                if not generate_title_card(spec.url, all_tcs, title_path):
+                    log.error("  Title card failed for URL — skipping clip %d", spec.clip_num)
+                    title_emitted.add(spec.url)  # don't retry for subsequent clips
+                    continue
+                segments.append(title_path)
+                title_emitted.add(spec.url)
 
-            # 2. Download full video once per URL, then extract the needed window
+            # Download full video once per URL, then extract the needed window
             if spec.url not in url_cache:
                 full_stem = temp_dir / f"full_{_url_hash(spec.url)}"
-                log.info("  [2/3] Downloading full video (first use of this URL)...")
+                log.info("  [1/3] Downloading full video (first use of this URL)...")
                 url_cache[spec.url] = download_full_video(spec.url, full_stem)
             else:
-                log.info("  [2/3] Using cached video for this URL.")
+                log.info("  [1/3] Using cached video for this URL.")
 
             full_video = url_cache[spec.url]
             if full_video is None:
@@ -746,21 +763,21 @@ def main() -> None:
 
             raw_path = temp_dir / f"raw_{spec.clip_num:03d}.mp4"
             log.info(
-                "  Extracting window  %.1fs – %.1fs...",
+                "  [2/3] Extracting window  %.1fs – %.1fs...",
                 spec.start_secs, spec.end_secs,
             )
             if not extract_clip(full_video, spec.start_secs, spec.end_secs, raw_path):
                 log.error("  Extraction failed — skipping clip %d", spec.clip_num)
                 continue
 
-            # 3. Normalise
+            # Normalise
             norm_path = temp_dir / f"norm_{spec.clip_num:03d}.mp4"
             log.info("  [3/3] Normalising to %dx%d @ %dfps...", VWIDTH, VHEIGHT, VFPS)
             if not normalize_clip(raw_path, norm_path):
                 log.error("  Normalisation failed — skipping clip %d", spec.clip_num)
                 continue
 
-            segments += [title_path, norm_path]
+            segments.append(norm_path)
             log.info("  Clip %d done.", spec.clip_num)
 
         if not segments:
