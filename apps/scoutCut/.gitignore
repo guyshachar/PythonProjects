@@ -5,3 +5,10 @@ token.json
 # Run artifacts
 runs/
 temp_clips/
+
+# PyInstaller build output
+build/
+dist/
+
+# Playwright saved session
+veo_profile/
