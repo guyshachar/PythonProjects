@@ -273,6 +273,88 @@ def _url_hash(url: str) -> str:
     return hashlib.md5(url.encode()).hexdigest()[:10]
 
 
+_PLATFORM_MARKERS = ("pixellot.link", "live.veo.co")
+
+
+def _resolve_url(url: str) -> str:
+    """Translate a platform share link into a direct stream URL."""
+    if "pixellot.link" in url:
+        try:
+            from pixellot_scraper import extract_stream_url as _pixellot
+            log.info("  Resolving Pixellot share link…")
+            resolved = _pixellot(url)
+            if resolved:
+                log.info("  → %s", resolved)
+                return resolved
+            log.warning("  Pixellot scraper returned nothing — keeping original")
+        except ImportError:
+            log.warning("  pixellot_scraper.py not found — keeping original")
+        except Exception as exc:
+            log.warning("  Pixellot scraper error (%s) — keeping original", exc)
+
+    if "live.veo.co" in url:
+        try:
+            from veo_scraper import extract_stream_url as _veo
+            log.info("  Resolving live.veo.co URL…")
+            resolved = _veo(url)
+            if resolved:
+                log.info("  → %s", resolved)
+                return resolved
+            log.warning("  Veo scraper returned nothing — keeping original")
+        except ImportError:
+            log.warning("  veo_scraper.py not found — keeping original")
+        except Exception as exc:
+            log.warning("  Veo scraper error (%s) — keeping original", exc)
+
+    return url
+
+
+def resolve_csv(input_path: Path) -> Path:
+    """
+    Scan *input_path* for Pixellot share links and live.veo.co URLs, run the
+    appropriate scraper for each, and write a sibling *_resolved.csv with the
+    direct stream URLs substituted in.  Returns the resolved file path (or the
+    original path if nothing needed resolving).
+    """
+    text = input_path.read_text(encoding="utf-8-sig")
+
+    # Quick check — skip the expensive scan if no platform markers present
+    if not any(m in text for m in _PLATFORM_MARKERS):
+        return input_path
+
+    # Collect every unique platform URL appearing anywhere in the file
+    platform_urls: list[str] = []
+    for token in re.split(r'[\s,"]+', text):
+        token = token.strip().rstrip("/")
+        if _looks_like_url(token) and any(m in token for m in _PLATFORM_MARKERS):
+            if token not in platform_urls:
+                platform_urls.append(token)
+
+    if not platform_urls:
+        return input_path
+
+    log.info("Found %d platform URL(s) to resolve:", len(platform_urls))
+    replacements: dict[str, str] = {}
+    for url in platform_urls:
+        log.info("  %s", url)
+        resolved = _resolve_url(url)
+        if resolved != url:
+            replacements[url] = resolved
+
+    if not replacements:
+        log.warning("No URLs could be resolved — using original CSV")
+        return input_path
+
+    new_text = text
+    for orig, resolved in replacements.items():
+        new_text = new_text.replace(orig, resolved)
+
+    out_path = input_path.with_name(input_path.stem + "_resolved" + input_path.suffix)
+    out_path.write_text(new_text, encoding="utf-8")
+    log.info("Resolved CSV written: %s", out_path)
+    return out_path
+
+
 def download_full_video(url: str, stem: Path, browser: Optional[str] = None) -> Optional[Path]:
     """
     Download the complete video at highest quality via yt-dlp.
@@ -681,7 +763,9 @@ def main() -> None:
         log.error("CSV file not found: %s", args.csv_file)
         sys.exit(1)
 
-    rows = read_csv(args.csv_file)
+    csv_path = resolve_csv(args.csv_file)
+
+    rows = read_csv(csv_path)
     if not rows:
         log.error("CSV is empty or has no data rows.")
         sys.exit(1)
