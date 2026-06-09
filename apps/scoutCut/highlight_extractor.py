@@ -33,6 +33,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -45,7 +46,6 @@ log = logging.getLogger(__name__)
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-TEMP_DIR    = Path("temp_clips")
 OUTPUT_FILE = Path("unified_highlights.mp4")
 TITLE_SECS  = 2        # title card duration in seconds
 VWIDTH      = 1920
@@ -451,7 +451,7 @@ def read_csv(path: Path) -> list[dict]:
     with path.open(newline="", encoding="utf-8-sig") as fh:  # utf-8-sig handles Excel BOM
         reader = csv.DictReader(fh)
         return [
-            {k.strip().lower(): v.strip() for k, v in row.items()}
+            {k.strip().lower(): (v or "").strip() for k, v in row.items()}
             for row in reader
         ]
 
@@ -608,7 +608,8 @@ def main() -> None:
         "Starting: %d clip(s), pad_before=%.1fs, pad_after=%.1fs",
         len(specs), args.pad_before, args.pad_after,
     )
-    TEMP_DIR.mkdir(exist_ok=True)
+    temp_dir = Path("temp_clips") / datetime.now().strftime("%Y%m%d_%H%M%S")
+    temp_dir.mkdir(parents=True, exist_ok=True)
 
     segments: list[Path] = []
     # Cache: url -> downloaded full-video Path (or None if download failed)
@@ -630,7 +631,7 @@ def main() -> None:
             )
 
             # 1. Title card
-            title_path = TEMP_DIR / f"title_{spec.clip_num:03d}.mp4"
+            title_path = temp_dir / f"title_{spec.clip_num:03d}.mp4"
             log.info("  [1/3] Generating title card...")
             if not generate_title_card(spec.url, spec.raw_timecode, title_path):
                 log.error("  Title card failed — skipping clip %d", spec.clip_num)
@@ -638,7 +639,7 @@ def main() -> None:
 
             # 2. Download full video once per URL, then extract the needed window
             if spec.url not in url_cache:
-                full_stem = TEMP_DIR / f"full_{_url_hash(spec.url)}"
+                full_stem = temp_dir / f"full_{_url_hash(spec.url)}"
                 log.info("  [2/3] Downloading full video (first use of this URL)...")
                 url_cache[spec.url] = download_full_video(spec.url, full_stem)
             else:
@@ -649,7 +650,7 @@ def main() -> None:
                 log.error("  Video unavailable — skipping clip %d", spec.clip_num)
                 continue
 
-            raw_path = TEMP_DIR / f"raw_{spec.clip_num:03d}.mp4"
+            raw_path = temp_dir / f"raw_{spec.clip_num:03d}.mp4"
             log.info(
                 "  Extracting window  %.1fs – %.1fs...",
                 spec.start_secs, spec.end_secs,
@@ -659,7 +660,7 @@ def main() -> None:
                 continue
 
             # 3. Normalise
-            norm_path = TEMP_DIR / f"norm_{spec.clip_num:03d}.mp4"
+            norm_path = temp_dir / f"norm_{spec.clip_num:03d}.mp4"
             log.info("  [3/3] Normalising to %dx%d @ %dfps...", VWIDTH, VHEIGHT, VFPS)
             if not normalize_clip(raw_path, norm_path):
                 log.error("  Normalisation failed — skipping clip %d", spec.clip_num)
@@ -689,8 +690,8 @@ def main() -> None:
 
     finally:
         if not args.keep_temp:
-            log.info("Removing temp directory %s", TEMP_DIR)
-            shutil.rmtree(TEMP_DIR, ignore_errors=True)
+            log.info("Removing temp directory %s", temp_dir)
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     log.info("Done.")
 
