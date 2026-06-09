@@ -1,0 +1,11 @@
+# Python >= 3.9 required
+# System dependency (not pip): ffmpeg + ffprobe  (https://ffmpeg.org/download.html)
+
+# Core
+yt-dlp>=2023.7.6
+Pillow>=10.0.0
+
+# Google Drive upload (only needed with --upload-gdrive)
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.1.1
+google-auth-oauthlib>=1.0.0
