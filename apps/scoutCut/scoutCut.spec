@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for highlight_extractor.
+PyInstaller spec for scoutCut.
 
 Bundles:
-  - highlight_extractor.py (main script)
+  - scoutCut.py (main script)
   - pixellot_scraper.py + veo_scraper.py (platform scrapers)
   - All Python dependencies (yt-dlp, Pillow, playwright, google-api-*)
   - ffmpeg + ffprobe binaries (from Homebrew)
@@ -13,9 +13,9 @@ NOT bundled (must be pre-installed on target machine):
   - veo_profile/ session dir     →  run veo_scraper.py once to log in
 
 Build:
-    python3.11 -m PyInstaller highlight_extractor.spec
+    python3.11 -m PyInstaller scoutCut.spec
 Output:
-    dist/highlight_extractor   (one-dir bundle)
+    dist/scoutCut   (one-dir bundle)
 """
 
 import shutil
@@ -40,7 +40,7 @@ for tool in ("ffmpeg", "ffprobe"):
 
 # ── Analysis ──────────────────────────────────────────────────────────────
 a = Analysis(
-    ["highlight_extractor.py"],
+    ["scoutCut.py"],
     pathex=["."],
     binaries=extra_bins + yt_bins + pw_bins + pil_bins + ga_bins + gac_bins + req_bins,
     datas=yt_datas + pw_datas + pil_datas + ga_datas + gac_datas + req_datas,
@@ -63,7 +63,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="highlight_extractor",
+    name="scoutCut",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -83,5 +83,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="highlight_extractor",
+    name="scoutCut",
 )

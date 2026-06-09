@@ -1,5 +1,5 @@
 """
-PyInstaller runtime hook for highlight_extractor.
+PyInstaller runtime hook for scoutCut.
 
 Runs before the application starts when launched from the frozen bundle.
 Adds the bundled directory to PATH so the embedded ffmpeg/ffprobe are found,

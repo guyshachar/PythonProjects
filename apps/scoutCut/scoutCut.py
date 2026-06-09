@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-highlight_extractor.py
+scoutCut.py
 
 Extracts video clips from public URLs, prepends 2-second title cards,
 concatenates everything into a single unified video, and optionally
 uploads to Google Drive.
 
 Usage:
-    python highlight_extractor.py clips.csv
-    python highlight_extractor.py clips.csv --pad-before 3 --pad-after 8
-    python highlight_extractor.py clips.csv --upload-gdrive --verbose
+    python scoutCut.py clips.csv
+    python scoutCut.py clips.csv --pad-before 3 --pad-after 8
+    python scoutCut.py clips.csv --upload-gdrive --verbose
 
 CSV format (header row required, column names case-insensitive):
     Single timecode per row:
