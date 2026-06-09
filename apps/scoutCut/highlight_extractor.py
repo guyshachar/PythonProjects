@@ -327,12 +327,13 @@ def _resolve_url(url: str) -> str:
     return url
 
 
-def resolve_csv(input_path: Path) -> Path:
+def resolve_csv(input_path: Path, out_dir: Optional[Path] = None) -> Path:
     """
     Scan *input_path* for Pixellot share links and live.veo.co URLs, run the
-    appropriate scraper for each, and write a sibling *_resolved.csv with the
-    direct stream URLs substituted in.  Returns the resolved file path (or the
-    original path if nothing needed resolving).
+    appropriate scraper for each, and write a *_resolved.csv with the direct
+    stream URLs substituted in.  The resolved file is placed in *out_dir* when
+    given, otherwise next to the original.  Returns the resolved file path (or
+    the original path if nothing needed resolving).
     """
     text = input_path.read_text(encoding="utf-8-sig")
 
@@ -367,7 +368,8 @@ def resolve_csv(input_path: Path) -> Path:
     for orig, resolved in replacements.items():
         new_text = new_text.replace(orig, resolved)
 
-    out_path = input_path.with_name(input_path.stem + "_resolved" + input_path.suffix)
+    dest_dir = out_dir if out_dir is not None else input_path.parent
+    out_path = dest_dir / (input_path.stem + "_resolved" + input_path.suffix)
     out_path.write_text(new_text, encoding="utf-8")
     log.info("Resolved CSV written: %s", out_path)
     return out_path
@@ -781,7 +783,16 @@ def main() -> None:
         log.error("CSV file not found: %s", args.csv_file)
         sys.exit(1)
 
-    csv_path = resolve_csv(args.csv_file)
+    # Create run dir early so resolved CSV and logs land inside it
+    run_id   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_stem = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
+    run_dir  = RUNS_DIR / f"{csv_stem}_{run_id}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    add_file_logging(run_dir / "run.log")
+
+    # Copy original CSV into run folder, then resolve platform URLs
+    shutil.copy2(args.csv_file, run_dir / args.csv_file.name)
+    csv_path = resolve_csv(args.csv_file, out_dir=run_dir)
 
     rows = read_csv(csv_path)
     if not rows:
@@ -798,14 +809,6 @@ def main() -> None:
         "Starting: %d clip(s), pad_before=%.1fs, pad_after=%.1fs",
         len(specs), args.pad_before, args.pad_after,
     )
-    run_id   = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_stem = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
-    run_dir  = RUNS_DIR / f"{csv_stem}_{run_id}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    add_file_logging(run_dir / "run.log")
-
-    # Copy input CSV into the run folder for reproducibility
-    shutil.copy2(args.csv_file, run_dir / args.csv_file.name)
 
     temp_dir = run_dir / "temp"
     temp_dir.mkdir(exist_ok=True)
