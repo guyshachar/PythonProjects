@@ -273,10 +273,11 @@ def _url_hash(url: str) -> str:
     return hashlib.md5(url.encode()).hexdigest()[:10]
 
 
-def download_full_video(url: str, stem: Path) -> Optional[Path]:
+def download_full_video(url: str, stem: Path, browser: Optional[str] = None) -> Optional[Path]:
     """
     Download the complete video at highest quality via yt-dlp.
     stem is the output path without extension (e.g. temp_clips/full_abc123).
+    browser, if set, is passed as cookiesfrombrowser (e.g. "safari", "chrome").
     Returns the actual output file path, or None on failure.
     """
     template = str(stem) + ".%(ext)s"
@@ -288,6 +289,8 @@ def download_full_video(url: str, stem: Path) -> Optional[Path]:
         "no_warnings": True,
         "progress_hooks": [_ydl_progress_hook],
     }
+    if browser:
+        ydl_opts["cookiesfrombrowser"] = (browser,)
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ret = ydl.download([url])
@@ -654,6 +657,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep the temp_clips working directory after completion",
     )
     p.add_argument(
+        "--browser", default=None, metavar="BROWSER",
+        help="Pass cookies from this browser to yt-dlp for authenticated sites "
+             "(e.g. safari, chrome, firefox). Required for Veo, Pixellot, etc.",
+    )
+    p.add_argument(
         "--verbose", "-v", action="store_true",
         help="Enable DEBUG-level logging",
     )
@@ -752,7 +760,7 @@ def main() -> None:
             if spec.url not in url_cache:
                 full_stem = temp_dir / f"full_{_url_hash(spec.url)}"
                 log.info("  [1/3] Downloading full video (first use of this URL)...")
-                url_cache[spec.url] = download_full_video(spec.url, full_stem)
+                url_cache[spec.url] = download_full_video(spec.url, full_stem, args.browser)
             else:
                 log.info("  [1/3] Using cached video for this URL.")
 
