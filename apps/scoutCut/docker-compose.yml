@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+
+  # ── Redis — broker + result backend ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── FastAPI web server ────────────────────────────────────────────────────────
+  api:
+    build: .
+    command: uvicorn web.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL:    redis://redis:6379/0
+      DATABASE_URL: sqlite:///./scoutcut.db
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./runs:/app/runs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Celery worker — one job at a time ─────────────────────────────────────────
+  worker:
+    build: .
+    command: celery -A web.celery_app worker --loglevel=info --concurrency=1
+    environment:
+      REDIS_URL:    redis://redis:6379/0
+      DATABASE_URL: sqlite:///./scoutcut.db
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./runs:/app/runs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped

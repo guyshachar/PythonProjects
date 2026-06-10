@@ -12,3 +12,4 @@ dist/
 
 # Playwright saved session
 veo_profile/
+scoutcut.db

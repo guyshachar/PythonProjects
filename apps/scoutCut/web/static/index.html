@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScoutCut — Video Highlight Compiler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .step-line { height: 2px; }
+    .spinner { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    textarea { resize: vertical; }
+    .pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:.4;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 antialiased" x-data="scoutcut()" x-cloak>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur border-b border-slate-800">
+    <div class="mx-auto max-w-5xl px-4 py-4 flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" />
+          </svg>
+        </div>
+        <span class="font-semibold text-lg tracking-tight">ScoutCut</span>
+      </div>
+      <span class="text-slate-500 text-sm hidden sm:inline">Video Highlight Compiler</span>
+      <div class="ml-auto text-xs text-slate-500" x-show="totalClips > 0">
+        <span x-text="totalClips"></span> clip<span x-show="totalClips !== 1">s</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Step indicator ──────────────────────────────────────────────────────── -->
+  <div class="mx-auto max-w-5xl px-4 pt-8 pb-2">
+    <div class="flex items-center gap-0">
+      <template x-for="(label, i) in stepLabels" :key="i">
+        <div class="flex items-center" :class="i < stepLabels.length - 1 ? 'flex-1' : ''">
+          <div class="flex flex-col items-center">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300"
+                 :class="{
+                   'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-950': step === i+1,
+                   'bg-indigo-600 text-white': step > i+1,
+                   'bg-slate-800 text-slate-400': step < i+1
+                 }">
+              <template x-if="step > i+1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </template>
+              <template x-if="step <= i+1">
+                <span x-text="i+1"></span>
+              </template>
+            </div>
+            <span class="text-xs mt-1 hidden sm:block"
+                  :class="step >= i+1 ? 'text-slate-300' : 'text-slate-600'"
+                  x-text="label"></span>
+          </div>
+          <template x-if="i < stepLabels.length - 1">
+            <div class="flex-1 step-line mx-2 transition-all duration-500"
+                 :class="step > i+1 ? 'bg-indigo-600' : 'bg-slate-800'"></div>
+          </template>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ── Main card ───────────────────────────────────────────────────────────── -->
+  <main class="mx-auto max-w-5xl px-4 py-8">
+
+    <!-- ══ STEP 1: Video rows ══════════════════════════════════════════════════ -->
+    <div x-show="step === 1" x-transition>
+      <h2 class="text-2xl font-bold mb-1">Add your clips</h2>
+      <p class="text-slate-400 text-sm mb-6">Enter each source video with its title and the timecodes you want to extract.</p>
+
+      <template x-for="(row, idx) in rows" :key="idx">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4 relative">
+          <!-- Remove button -->
+          <button x-show="rows.length > 1" @click="removeRow(idx)"
+                  class="absolute top-3 right-3 text-slate-600 hover:text-red-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-medium text-slate-400 mb-1">Video URL</label>
+              <input type="url" x-model="row.url" placeholder="https://you.pixellot.link/… or https://app.veo.co/…"
+                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Title / Label (optional)</label>
+              <input type="text" x-model="row.title" placeholder="e.g. Kiryat Gat vs Kfar Yona"
+                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">
+                Timecodes
+                <span class="text-slate-600 font-normal">(one per line)</span>
+              </label>
+              <textarea x-model="row.timecodes" rows="4"
+                        placeholder="47:29&#10;58:31-58:45&#10;1:02:10"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600"></textarea>
+              <p class="text-xs text-slate-600 mt-1">
+                <span class="text-indigo-400 font-medium" x-text="countTimecodes(row)"></span>
+                timecode<span x-show="countTimecodes(row) !== 1">s</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <button @click="addRow()"
+              class="w-full py-3 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-indigo-500 hover:text-indigo-400 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Add another video
+      </button>
+
+      <div class="mt-8 flex justify-end">
+        <button @click="goToConfig()"
+                :disabled="!canProceedFromStep1"
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+          Configure processing
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 2: Config ══════════════════════════════════════════════════════ -->
+    <div x-show="step === 2" x-transition>
+      <h2 class="text-2xl font-bold mb-1">Processing options</h2>
+      <p class="text-slate-400 text-sm mb-6">Control how much context to include around each clip and how output files are organised.</p>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+        <!-- Padding -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium mb-2">Seconds before each clip</label>
+            <div class="flex items-center gap-3">
+              <input type="range" min="0" max="60" step="1" x-model.number="config.pad_before"
+                     class="flex-1 accent-indigo-500" />
+              <span class="w-10 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1" x-text="config.pad_before + 's'"></span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Seconds after each clip</label>
+            <div class="flex items-center gap-3">
+              <input type="range" min="0" max="60" step="1" x-model.number="config.pad_after"
+                     class="flex-1 accent-indigo-500" />
+              <span class="w-10 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1" x-text="config.pad_after + 's'"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output strategy -->
+        <div>
+          <label class="block text-sm font-medium mb-3">Output format</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button @click="config.output_strategy = 'single'"
+                    :class="config.output_strategy === 'single'
+                              ? 'border-indigo-500 bg-indigo-950 text-white'
+                              : 'border-slate-700 text-slate-400 hover:border-slate-500'"
+                    class="p-4 rounded-xl border-2 text-left transition-all">
+              <div class="flex items-start gap-3">
+                <div class="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
+                     :class="config.output_strategy === 'single' ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
+                  <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="config.output_strategy === 'single'"></div>
+                </div>
+                <div>
+                  <p class="font-medium text-sm">Single file</p>
+                  <p class="text-xs text-slate-500 mt-0.5">All clips concatenated into one video</p>
+                </div>
+              </div>
+            </button>
+            <button @click="config.output_strategy = 'multiple'"
+                    :class="config.output_strategy === 'multiple'
+                              ? 'border-indigo-500 bg-indigo-950 text-white'
+                              : 'border-slate-700 text-slate-400 hover:border-slate-500'"
+                    class="p-4 rounded-xl border-2 text-left transition-all">
+              <div class="flex items-start gap-3">
+                <div class="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
+                     :class="config.output_strategy === 'multiple' ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
+                  <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="config.output_strategy === 'multiple'"></div>
+                </div>
+                <div>
+                  <p class="font-medium text-sm">One file per URL</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Separate highlight reel for each source video</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 flex justify-between">
+        <button @click="step = 1" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
+          ← Back
+        </button>
+        <button @click="fetchQuote()"
+                :disabled="quoteLoading"
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+          <svg x-show="quoteLoading" class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span x-text="quoteLoading ? 'Calculating…' : 'Get price quote'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 3: Quote / Review ══════════════════════════════════════════════ -->
+    <div x-show="step === 3" x-transition>
+      <h2 class="text-2xl font-bold mb-1">Review &amp; price</h2>
+      <p class="text-slate-400 text-sm mb-6">Confirm your order before payment.</p>
+
+      <template x-if="quote">
+        <div class="space-y-4">
+          <!-- Summary cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+              <p class="text-2xl font-bold text-indigo-400" x-text="quote.total_clips"></p>
+              <p class="text-xs text-slate-500 mt-1">Clips</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+              <p class="text-2xl font-bold text-indigo-400" x-text="quote.unique_urls"></p>
+              <p class="text-xs text-slate-500 mt-1">Source videos</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+              <p class="text-2xl font-bold text-indigo-400" x-text="quote.estimated_duration_mins + ' min'"></p>
+              <p class="text-xs text-slate-500 mt-1">Est. output</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+              <p class="text-2xl font-bold text-green-400" x-text="'$' + quote.price.toFixed(2)"></p>
+              <p class="text-xs text-slate-500 mt-1">Total price</p>
+            </div>
+          </div>
+
+          <!-- Price breakdown -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-3">Price breakdown</h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-slate-400">
+                  <span x-text="quote.total_clips"></span> clip<span x-show="quote.total_clips!==1">s</span>
+                  × $0.50
+                </span>
+                <span x-text="'$' + quote.breakdown.clips.toFixed(2)"></span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">
+                  <span x-text="quote.estimated_duration_mins"></span> min × $0.20
+                </span>
+                <span x-text="'$' + quote.breakdown.duration.toFixed(2)"></span>
+              </div>
+              <div class="flex justify-between" x-show="quote.breakdown.split_surcharge > 0">
+                <span class="text-slate-400">Per-URL split surcharge</span>
+                <span x-text="'$' + quote.breakdown.split_surcharge.toFixed(2)"></span>
+              </div>
+              <div class="border-t border-slate-700 pt-2 flex justify-between font-semibold">
+                <span>Total</span>
+                <span class="text-green-400" x-text="'$' + quote.price.toFixed(2)"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row summary -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <h3 class="text-sm font-semibold text-slate-300 mb-3">Clips per video</h3>
+            <div class="space-y-2">
+              <template x-for="(row, i) in rows" :key="i">
+                <div class="flex items-start gap-3 text-sm" x-show="countTimecodes(row) > 0">
+                  <span class="text-indigo-400 font-mono text-xs mt-0.5 w-5 flex-shrink-0" x-text="countTimecodes(row)"></span>
+                  <div class="min-w-0">
+                    <p class="text-slate-300 truncate" x-text="row.title || 'Untitled'"></p>
+                    <p class="text-slate-600 text-xs truncate" x-text="row.url"></p>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div class="mt-8 flex justify-between">
+        <button @click="step = 2" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
+          ← Back
+        </button>
+        <button @click="step = 4" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+          Proceed to payment
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 4: Payment ═════════════════════════════════════════════════════ -->
+    <div x-show="step === 4" x-transition>
+      <h2 class="text-2xl font-bold mb-1">Payment</h2>
+      <p class="text-slate-400 text-sm mb-6">Choose your preferred payment method to confirm the order.</p>
+
+      <div class="space-y-3 mb-6">
+        <template x-for="pm in paymentMethods" :key="pm.id">
+          <button @click="selectedPayment = pm.id"
+                  :class="selectedPayment === pm.id
+                            ? 'border-indigo-500 bg-indigo-950'
+                            : 'border-slate-700 hover:border-slate-600'"
+                  class="w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all text-left">
+            <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0" x-html="pm.icon"></div>
+            <div class="flex-1">
+              <p class="font-medium text-sm" x-text="pm.label"></p>
+              <p class="text-xs text-slate-500" x-text="pm.desc"></p>
+            </div>
+            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                 :class="selectedPayment === pm.id ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
+              <div class="w-2 h-2 rounded-full bg-white" x-show="selectedPayment === pm.id"></div>
+            </div>
+          </button>
+        </template>
+      </div>
+
+      <template x-if="quote">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl px-5 py-4 flex items-center justify-between mb-6">
+          <span class="text-sm text-slate-400">Order total</span>
+          <span class="text-xl font-bold text-green-400" x-text="'$' + quote.price.toFixed(2)"></span>
+        </div>
+      </template>
+
+      <div class="mt-6 flex justify-between">
+        <button @click="step = 3" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
+          ← Back
+        </button>
+        <button @click="verifyPayment()"
+                :disabled="!selectedPayment || paymentLoading"
+                class="px-6 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors flex items-center gap-2">
+          <svg x-show="paymentLoading" class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span x-text="paymentLoading ? 'Processing…' : 'Pay $' + (quote ? quote.price.toFixed(2) : '')"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 5: Delivery ════════════════════════════════════════════════════ -->
+    <div x-show="step === 5" x-transition>
+      <h2 class="text-2xl font-bold mb-1">Delivery</h2>
+      <p class="text-slate-400 text-sm mb-6">Where should we send your download link when the job is ready?</p>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-5">
+        <!-- Method selector -->
+        <div class="flex gap-3">
+          <button @click="delivery.method = 'email'"
+                  :class="delivery.method === 'email'
+                            ? 'border-indigo-500 bg-indigo-950 text-white'
+                            : 'border-slate-700 text-slate-400'"
+                  class="flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+            Email
+          </button>
+          <button @click="delivery.method = 'whatsapp'"
+                  :class="delivery.method === 'whatsapp'
+                            ? 'border-green-500 bg-green-950 text-white'
+                            : 'border-slate-700 text-slate-400'"
+                  class="flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            WhatsApp
+          </button>
+        </div>
+
+        <!-- Contact input -->
+        <div>
+          <label class="block text-sm font-medium mb-2" x-text="delivery.method === 'email' ? 'Email address' : 'Phone number (with country code)'"></label>
+          <input x-model="delivery.contact"
+                 :type="delivery.method === 'email' ? 'email' : 'tel'"
+                 :placeholder="delivery.method === 'email' ? 'you@example.com' : '+972 50 123 4567'"
+                 class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+        </div>
+      </div>
+
+      <div class="mt-8 flex justify-between">
+        <button @click="step = 4" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
+          ← Back
+        </button>
+        <button @click="submitJob()"
+                :disabled="!delivery.contact.trim() || submitLoading"
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors flex items-center gap-2">
+          <svg x-show="submitLoading" class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span x-text="submitLoading ? 'Submitting…' : 'Submit job'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 6: Status ══════════════════════════════════════════════════════ -->
+    <div x-show="step === 6" x-transition>
+      <h2 class="text-2xl font-bold mb-1">Processing</h2>
+      <p class="text-slate-400 text-sm mb-6">Your highlights are being compiled. This may take a while for large jobs.</p>
+
+      <template x-if="jobStatus">
+        <div class="space-y-4">
+          <!-- Status badge -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center">
+            <!-- Pending / Processing -->
+            <template x-if="jobStatus.status === 'pending' || jobStatus.status === 'processing'">
+              <div>
+                <div class="flex items-center justify-center gap-2 mb-4">
+                  <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:0s"></div>
+                  <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:.2s"></div>
+                  <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:.4s"></div>
+                </div>
+                <p class="text-lg font-semibold capitalize" x-text="jobStatus.status"></p>
+                <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.progress" x-text="jobStatus.progress"></p>
+              </div>
+            </template>
+
+            <!-- Completed -->
+            <template x-if="jobStatus.status === 'completed'">
+              <div>
+                <div class="w-16 h-16 rounded-full bg-green-900/40 border border-green-700 flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p class="text-xl font-semibold text-green-400">Highlights ready!</p>
+                <p class="text-sm text-slate-400 mt-1">Check your <span x-text="delivery.method"></span> for the download link.</p>
+              </div>
+            </template>
+
+            <!-- Failed -->
+            <template x-if="jobStatus.status === 'failed'">
+              <div>
+                <div class="w-16 h-16 rounded-full bg-red-900/40 border border-red-700 flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <p class="text-xl font-semibold text-red-400">Job failed</p>
+                <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.error" x-text="jobStatus.error"></p>
+              </div>
+            </template>
+          </div>
+
+          <!-- Download links -->
+          <template x-if="jobStatus.output_links && jobStatus.output_links.length > 0">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <h3 class="text-sm font-semibold text-slate-300 mb-3">Download links</h3>
+              <div class="space-y-2">
+                <template x-for="(link, i) in jobStatus.output_links" :key="i">
+                  <a :href="link" target="_blank" rel="noopener"
+                     class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors text-sm group">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span class="truncate text-indigo-300" x-text="link"></span>
+                  </a>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Job ID reference -->
+          <div class="text-center text-xs text-slate-600">
+            Job ID: <span class="font-mono" x-text="jobStatus.job_id"></span>
+          </div>
+
+          <!-- New job button -->
+          <div class="text-center" x-show="['completed','failed'].includes(jobStatus.status)">
+            <button @click="resetForm()"
+                    class="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors">
+              Start a new job
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="!jobStatus">
+        <div class="text-center py-12 text-slate-500">Waiting for server response…</div>
+      </template>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+  <footer class="border-t border-slate-900 mt-16 py-6 text-center text-xs text-slate-700">
+    ScoutCut — Video Highlight Compiler
+  </footer>
+
+  <!-- ── Alpine component ───────────────────────────────────────────────────── -->
+  <script>
+    function scoutcut() {
+      return {
+        step: 1,
+        stepLabels: ['Clips', 'Config', 'Review', 'Payment', 'Delivery', 'Status'],
+
+        // Step 1
+        rows: [{ url: '', title: '', timecodes: '' }],
+
+        // Step 2
+        config: { pad_before: 5, pad_after: 5, output_strategy: 'single' },
+
+        // Step 3
+        quote: null,
+        quoteLoading: false,
+
+        // Step 4
+        selectedPayment: null,
+        paymentToken: null,
+        paymentLoading: false,
+        paymentMethods: [
+          {
+            id: 'apple_pay',
+            label: 'Apple Pay',
+            desc: 'Pay with Face ID or Touch ID',
+            icon: `<svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>`
+          },
+          {
+            id: 'google_pay',
+            label: 'Google Pay',
+            desc: 'Pay with your Google account',
+            icon: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><text y="18" font-size="16" font-weight="bold"><tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">o</tspan><tspan fill="#FBBC05">o</tspan><tspan fill="#4285F4">g</tspan><tspan fill="#34A853">l</tspan><tspan fill="#EA4335">e</tspan></text></svg>`
+          },
+          {
+            id: 'credit_card',
+            label: 'Credit / Debit Card',
+            desc: 'Visa, Mastercard, Amex',
+            icon: `<svg class="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>`
+          },
+          {
+            id: 'bit',
+            label: 'Bit',
+            desc: 'Israeli mobile payment',
+            icon: `<span class="text-xl font-black text-blue-400">bit</span>`
+          }
+        ],
+
+        // Step 5
+        delivery: { method: 'email', contact: '' },
+        submitLoading: false,
+
+        // Step 6
+        jobId: null,
+        jobStatus: null,
+        _pollTimer: null,
+
+        // ── Computed ──────────────────────────────────────────────────────────
+        get totalClips() {
+          return this.rows.reduce((s, r) => s + this.countTimecodes(r), 0)
+        },
+
+        get canProceedFromStep1() {
+          return this.rows.some(r => r.url.trim() && this.countTimecodes(r) > 0)
+        },
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        countTimecodes(row) {
+          if (!row.timecodes) return 0
+          return row.timecodes.split('\n').filter(t => t.trim()).length
+        },
+
+        addRow() {
+          this.rows.push({ url: '', title: '', timecodes: '' })
+        },
+
+        removeRow(i) {
+          if (this.rows.length > 1) this.rows.splice(i, 1)
+        },
+
+        goToConfig() {
+          if (this.canProceedFromStep1) this.step = 2
+        },
+
+        _buildVideoRows() {
+          return this.rows
+            .filter(r => r.url.trim() && this.countTimecodes(r) > 0)
+            .map(r => ({
+              url: r.url.trim(),
+              title: r.title.trim(),
+              timecodes: r.timecodes.split('\n').map(t => t.trim()).filter(Boolean)
+            }))
+        },
+
+        // ── API calls ─────────────────────────────────────────────────────────
+        async fetchQuote() {
+          this.quoteLoading = true
+          try {
+            const res = await fetch('/api/jobs/quote', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                video_rows: this._buildVideoRows(),
+                config: this.config
+              })
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              alert('Quote error: ' + (err.detail || JSON.stringify(err)))
+              return
+            }
+            this.quote = await res.json()
+            this.step = 3
+          } finally {
+            this.quoteLoading = false
+          }
+        },
+
+        async verifyPayment() {
+          if (!this.selectedPayment) return
+          this.paymentLoading = true
+          try {
+            const res = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                method: this.selectedPayment,
+                amount: this.quote.price,
+                metadata: {}
+              })
+            })
+            const data = await res.json()
+            if (!data.success) throw new Error(data.message)
+            this.paymentToken = data.payment_token
+            this.step = 5
+          } catch (e) {
+            alert('Payment failed: ' + e.message)
+          } finally {
+            this.paymentLoading = false
+          }
+        },
+
+        async submitJob() {
+          if (!this.delivery.contact.trim()) return
+          this.submitLoading = true
+          try {
+            const res = await fetch('/api/jobs/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                video_rows: this._buildVideoRows(),
+                config: this.config,
+                delivery: this.delivery,
+                payment_token: this.paymentToken
+              })
+            })
+            if (!res.ok) {
+              const err = await res.json()
+              alert('Submit error: ' + (err.detail || JSON.stringify(err)))
+              return
+            }
+            const data = await res.json()
+            this.jobId = data.job_id
+            this.step = 6
+            this._startPolling()
+          } finally {
+            this.submitLoading = false
+          }
+        },
+
+        _startPolling() {
+          this._pollTimer = setInterval(async () => {
+            try {
+              const res = await fetch(`/api/jobs/${this.jobId}/status`)
+              if (!res.ok) return
+              this.jobStatus = await res.json()
+              if (['completed', 'failed'].includes(this.jobStatus.status)) {
+                clearInterval(this._pollTimer)
+              }
+            } catch { /* network hiccup — retry next tick */ }
+          }, 3000)
+        },
+
+        resetForm() {
+          if (this._pollTimer) clearInterval(this._pollTimer)
+          this.step = 1
+          this.rows = [{ url: '', title: '', timecodes: '' }]
+          this.config = { pad_before: 5, pad_after: 5, output_strategy: 'single' }
+          this.quote = null
+          this.selectedPayment = null
+          this.paymentToken = null
+          this.delivery = { method: 'email', contact: '' }
+          this.jobId = null
+          this.jobStatus = null
+        }
+      }
+    }
+  </script>
+</body>
+</html>
