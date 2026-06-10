@@ -441,15 +441,19 @@ def normalize_clip(input_path: Path, output_path: Path) -> bool:
     Re-encode one clip to the uniform target spec (1920×1080, 30 fps, H.264
     CRF 18, yuv420p, AAC stereo 44.1 kHz).  Injects silence if no audio track.
     """
+    # setpts resets video timestamps to 0 — stream-copy preserves source offsets
+    # (e.g. 447 s) which would create a huge sparse moov atom when mixed with
+    # anullsrc (which always starts at 0).
     scale_chain = (
         f"scale={VWIDTH}:{VHEIGHT}:force_original_aspect_ratio=decrease,"
         f"pad={VWIDTH}:{VHEIGHT}:(ow-iw)/2:(oh-ih)/2,"
         f"fps={VFPS},"
+        f"setpts=PTS-STARTPTS,"
         f"format=yuv420p"
     )
     if has_audio(input_path):
         extra: list[str] = []
-        audio_filter = f"[0:a]aresample={AUDIO_SR},aformat=channel_layouts=stereo[aout]"
+        audio_filter = f"[0:a]aresample={AUDIO_SR},asetpts=PTS-STARTPTS,aformat=channel_layouts=stereo[aout]"
     else:
         extra = ["-f", "lavfi", "-i", f"anullsrc=channel_layout=stereo:sample_rate={AUDIO_SR}"]
         audio_filter = f"[1:a]aresample={AUDIO_SR}[aout]"
@@ -461,6 +465,7 @@ def normalize_clip(input_path: Path, output_path: Path) -> bool:
         "-map", "[vout]", "-map", "[aout]",
         "-c:v", "libx264", "-crf", str(VCRF), "-preset", "fast",
         "-c:a", "aac", "-b:a", AUDIO_BR, "-ar", str(AUDIO_SR),
+        "-shortest",
         "-movflags", "+faststart",
         str(output_path),
     ]
