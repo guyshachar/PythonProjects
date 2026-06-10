@@ -22,29 +22,29 @@ class Base(DeclarativeBase):
 class JobRecord(Base):
     __tablename__ = "jobs"
 
-    id         = Column(String,  primary_key=True, default=lambda: str(uuid.uuid4()))
-    status     = Column(String,  default="pending")  # pending|processing|completed|failed
-    payload    = Column(JSON)
-    price      = Column(Float)
-    output_links = Column(JSON,  nullable=True)
-    progress   = Column(Text,    nullable=True)
-    error      = Column(Text,    nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id           = Column(String,  primary_key=True, default=lambda: str(uuid.uuid4()))
+    status       = Column(String,  default="pending")  # pending|processing|completed|failed
+    payload      = Column(JSON)
+    price        = Column(Float)
+    output_links = Column(JSON,    nullable=True)
+    progress     = Column(Text,    nullable=True)
+    error        = Column(Text,    nullable=True)
+    created_at   = Column(DateTime, default=datetime.utcnow)
+    updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-# ── Pydantic API models ────────────────────────────────────────────────────────
+# ── Shared sub-models ──────────────────────────────────────────────────────────
 
 class VideoRow(BaseModel):
-    url: str
-    title: str = ""
+    url:       str
+    title:     str = ""
     timecodes: List[str] = Field(default_factory=list)
 
 
 class ProcessingConfig(BaseModel):
-    pad_before: int = Field(default=5, ge=0, le=120)
-    pad_after:  int = Field(default=5, ge=0, le=120)
-    output_strategy: Literal["single", "multiple"] = "single"
+    pad_before:       int     = Field(default=5, ge=0, le=120)
+    pad_after:        int     = Field(default=5, ge=0, le=120)
+    output_strategy:  Literal["single", "multiple"] = "single"
 
 
 class DeliveryInfo(BaseModel):
@@ -52,35 +52,48 @@ class DeliveryInfo(BaseModel):
     contact: str
 
 
+# ── Quote / Pricing ────────────────────────────────────────────────────────────
+
 class JobQuoteRequest(BaseModel):
     video_rows: List[VideoRow]
     config:     ProcessingConfig
+    currency:   Literal["USD", "NIS"] = "USD"
+    language:   str = "en"   # "en" | "he" — passed through for context
 
 
 class JobQuoteResponse(BaseModel):
-    # ── Input counts ──────────────────────────────────────────────────────────
+    # Input counts
     number_of_links: int
     total_clips:     int
 
-    # ── Financial breakdown (all values in USD) ───────────────────────────────
-    traditional_cost:     float   # what the client would pay without ScoutCut
-    pure_app_revenue:     float   # ScoutCut's processing fee
-    fixed_final_edit_fee: float   # one-time final editor fee (constant)
-    hybrid_total_cost:    float   # pure_app_revenue + fixed_final_edit_fee
-    client_savings:       float   # traditional_cost − hybrid_total_cost
-    savings_percentage:   float   # client_savings / traditional_cost × 100
+    # Localisation metadata
+    currency:        str   # "USD" | "NIS"
+    currency_symbol: str   # "$" | "₪"
 
-    # ── Config snapshot (for formula display in the UI) ───────────────────────
-    rate_per_link:    float
-    rate_per_clip:    float
-    traditional_rate: float
+    # Financial breakdown — all values are whole integers in the requested currency
+    traditional_cost:     int
+    pure_app_revenue:     int
+    fixed_final_edit_fee: int
+    hybrid_total_cost:    int
+    client_savings:       int
+    savings_percentage:   float   # still a float (e.g. 43.1%)
 
+    # Config snapshot for formula display in the UI
+    rate_per_link:    int
+    rate_per_clip:    int
+    traditional_rate: int
+
+
+# ── Job lifecycle ──────────────────────────────────────────────────────────────
 
 class JobCreateRequest(BaseModel):
+    job_title:     str = ""               # user-set project name / header
     video_rows:    List[VideoRow]
     config:        ProcessingConfig
     delivery:      DeliveryInfo
     payment_token: str
+    currency:      Literal["USD", "NIS"] = "USD"
+    language:      str = "en"
 
 
 class JobCreateResponse(BaseModel):
@@ -92,14 +105,17 @@ class JobCreateResponse(BaseModel):
 class JobStatusResponse(BaseModel):
     job_id:       str
     status:       str
-    progress:     Optional[str]   = None
+    progress:     Optional[str]       = None
     output_links: Optional[List[str]] = None
-    error:        Optional[str]   = None
+    error:        Optional[str]       = None
 
+
+# ── Payments ───────────────────────────────────────────────────────────────────
 
 class PaymentVerifyRequest(BaseModel):
     method:   str
     amount:   float
+    currency: str = "USD"
     metadata: Dict = Field(default_factory=dict)
 
 

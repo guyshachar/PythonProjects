@@ -16,16 +16,21 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # ── Pricing constants ─────────────────────────────────────────────────────
+    # ── Pricing constants (ALL values are in NIS — the absolute base currency) ──
     # ScoutCut charges per source video link and per extracted clip.
-    app_base_fee_per_link: float = 40.0   # USD — base setup fee per unique URL
-    app_fee_per_clip:      float = 4.0    # USD — per timecode / extracted clip
+    app_base_fee_per_link: float = 40.0    # NIS — base setup fee per unique URL
+    app_fee_per_clip:      float = 4.0     # NIS — per timecode / extracted clip
 
     # Used in the "hybrid" value-comparison model:
     #   • traditional_cost   = links × TRADITIONAL_EDITOR_RATE
     #   • hybrid_total_cost  = pure_app_revenue + FIXED_FINAL_EDIT_FEE
-    traditional_editor_rate: float = 300.0   # USD/video — industry day-rate baseline
-    fixed_final_edit_fee:    float = 300.0   # USD — one-time final polish fee
+    traditional_editor_rate: float = 300.0  # NIS/video — industry day-rate baseline
+    fixed_final_edit_fee:    float = 300.0  # NIS — one-time final polish fee
+
+    # ── Currency & localisation ───────────────────────────────────────────────
+    usd_to_nis_exchange_rate: float = 3.70  # divide NIS values by this to get USD
+    default_language:         str   = "en"  # "en" | "he"
+    default_currency:         str   = "USD" # "USD" | "NIS"
 
 
 # Module-level singleton — import `settings` everywhere else

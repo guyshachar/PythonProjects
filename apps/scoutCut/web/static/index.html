@@ -1,46 +1,89 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" dir="ltr" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ScoutCut — Video Highlight Compiler</title>
+  <title>ScoutCut</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <style>
-    [x-cloak] { display: none !important; }
+    [x-cloak]  { display: none !important; }
     .step-line { height: 2px; }
-    .spinner { animation: spin 0.9s linear infinite; }
+    .spinner   { animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    textarea { resize: vertical; }
-    .pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
-    @keyframes pulse-dot { 0%,100%{opacity:.4;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+    textarea   { resize: vertical; }
+    .pulse-dot { animation: pdot 1.4s ease-in-out infinite; }
+    @keyframes pdot { 0%,100%{opacity:.4;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+    /* RTL: keep numeric/URL values in LTR direction */
+    [dir="rtl"] .ltr-value { direction: ltr; unicode-bidi: embed; }
+    /* RTL: reverse back-arrow icons */
+    [dir="rtl"] .arrow-back  { transform: scaleX(-1); display: inline-block; }
+    [dir="rtl"] .arrow-fwd   { transform: scaleX(-1); display: inline-block; }
+    /* Step connector line fills correctly in RTL */
+    [dir="rtl"] .step-connector { transform: scaleX(-1); }
   </style>
 </head>
-<body class="h-full bg-slate-950 text-slate-100 antialiased" x-data="scoutcut()" x-cloak>
 
-  <!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<!-- ─────────────────────────────────────────────────────────────────────────
+     Root Alpine component — wraps the entire page
+──────────────────────────────────────────────────────────────────────────── -->
+<body class="h-full bg-slate-950 text-slate-100 antialiased"
+      x-data="scoutcut()"
+      x-init="init()"
+      x-cloak
+      :dir="dir"
+      :lang="lang">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
   <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur border-b border-slate-800">
-    <div class="mx-auto max-w-5xl px-4 py-4 flex items-center gap-3">
+    <div class="mx-auto max-w-5xl px-4 py-3 flex items-center gap-3">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
           <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" />
           </svg>
         </div>
         <span class="font-semibold text-lg tracking-tight">ScoutCut</span>
       </div>
-      <span class="text-slate-500 text-sm hidden sm:inline">Video Highlight Compiler</span>
-      <div class="ml-auto text-xs text-slate-500" x-show="totalClips > 0">
-        <span x-text="totalClips"></span> clip<span x-show="totalClips !== 1">s</span>
+      <span class="text-slate-500 text-sm hidden sm:inline" x-text="t('appTagline')"></span>
+
+      <!-- ── Global preferences ──────────────────────────────────────────── -->
+      <div class="ms-auto flex items-center gap-1 sm:gap-3">
+
+        <!-- Language toggle -->
+        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg overflow-hidden text-xs font-medium">
+          <button @click="setLang('en')"
+                  :class="lang==='en' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'"
+                  class="px-2.5 py-1.5 transition-colors">EN</button>
+          <button @click="setLang('he')"
+                  :class="lang==='he' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'"
+                  class="px-2.5 py-1.5 transition-colors">עב</button>
+        </div>
+
+        <!-- Currency toggle -->
+        <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg overflow-hidden text-xs font-medium">
+          <button @click="setCurrency('USD')"
+                  :class="currency==='USD' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'"
+                  class="px-2.5 py-1.5 transition-colors">$ USD</button>
+          <button @click="setCurrency('NIS')"
+                  :class="currency==='NIS' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'"
+                  class="px-2.5 py-1.5 transition-colors">₪ NIS</button>
+        </div>
+
+        <!-- Clip counter -->
+        <span class="text-xs text-slate-500 hidden sm:inline" x-show="totalClips > 0">
+          <span x-text="totalClips"></span>
+          <span x-text="totalClips===1 ? t('clip') : t('clips')"></span>
+        </span>
       </div>
     </div>
   </header>
 
-  <!-- ── Step indicator ──────────────────────────────────────────────────────── -->
+  <!-- ══ STEP INDICATOR ═══════════════════════════════════════════════════════ -->
   <div class="mx-auto max-w-5xl px-4 pt-8 pb-2">
-    <div class="flex items-center gap-0">
-      <template x-for="(label, i) in stepLabels" :key="i">
-        <div class="flex items-center" :class="i < stepLabels.length - 1 ? 'flex-1' : ''">
+    <div class="flex items-center">
+      <template x-for="(label, i) in t('steps')" :key="i">
+        <div class="flex items-center" :class="i < t('steps').length - 1 ? 'flex-1' : ''">
           <div class="flex flex-col items-center">
             <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300"
                  :class="{
@@ -54,15 +97,16 @@
                 </svg>
               </template>
               <template x-if="step <= i+1">
-                <span x-text="i+1"></span>
+                <!-- Step numbers always render LTR (1→6) regardless of dir -->
+                <span class="ltr-value" x-text="i+1"></span>
               </template>
             </div>
             <span class="text-xs mt-1 hidden sm:block"
                   :class="step >= i+1 ? 'text-slate-300' : 'text-slate-600'"
                   x-text="label"></span>
           </div>
-          <template x-if="i < stepLabels.length - 1">
-            <div class="flex-1 step-line mx-2 transition-all duration-500"
+          <template x-if="i < t('steps').length - 1">
+            <div class="flex-1 step-line mx-2 transition-all duration-500 step-connector"
                  :class="step > i+1 ? 'bg-indigo-600' : 'bg-slate-800'"></div>
           </template>
         </div>
@@ -70,19 +114,58 @@
     </div>
   </div>
 
-  <!-- ── Main card ───────────────────────────────────────────────────────────── -->
+  <!-- ══ MAIN CONTENT ══════════════════════════════════════════════════════════ -->
   <main class="mx-auto max-w-5xl px-4 py-8">
 
-    <!-- ══ STEP 1: Video rows ══════════════════════════════════════════════════ -->
+    <!-- ════ STEP 1: Clips ═══════════════════════════════════════════════════ -->
     <div x-show="step === 1" x-transition>
-      <h2 class="text-2xl font-bold mb-1">Add your clips</h2>
-      <p class="text-slate-400 text-sm mb-6">Enter each source video with its title and the timecodes you want to extract.</p>
+      <h2 class="text-2xl font-bold mb-1" x-text="t('step1Title')"></h2>
+      <p class="text-slate-400 text-sm mb-6" x-text="t('step1Subtitle')"></p>
 
+      <!-- Job Title field ─────────────────────────────────────────────────── -->
+      <div class="bg-slate-900 border-2 border-indigo-800/60 rounded-xl p-5 mb-5">
+        <label class="block text-sm font-semibold mb-2 flex items-center gap-1">
+          <svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+          </svg>
+          <span x-text="t('jobTitleLabel')"></span>
+          <span class="text-red-400">*</span>
+        </label>
+        <input type="text" x-model="jobTitle"
+               :placeholder="t('jobTitlePlaceholder')"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-3 text-base font-medium
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+      </div>
+
+      <!-- Export / Import ─────────────────────────────────────────────────── -->
+      <div class="flex items-center gap-2 mb-5">
+        <button @click="exportJob()"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800
+                       hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-slate-300">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          <span x-text="t('exportJob')"></span>
+        </button>
+
+        <label class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800
+                      hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors
+                      text-slate-300 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          <span x-text="t('importJob')"></span>
+          <input type="file" accept=".json" class="hidden" @change="importJob($event)" />
+        </label>
+
+        <span class="text-xs text-slate-600" x-show="importError" x-text="importError"></span>
+      </div>
+
+      <!-- Video rows ──────────────────────────────────────────────────────── -->
       <template x-for="(row, idx) in rows" :key="idx">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4 relative">
-          <!-- Remove button -->
           <button x-show="rows.length > 1" @click="removeRow(idx)"
-                  class="absolute top-3 right-3 text-slate-600 hover:text-red-400 transition-colors">
+                  class="absolute top-3 end-3 text-slate-600 hover:text-red-400 transition-colors">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -90,26 +173,29 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2">
-              <label class="block text-xs font-medium text-slate-400 mb-1">Video URL</label>
-              <input type="url" x-model="row.url" placeholder="https://you.pixellot.link/… or https://app.veo.co/…"
-                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+              <label class="block text-xs font-medium text-slate-400 mb-1" x-text="t('videoUrl')"></label>
+              <input type="url" x-model="row.url" :placeholder="t('videoUrlPlaceholder')"
+                     class="ltr-value w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Title / Label (optional)</label>
-              <input type="text" x-model="row.title" placeholder="e.g. Kiryat Gat vs Kfar Yona"
-                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+              <label class="block text-xs font-medium text-slate-400 mb-1" x-text="t('titleLabel')"></label>
+              <input type="text" x-model="row.title" :placeholder="t('titlePlaceholder')"
+                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-400 mb-1">
-                Timecodes
-                <span class="text-slate-600 font-normal">(one per line)</span>
+                <span x-text="t('timecodesLabel')"></span>
+                <span class="text-slate-600 font-normal" x-text="' ' + t('timecodesHint')"></span>
               </label>
               <textarea x-model="row.timecodes" rows="4"
-                        placeholder="47:29&#10;58:31-58:45&#10;1:02:10"
-                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600"></textarea>
+                        :placeholder="t('timecodesPlaceholder')"
+                        class="ltr-value w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm
+                               font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600"></textarea>
               <p class="text-xs text-slate-600 mt-1">
-                <span class="text-indigo-400 font-medium" x-text="countTimecodes(row)"></span>
-                timecode<span x-show="countTimecodes(row) !== 1">s</span>
+                <span class="text-indigo-400 font-medium ltr-value" x-text="countTimecodes(row)"></span>
+                <span x-text="countTimecodes(row)===1 ? t('clip') : t('clips')"></span>
               </p>
             </div>
           </div>
@@ -117,68 +203,72 @@
       </template>
 
       <button @click="addRow()"
-              class="w-full py-3 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 hover:border-indigo-500 hover:text-indigo-400 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+              class="w-full py-3 border-2 border-dashed border-slate-700 rounded-xl text-slate-500
+                     hover:border-indigo-500 hover:text-indigo-400 transition-colors text-sm
+                     font-medium flex items-center justify-center gap-2">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        Add another video
+        <span x-text="t('addVideo')"></span>
       </button>
 
       <div class="mt-8 flex justify-end">
         <button @click="goToConfig()"
                 :disabled="!canProceedFromStep1"
-                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
-          Configure processing
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700
+                       disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg font-medium
+                       text-sm transition-colors flex items-center gap-2">
+          <span x-text="t('configureProcessing')"></span>
+          <svg class="w-4 h-4 arrow-fwd" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
         </button>
       </div>
     </div>
 
-    <!-- ══ STEP 2: Config ══════════════════════════════════════════════════════ -->
+    <!-- ════ STEP 2: Config ══════════════════════════════════════════════════ -->
     <div x-show="step === 2" x-transition>
-      <h2 class="text-2xl font-bold mb-1">Processing options</h2>
-      <p class="text-slate-400 text-sm mb-6">Control how much context to include around each clip and how output files are organised.</p>
+      <h2 class="text-2xl font-bold mb-1" x-text="t('configTitle')"></h2>
+      <p class="text-slate-400 text-sm mb-6" x-text="t('configSubtitle')"></p>
 
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
-        <!-- Padding -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label class="block text-sm font-medium mb-2">Seconds before each clip</label>
+            <label class="block text-sm font-medium mb-2" x-text="t('padBefore')"></label>
             <div class="flex items-center gap-3">
               <input type="range" min="0" max="60" step="1" x-model.number="config.pad_before"
                      class="flex-1 accent-indigo-500" />
-              <span class="w-10 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1" x-text="config.pad_before + 's'"></span>
+              <span class="w-12 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1 ltr-value"
+                    x-text="config.pad_before + 's'"></span>
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">Seconds after each clip</label>
+            <label class="block text-sm font-medium mb-2" x-text="t('padAfter')"></label>
             <div class="flex items-center gap-3">
               <input type="range" min="0" max="60" step="1" x-model.number="config.pad_after"
                      class="flex-1 accent-indigo-500" />
-              <span class="w-10 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1" x-text="config.pad_after + 's'"></span>
+              <span class="w-12 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1 ltr-value"
+                    x-text="config.pad_after + 's'"></span>
             </div>
           </div>
         </div>
 
-        <!-- Output strategy -->
         <div>
-          <label class="block text-sm font-medium mb-3">Output format</label>
+          <label class="block text-sm font-medium mb-3" x-text="t('outputFormat')"></label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button @click="config.output_strategy = 'single'"
                     :class="config.output_strategy === 'single'
                               ? 'border-indigo-500 bg-indigo-950 text-white'
                               : 'border-slate-700 text-slate-400 hover:border-slate-500'"
-                    class="p-4 rounded-xl border-2 text-left transition-all">
+                    class="p-4 rounded-xl border-2 text-start transition-all">
               <div class="flex items-start gap-3">
                 <div class="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
-                     :class="config.output_strategy === 'single' ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
-                  <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="config.output_strategy === 'single'"></div>
+                     :class="config.output_strategy==='single' ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
+                  <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="config.output_strategy==='single'"></div>
                 </div>
                 <div>
-                  <p class="font-medium text-sm">Single file</p>
-                  <p class="text-xs text-slate-500 mt-0.5">All clips concatenated into one video</p>
+                  <p class="font-medium text-sm" x-text="t('singleFile')"></p>
+                  <p class="text-xs text-slate-500 mt-0.5" x-text="t('singleFileDesc')"></p>
                 </div>
               </div>
             </button>
@@ -186,15 +276,15 @@
                     :class="config.output_strategy === 'multiple'
                               ? 'border-indigo-500 bg-indigo-950 text-white'
                               : 'border-slate-700 text-slate-400 hover:border-slate-500'"
-                    class="p-4 rounded-xl border-2 text-left transition-all">
+                    class="p-4 rounded-xl border-2 text-start transition-all">
               <div class="flex items-start gap-3">
                 <div class="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
-                     :class="config.output_strategy === 'multiple' ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
-                  <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="config.output_strategy === 'multiple'"></div>
+                     :class="config.output_strategy==='multiple' ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
+                  <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="config.output_strategy==='multiple'"></div>
                 </div>
                 <div>
-                  <p class="font-medium text-sm">One file per URL</p>
-                  <p class="text-xs text-slate-500 mt-0.5">Separate highlight reel for each source video</p>
+                  <p class="font-medium text-sm" x-text="t('multipleFiles')"></p>
+                  <p class="text-xs text-slate-500 mt-0.5" x-text="t('multipleFilesDesc')"></p>
                 </div>
               </div>
             </button>
@@ -203,38 +293,42 @@
       </div>
 
       <div class="mt-8 flex justify-between">
-        <button @click="step = 1" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
-          ← Back
+        <button @click="step = 1"
+                class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+          <svg class="w-4 h-4 arrow-back" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          <span x-text="t('back')"></span>
         </button>
         <button @click="fetchQuote()"
                 :disabled="quoteLoading"
-                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700
+                       disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors
+                       flex items-center gap-2">
           <svg x-show="quoteLoading" class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <span x-text="quoteLoading ? 'Calculating…' : 'Get price quote'"></span>
+          <span x-text="quoteLoading ? t('calculating') : t('getPriceQuote')"></span>
         </button>
       </div>
     </div>
 
-    <!-- ══ STEP 3: Checkout & Review ════════════════════════════════════════════ -->
+    <!-- ════ STEP 3: Checkout & Review ══════════════════════════════════════ -->
     <div x-show="step === 3" x-transition>
-
       <template x-if="quote">
         <div>
-
-          <!-- ── Top savings banner ─────────────────────────────────────────── -->
+          <!-- Top bar: title + savings badge -->
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-7">
             <div>
-              <h2 class="text-2xl font-bold">Checkout &amp; Review</h2>
+              <h2 class="text-2xl font-bold" x-text="t('checkoutTitle')"></h2>
               <p class="text-slate-400 text-sm mt-1">
-                <span x-text="quote.number_of_links"></span> video<span x-show="quote.number_of_links!==1">s</span>,
-                <span x-text="quote.total_clips"></span> clip<span x-show="quote.total_clips!==1">s</span>
+                <span class="ltr-value" x-text="quote.number_of_links"></span>
+                <span x-text="quote.number_of_links===1 ? t('videoSingular') : t('videoPlural')"></span>,
+                <span class="ltr-value" x-text="quote.total_clips"></span>
+                <span x-text="quote.total_clips===1 ? t('clip') : t('clips')"></span>
               </p>
             </div>
-            <!-- Savings badge — the core value proposition, placed top-right so it's
-                 the second thing eyes land on after the heading (F-pattern reading). -->
             <div class="inline-flex items-center gap-2.5 bg-green-900/40 border border-green-600/60
                         rounded-2xl px-4 py-2.5 self-start sm:self-auto">
               <div class="w-7 h-7 rounded-full bg-green-600/50 flex items-center justify-center flex-shrink-0">
@@ -243,10 +337,10 @@
                 </svg>
               </div>
               <div>
-                <p class="text-xs text-green-500 font-medium uppercase tracking-wide">Your savings</p>
+                <p class="text-xs text-green-500 font-medium uppercase tracking-wide" x-text="t('yourSavings')"></p>
                 <p class="text-xl font-extrabold text-green-300 leading-none">
-                  $<span x-text="quote.client_savings.toFixed(0)"></span>
-                  <span class="text-sm font-semibold text-green-500 ml-1">
+                  <span x-text="quote.currency_symbol"></span><span class="ltr-value" x-text="quote.client_savings"></span>
+                  <span class="text-sm font-semibold text-green-500 ms-1 ltr-value">
                     (<span x-text="quote.savings_percentage"></span>%)
                   </span>
                 </p>
@@ -254,147 +348,117 @@
             </div>
           </div>
 
-          <!-- ── Side-by-side price comparison ─────────────────────────────── -->
-          <!--
-            UX: Price anchoring — show the traditional (high) cost first so the
-            ScoutCut total appears dramatically cheaper by contrast.
-            Red strikethrough triggers loss-aversion ("I'd be wasting that money").
-          -->
+          <!-- Side-by-side comparison -->
           <div class="grid grid-cols-2 gap-3 mb-4">
-
-            <!-- Traditional: the anchor / baseline -->
             <div class="relative bg-red-950/20 border border-red-800/40 rounded-xl p-5 overflow-hidden">
-              <div class="absolute top-0 right-0 text-[10px] font-bold tracking-wider
-                          bg-red-900/60 text-red-400 px-2 py-1 rounded-bl-lg">
-                WITHOUT SCOUTCUT
-              </div>
-              <p class="text-xs text-slate-500 mb-1 mt-3">Traditional editor</p>
-              <!-- Large, deliberately hard to miss, deliberately crossed out -->
-              <p class="text-4xl font-black text-slate-400 line-through decoration-red-500 decoration-[3px]">
-                $<span x-text="quote.traditional_cost.toFixed(0)"></span>
+              <div class="absolute top-0 end-0 text-[10px] font-bold tracking-wider
+                          bg-red-900/60 text-red-400 px-2 py-1 rounded-es-lg"
+                   x-text="t('withoutScoutcut')"></div>
+              <p class="text-xs text-slate-500 mb-1 mt-3" x-text="t('traditionalEditor')"></p>
+              <p class="text-4xl font-black text-slate-400 line-through decoration-red-500 decoration-[3px] ltr-value">
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.traditional_cost"></span>
               </p>
-              <p class="text-xs text-slate-600 mt-2">
-                <span x-text="quote.number_of_links"></span> video<span x-show="quote.number_of_links!==1">s</span>
-                × $<span x-text="quote.traditional_rate.toFixed(0)"></span> / video
+              <p class="text-xs text-slate-600 mt-2 ltr-value">
+                <span x-text="quote.number_of_links"></span>
+                × <span x-text="quote.currency_symbol"></span><span x-text="quote.traditional_rate"></span>
               </p>
             </div>
 
-            <!-- ScoutCut hybrid: the hero number -->
             <div class="relative bg-indigo-950/40 border-2 border-indigo-600 rounded-xl p-5 overflow-hidden">
-              <div class="absolute top-0 right-0 text-[10px] font-bold tracking-wider
-                          bg-indigo-700 text-white px-2 py-1 rounded-bl-lg">
-                SCOUTCUT
-              </div>
-              <p class="text-xs text-slate-400 mb-1 mt-3">ScoutCut hybrid</p>
-              <p class="text-4xl font-black text-white">
-                $<span x-text="quote.hybrid_total_cost.toFixed(0)"></span>
+              <div class="absolute top-0 end-0 text-[10px] font-bold tracking-wider
+                          bg-indigo-700 text-white px-2 py-1 rounded-es-lg"
+                   x-text="t('withScoutcut')"></div>
+              <p class="text-xs text-slate-400 mb-1 mt-3" x-text="t('scoutcutHybrid')"></p>
+              <p class="text-4xl font-black text-white ltr-value">
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.hybrid_total_cost"></span>
               </p>
-              <p class="text-xs text-indigo-400 mt-2">All-in total</p>
+              <p class="text-xs text-indigo-400 mt-2" x-text="t('allInTotal')"></p>
             </div>
           </div>
 
-          <!-- ── Detailed breakdown ─────────────────────────────────────────── -->
-          <!--
-            UX: Transparency — itemising every dollar removes the "hidden fee"
-            anxiety that causes last-second cart abandonment. Customers who
-            understand the bill convert at higher rates.
-          -->
+          <!-- Detailed breakdown -->
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-4">
-            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
-              ScoutCut hybrid cost breakdown
-            </h3>
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4"
+                x-text="t('costBreakdown')"></h3>
 
-            <!-- ScoutCut processing fee -->
             <div class="flex items-start justify-between gap-4 mb-3">
               <div>
-                <p class="text-sm font-medium text-slate-200">ScoutCut Processing Fee</p>
-                <p class="text-xs text-slate-500 mt-0.5">
+                <p class="text-sm font-medium text-slate-200" x-text="t('processingFee')"></p>
+                <p class="text-xs text-slate-500 mt-0.5 ltr-value">
                   (<span x-text="quote.number_of_links"></span>
-                  video<span x-show="quote.number_of_links!==1">s</span>
-                  × $<span x-text="quote.rate_per_link.toFixed(0)"></span>)
+                  × <span x-text="quote.currency_symbol"></span><span x-text="quote.rate_per_link"></span>)
                   +
                   (<span x-text="quote.total_clips"></span>
-                  clip<span x-show="quote.total_clips!==1">s</span>
-                  × $<span x-text="quote.rate_per_clip.toFixed(0)"></span>)
+                  × <span x-text="quote.currency_symbol"></span><span x-text="quote.rate_per_clip"></span>)
                 </p>
               </div>
-              <span class="text-sm font-semibold text-slate-200 whitespace-nowrap">
-                $<span x-text="quote.pure_app_revenue.toFixed(2)"></span>
+              <span class="text-sm font-semibold text-slate-200 whitespace-nowrap ltr-value">
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.pure_app_revenue"></span>
               </span>
             </div>
 
-            <!-- Final editor fee -->
             <div class="flex items-start justify-between gap-4 mb-3">
               <div>
-                <p class="text-sm font-medium text-slate-200">Final Editor Review</p>
-                <p class="text-xs text-slate-500 mt-0.5">
-                  One-time professional finishing &amp; quality pass
-                </p>
+                <p class="text-sm font-medium text-slate-200" x-text="t('finalEditorReview')"></p>
+                <p class="text-xs text-slate-500 mt-0.5" x-text="t('oneTimeFee')"></p>
               </div>
-              <span class="text-sm font-semibold text-slate-200 whitespace-nowrap">
-                $<span x-text="quote.fixed_final_edit_fee.toFixed(2)"></span>
+              <span class="text-sm font-semibold text-slate-200 whitespace-nowrap ltr-value">
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.fixed_final_edit_fee"></span>
               </span>
             </div>
 
-            <!-- Total row -->
             <div class="border-t border-slate-700 pt-3 flex items-center justify-between">
-              <span class="font-bold text-sm">Total you pay</span>
-              <span class="text-lg font-black text-white">
-                $<span x-text="quote.hybrid_total_cost.toFixed(2)"></span>
+              <span class="font-bold text-sm" x-text="t('totalYouPay')"></span>
+              <span class="text-lg font-black text-white ltr-value">
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.hybrid_total_cost"></span>
               </span>
             </div>
           </div>
 
-          <!-- ── Savings callout ─────────────────────────────────────────────── -->
-          <!--
-            UX: Reiterate savings at the bottom — just above the CTA button.
-            This is the last thing the user reads before clicking "Proceed".
-            Repetition at the decision point reduces hesitation.
-          -->
+          <!-- Savings callout -->
           <div class="flex items-center gap-4 bg-green-950/30 border border-green-700/50
                       rounded-xl px-5 py-4 mb-6">
             <div class="flex-1 min-w-0">
               <p class="text-sm font-semibold text-green-300">
-                You save <strong class="text-green-200">$<span x-text="quote.client_savings.toFixed(0)"></span></strong>
-                vs. hiring a traditional editor
+                <span x-text="t('youSave')"></span>
+                <strong class="text-green-200 ltr-value">
+                  <span x-text="quote.currency_symbol"></span><span x-text="quote.client_savings"></span>
+                </strong>
+                <span x-text="t('vsTraditional')"></span>
               </p>
-              <p class="text-xs text-slate-500 mt-0.5">
-                That's <span class="text-green-500 font-medium"><span x-text="quote.savings_percentage"></span>% off</span>
-                the industry-standard rate — without sacrificing quality.
+              <p class="text-xs text-slate-500 mt-0.5 ltr-value">
+                <span class="text-green-500 font-medium"><span x-text="quote.savings_percentage"></span>%</span>
+                <span x-text="' ' + t('savingsOff')"></span>
               </p>
             </div>
-            <!-- Progress bar: savings % fills left-to-right -->
-            <div class="hidden sm:flex flex-col items-end gap-1">
-              <span class="text-2xl font-extrabold text-green-300">
+            <div class="hidden sm:flex flex-col items-end gap-1 flex-shrink-0">
+              <span class="text-2xl font-extrabold text-green-300 ltr-value">
                 <span x-text="quote.savings_percentage"></span>%
               </span>
               <div class="w-28 h-2 bg-slate-800 rounded-full overflow-hidden">
                 <div class="h-full bg-gradient-to-r from-green-600 to-emerald-400 rounded-full transition-all duration-700"
-                     :style="'width:' + Math.min(quote.savings_percentage, 100) + '%'">
-                </div>
+                     :style="'width:' + Math.min(quote.savings_percentage, 100) + '%'"></div>
               </div>
-              <span class="text-xs text-slate-600">savings</span>
+              <span class="text-xs text-slate-600" x-text="t('savings')"></span>
             </div>
           </div>
 
-          <!-- ── Clips per video summary ──────────────────────────────────── -->
+          <!-- Clips-per-video summary -->
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-2">
-            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              What's included
-            </h3>
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3"
+                x-text="t('whatsIncluded')"></h3>
             <div class="space-y-2">
               <template x-for="(row, i) in rows" :key="i">
                 <div class="flex items-center gap-3 text-sm" x-show="countTimecodes(row) > 0">
                   <span class="inline-flex items-center justify-center w-6 h-6 rounded-md
-                               bg-indigo-900/60 text-indigo-300 text-xs font-bold flex-shrink-0"
+                               bg-indigo-900/60 text-indigo-300 text-xs font-bold flex-shrink-0 ltr-value"
                         x-text="countTimecodes(row)"></span>
                   <div class="min-w-0 flex-1">
-                    <p class="text-slate-300 truncate font-medium" x-text="row.title || 'Untitled'"></p>
-                    <p class="text-slate-600 text-xs truncate" x-text="row.url"></p>
+                    <p class="text-slate-300 truncate font-medium" x-text="row.title || t('untitled')"></p>
+                    <p class="text-slate-600 text-xs truncate ltr-value" x-text="row.url"></p>
                   </div>
-                  <span class="text-xs text-slate-600 flex-shrink-0">
-                    clip<span x-show="countTimecodes(row)!==1">s</span>
-                  </span>
+                  <span class="text-xs text-slate-600 flex-shrink-0"
+                        x-text="countTimecodes(row)===1 ? t('clip') : t('clips')"></span>
                 </div>
               </template>
             </div>
@@ -404,35 +468,41 @@
       </template>
 
       <div class="mt-6 flex justify-between">
-        <button @click="step = 2" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
-          ← Back
+        <button @click="step = 2"
+                class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+          <svg class="w-4 h-4 arrow-back" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          <span x-text="t('back')"></span>
         </button>
         <button @click="step = 4"
-                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2">
-          Proceed to payment
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold
+                       text-sm transition-colors flex items-center gap-2">
+          <span x-text="t('proceedToPayment')"></span>
+          <svg class="w-4 h-4 arrow-fwd" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
         </button>
       </div>
     </div>
 
-    <!-- ══ STEP 4: Payment ═════════════════════════════════════════════════════ -->
+    <!-- ════ STEP 4: Payment ═════════════════════════════════════════════════ -->
     <div x-show="step === 4" x-transition>
-      <h2 class="text-2xl font-bold mb-1">Payment</h2>
-      <p class="text-slate-400 text-sm mb-6">Choose your preferred payment method to confirm the order.</p>
+      <h2 class="text-2xl font-bold mb-1" x-text="t('paymentTitle')"></h2>
+      <p class="text-slate-400 text-sm mb-6" x-text="t('paymentSubtitle')"></p>
 
       <div class="space-y-3 mb-6">
-        <template x-for="pm in paymentMethods" :key="pm.id">
+        <template x-for="pm in visiblePaymentMethods" :key="pm.id">
           <button @click="selectedPayment = pm.id"
                   :class="selectedPayment === pm.id
                             ? 'border-indigo-500 bg-indigo-950'
                             : 'border-slate-700 hover:border-slate-600'"
-                  class="w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all text-left">
-            <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0" x-html="pm.icon"></div>
+                  class="w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all text-start">
+            <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0"
+                 x-html="pm.icon"></div>
             <div class="flex-1">
-              <p class="font-medium text-sm" x-text="pm.label"></p>
-              <p class="text-xs text-slate-500" x-text="pm.desc"></p>
+              <p class="font-medium text-sm" x-text="t(pm.labelKey)"></p>
+              <p class="text-xs text-slate-500" x-text="t(pm.descKey)"></p>
             </div>
             <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                  :class="selectedPayment === pm.id ? 'border-indigo-500 bg-indigo-500' : 'border-slate-600'">
@@ -444,374 +514,689 @@
 
       <template x-if="quote">
         <div class="bg-slate-900 border border-slate-800 rounded-xl px-5 py-4 flex items-center justify-between mb-6">
-          <span class="text-sm text-slate-400">Order total</span>
-          <span class="text-xl font-bold text-green-400" x-text="'$' + quote.hybrid_total_cost.toFixed(2)"></span>
+          <span class="text-sm text-slate-400" x-text="t('orderTotal')"></span>
+          <span class="text-xl font-bold text-green-400 ltr-value">
+            <span x-text="quote.currency_symbol"></span><span x-text="quote.hybrid_total_cost"></span>
+          </span>
         </div>
       </template>
 
       <div class="mt-6 flex justify-between">
-        <button @click="step = 3" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
-          ← Back
+        <button @click="step = 3"
+                class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+          <svg class="w-4 h-4 arrow-back" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          <span x-text="t('back')"></span>
         </button>
         <button @click="verifyPayment()"
                 :disabled="!selectedPayment || paymentLoading"
-                class="px-6 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors flex items-center gap-2">
+                class="px-6 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-700
+                       disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors
+                       flex items-center gap-2">
           <svg x-show="paymentLoading" class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <span x-text="paymentLoading ? 'Processing…' : 'Pay $' + (quote ? quote.hybrid_total_cost.toFixed(2) : '')"></span>
+          <span x-text="paymentLoading ? t('processing') : (t('pay') + ' ' + (quote ? quote.currency_symbol + quote.hybrid_total_cost : ''))"></span>
         </button>
       </div>
     </div>
 
-    <!-- ══ STEP 5: Delivery ════════════════════════════════════════════════════ -->
+    <!-- ════ STEP 5: Delivery ════════════════════════════════════════════════ -->
     <div x-show="step === 5" x-transition>
-      <h2 class="text-2xl font-bold mb-1">Delivery</h2>
-      <p class="text-slate-400 text-sm mb-6">Where should we send your download link when the job is ready?</p>
+      <h2 class="text-2xl font-bold mb-1" x-text="t('deliveryTitle')"></h2>
+      <p class="text-slate-400 text-sm mb-6" x-text="t('deliverySubtitle')"></p>
 
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-5">
-        <!-- Method selector -->
         <div class="flex gap-3">
           <button @click="delivery.method = 'email'"
-                  :class="delivery.method === 'email'
-                            ? 'border-indigo-500 bg-indigo-950 text-white'
-                            : 'border-slate-700 text-slate-400'"
+                  :class="delivery.method==='email' ? 'border-indigo-500 bg-indigo-950 text-white' : 'border-slate-700 text-slate-400'"
                   class="flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
-            Email
+            <span x-text="t('emailMethod')"></span>
           </button>
           <button @click="delivery.method = 'whatsapp'"
-                  :class="delivery.method === 'whatsapp'
-                            ? 'border-green-500 bg-green-950 text-white'
-                            : 'border-slate-700 text-slate-400'"
+                  :class="delivery.method==='whatsapp' ? 'border-green-500 bg-green-950 text-white' : 'border-slate-700 text-slate-400'"
                   class="flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
-            WhatsApp
+            <span x-text="t('whatsappMethod')"></span>
           </button>
         </div>
 
-        <!-- Contact input -->
         <div>
-          <label class="block text-sm font-medium mb-2" x-text="delivery.method === 'email' ? 'Email address' : 'Phone number (with country code)'"></label>
+          <label class="block text-sm font-medium mb-2"
+                 x-text="delivery.method==='email' ? t('emailLabel') : t('phoneLabel')"></label>
           <input x-model="delivery.contact"
-                 :type="delivery.method === 'email' ? 'email' : 'tel'"
-                 :placeholder="delivery.method === 'email' ? 'you@example.com' : '+972 50 123 4567'"
-                 class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+                 :type="delivery.method==='email' ? 'email' : 'tel'"
+                 :placeholder="delivery.method==='email' ? t('emailPlaceholder') : t('phonePlaceholder')"
+                 class="ltr-value w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5
+                        text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
         </div>
       </div>
 
       <div class="mt-8 flex justify-between">
-        <button @click="step = 4" class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors">
-          ← Back
+        <button @click="step = 4"
+                class="px-5 py-2.5 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+          <svg class="w-4 h-4 arrow-back" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          <span x-text="t('back')"></span>
         </button>
         <button @click="submitJob()"
                 :disabled="!delivery.contact.trim() || submitLoading"
-                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors flex items-center gap-2">
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700
+                       disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors
+                       flex items-center gap-2">
           <svg x-show="submitLoading" class="spinner w-4 h-4" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <span x-text="submitLoading ? 'Submitting…' : 'Submit job'"></span>
+          <span x-text="submitLoading ? t('submitting') : t('submitJob')"></span>
         </button>
       </div>
     </div>
 
-    <!-- ══ STEP 6: Status ══════════════════════════════════════════════════════ -->
+    <!-- ════ STEP 6: Status ══════════════════════════════════════════════════ -->
     <div x-show="step === 6" x-transition>
-      <h2 class="text-2xl font-bold mb-1">Processing</h2>
-      <p class="text-slate-400 text-sm mb-6">Your highlights are being compiled. This may take a while for large jobs.</p>
+      <h2 class="text-2xl font-bold mb-1" x-text="t('processingTitle')"></h2>
+      <p class="text-slate-400 text-sm mb-6" x-text="t('processingSubtitle')"></p>
 
       <template x-if="jobStatus">
         <div class="space-y-4">
-          <!-- Status badge -->
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center">
-            <!-- Pending / Processing -->
-            <template x-if="jobStatus.status === 'pending' || jobStatus.status === 'processing'">
+
+            <template x-if="jobStatus.status==='pending'||jobStatus.status==='processing'">
               <div>
                 <div class="flex items-center justify-center gap-2 mb-4">
                   <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:0s"></div>
                   <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:.2s"></div>
                   <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:.4s"></div>
                 </div>
-                <p class="text-lg font-semibold capitalize" x-text="jobStatus.status"></p>
+                <p class="text-lg font-semibold" x-text="t(jobStatus.status)"></p>
                 <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.progress" x-text="jobStatus.progress"></p>
               </div>
             </template>
 
-            <!-- Completed -->
-            <template x-if="jobStatus.status === 'completed'">
+            <template x-if="jobStatus.status==='completed'">
               <div>
-                <div class="w-16 h-16 rounded-full bg-green-900/40 border border-green-700 flex items-center justify-center mx-auto mb-4">
+                <div class="w-16 h-16 rounded-full bg-green-900/40 border border-green-700
+                            flex items-center justify-center mx-auto mb-4">
                   <svg class="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p class="text-xl font-semibold text-green-400">Highlights ready!</p>
-                <p class="text-sm text-slate-400 mt-1">Check your <span x-text="delivery.method"></span> for the download link.</p>
+                <p class="text-xl font-semibold text-green-400" x-text="t('completed')"></p>
+                <p class="text-sm text-slate-400 mt-1">
+                  <span x-text="t('completedMsg')"></span>
+                  <span x-text="t(delivery.method + 'Method')"></span>
+                  <span x-text="' ' + t('completedMsg2')"></span>
+                </p>
               </div>
             </template>
 
-            <!-- Failed -->
-            <template x-if="jobStatus.status === 'failed'">
+            <template x-if="jobStatus.status==='failed'">
               <div>
-                <div class="w-16 h-16 rounded-full bg-red-900/40 border border-red-700 flex items-center justify-center mx-auto mb-4">
+                <div class="w-16 h-16 rounded-full bg-red-900/40 border border-red-700
+                            flex items-center justify-center mx-auto mb-4">
                   <svg class="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                   </svg>
                 </div>
-                <p class="text-xl font-semibold text-red-400">Job failed</p>
+                <p class="text-xl font-semibold text-red-400" x-text="t('failed')"></p>
                 <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.error" x-text="jobStatus.error"></p>
               </div>
             </template>
           </div>
 
-          <!-- Download links -->
           <template x-if="jobStatus.output_links && jobStatus.output_links.length > 0">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 class="text-sm font-semibold text-slate-300 mb-3">Download links</h3>
+              <h3 class="text-sm font-semibold text-slate-300 mb-3" x-text="t('downloadLinks')"></h3>
               <div class="space-y-2">
                 <template x-for="(link, i) in jobStatus.output_links" :key="i">
                   <a :href="link" target="_blank" rel="noopener"
-                     class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors text-sm group">
-                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                     class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg hover:bg-slate-700
+                            transition-colors text-sm group">
+                    <svg class="w-4 h-4 text-slate-400 flex-shrink-0 group-hover:text-indigo-400 transition-colors"
+                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
-                    <span class="truncate text-indigo-300" x-text="link"></span>
+                    <span class="truncate text-indigo-300 ltr-value" x-text="link"></span>
                   </a>
                 </template>
               </div>
             </div>
           </template>
 
-          <!-- Job ID reference -->
           <div class="text-center text-xs text-slate-600">
-            Job ID: <span class="font-mono" x-text="jobStatus.job_id"></span>
+            <span x-text="t('jobRef')"></span>:
+            <span class="font-mono ltr-value" x-text="jobStatus.job_id"></span>
           </div>
 
-          <!-- New job button -->
           <div class="text-center" x-show="['completed','failed'].includes(jobStatus.status)">
             <button @click="resetForm()"
-                    class="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors">
-              Start a new job
-            </button>
+                    class="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm
+                           font-medium transition-colors" x-text="t('startNew')"></button>
           </div>
         </div>
       </template>
 
       <template x-if="!jobStatus">
-        <div class="text-center py-12 text-slate-500">Waiting for server response…</div>
+        <div class="text-center py-12 text-slate-500" x-text="t('waitingServer')"></div>
       </template>
     </div>
 
   </main>
 
-  <!-- ── Footer ─────────────────────────────────────────────────────────────── -->
   <footer class="border-t border-slate-900 mt-16 py-6 text-center text-xs text-slate-700">
-    ScoutCut — Video Highlight Compiler
+    ScoutCut
   </footer>
 
-  <!-- ── Alpine component ───────────────────────────────────────────────────── -->
+  <!-- ══ TRANSLATIONS + ALPINE COMPONENT ══════════════════════════════════════ -->
   <script>
-    function scoutcut() {
-      return {
-        step: 1,
-        stepLabels: ['Clips', 'Config', 'Review', 'Payment', 'Delivery', 'Status'],
-
-        // Step 1
-        rows: [{ url: '', title: '', timecodes: '' }],
-
-        // Step 2
-        config: { pad_before: 5, pad_after: 5, output_strategy: 'single' },
-
-        // Step 3
-        quote: null,
-        quoteLoading: false,
-
-        // Step 4
-        selectedPayment: null,
-        paymentToken: null,
-        paymentLoading: false,
-        paymentMethods: [
-          {
-            id: 'apple_pay',
-            label: 'Apple Pay',
-            desc: 'Pay with Face ID or Touch ID',
-            icon: `<svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>`
-          },
-          {
-            id: 'google_pay',
-            label: 'Google Pay',
-            desc: 'Pay with your Google account',
-            icon: `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><text y="18" font-size="16" font-weight="bold"><tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">o</tspan><tspan fill="#FBBC05">o</tspan><tspan fill="#4285F4">g</tspan><tspan fill="#34A853">l</tspan><tspan fill="#EA4335">e</tspan></text></svg>`
-          },
-          {
-            id: 'credit_card',
-            label: 'Credit / Debit Card',
-            desc: 'Visa, Mastercard, Amex',
-            icon: `<svg class="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>`
-          },
-          {
-            id: 'bit',
-            label: 'Bit',
-            desc: 'Israeli mobile payment',
-            icon: `<span class="text-xl font-black text-blue-400">bit</span>`
-          }
-        ],
-
-        // Step 5
-        delivery: { method: 'email', contact: '' },
-        submitLoading: false,
-
-        // Step 6
-        jobId: null,
-        jobStatus: null,
-        _pollTimer: null,
-
-        // ── Computed ──────────────────────────────────────────────────────────
-        get totalClips() {
-          return this.rows.reduce((s, r) => s + this.countTimecodes(r), 0)
-        },
-
-        get canProceedFromStep1() {
-          return this.rows.some(r => r.url.trim() && this.countTimecodes(r) > 0)
-        },
-
-        // ── Helpers ───────────────────────────────────────────────────────────
-        countTimecodes(row) {
-          if (!row.timecodes) return 0
-          return row.timecodes.split('\n').filter(t => t.trim()).length
-        },
-
-        addRow() {
-          this.rows.push({ url: '', title: '', timecodes: '' })
-        },
-
-        removeRow(i) {
-          if (this.rows.length > 1) this.rows.splice(i, 1)
-        },
-
-        goToConfig() {
-          if (this.canProceedFromStep1) this.step = 2
-        },
-
-        _buildVideoRows() {
-          return this.rows
-            .filter(r => r.url.trim() && this.countTimecodes(r) > 0)
-            .map(r => ({
-              url: r.url.trim(),
-              title: r.title.trim(),
-              timecodes: r.timecodes.split('\n').map(t => t.trim()).filter(Boolean)
-            }))
-        },
-
-        // ── API calls ─────────────────────────────────────────────────────────
-        async fetchQuote() {
-          this.quoteLoading = true
-          try {
-            const res = await fetch('/api/jobs/quote', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                video_rows: this._buildVideoRows(),
-                config: this.config
-              })
-            })
-            if (!res.ok) {
-              const err = await res.json()
-              alert('Quote error: ' + (err.detail || JSON.stringify(err)))
-              return
-            }
-            this.quote = await res.json()
-            this.step = 3
-          } finally {
-            this.quoteLoading = false
-          }
-        },
-
-        async verifyPayment() {
-          if (!this.selectedPayment) return
-          this.paymentLoading = true
-          try {
-            const res = await fetch('/api/payments/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                method: this.selectedPayment,
-                amount: this.quote.hybrid_total_cost,
-                metadata: {}
-              })
-            })
-            const data = await res.json()
-            if (!data.success) throw new Error(data.message)
-            this.paymentToken = data.payment_token
-            this.step = 5
-          } catch (e) {
-            alert('Payment failed: ' + e.message)
-          } finally {
-            this.paymentLoading = false
-          }
-        },
-
-        async submitJob() {
-          if (!this.delivery.contact.trim()) return
-          this.submitLoading = true
-          try {
-            const res = await fetch('/api/jobs/create', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                video_rows: this._buildVideoRows(),
-                config: this.config,
-                delivery: this.delivery,
-                payment_token: this.paymentToken
-              })
-            })
-            if (!res.ok) {
-              const err = await res.json()
-              alert('Submit error: ' + (err.detail || JSON.stringify(err)))
-              return
-            }
-            const data = await res.json()
-            this.jobId = data.job_id
-            this.step = 6
-            this._startPolling()
-          } finally {
-            this.submitLoading = false
-          }
-        },
-
-        _startPolling() {
-          this._pollTimer = setInterval(async () => {
-            try {
-              const res = await fetch(`/api/jobs/${this.jobId}/status`)
-              if (!res.ok) return
-              this.jobStatus = await res.json()
-              if (['completed', 'failed'].includes(this.jobStatus.status)) {
-                clearInterval(this._pollTimer)
-              }
-            } catch { /* network hiccup — retry next tick */ }
-          }, 3000)
-        },
-
-        resetForm() {
-          if (this._pollTimer) clearInterval(this._pollTimer)
-          this.step = 1
-          this.rows = [{ url: '', title: '', timecodes: '' }]
-          this.config = { pad_before: 5, pad_after: 5, output_strategy: 'single' }
-          this.quote = null
-          this.selectedPayment = null
-          this.paymentToken = null
-          this.delivery = { method: 'email', contact: '' }
-          this.jobId = null
-          this.jobStatus = null
-        }
-      }
+  // ── i18n dictionary ─────────────────────────────────────────────────────────
+  const TRANSLATIONS = {
+    en: {
+      appTagline:          "Video Highlight Compiler",
+      steps:               ["Clips","Config","Review","Payment","Delivery","Status"],
+      // Step 1
+      step1Title:          "Add your clips",
+      step1Subtitle:       "Enter each source video with its title and the timecodes you want to extract.",
+      jobTitleLabel:       "Job Title / Project Name",
+      jobTitlePlaceholder: "e.g. Matchday 12 Scouting Analysis",
+      exportJob:           "Export Job",
+      importJob:           "Import Job",
+      videoUrl:            "Video URL",
+      videoUrlPlaceholder: "https://you.pixellot.link/… or https://app.veo.co/…",
+      titleLabel:          "Title / Label (optional)",
+      titlePlaceholder:    "e.g. Kiryat Gat vs Kfar Yona",
+      timecodesLabel:      "Timecodes",
+      timecodesHint:       "(one per line)",
+      timecodesPlaceholder:"47:29\n58:31-58:45\n1:02:10",
+      clip:                "clip",
+      clips:               "clips",
+      videoSingular:       "video",
+      videoPlural:         "videos",
+      untitled:            "Untitled",
+      addVideo:            "Add another video",
+      configureProcessing: "Configure processing",
+      // Step 2
+      configTitle:         "Processing options",
+      configSubtitle:      "Control how much context to include around each clip.",
+      padBefore:           "Seconds before each clip",
+      padAfter:            "Seconds after each clip",
+      outputFormat:        "Output format",
+      singleFile:          "Single file",
+      singleFileDesc:      "All clips concatenated into one video",
+      multipleFiles:       "One file per URL",
+      multipleFilesDesc:   "Separate highlight reel for each source video",
+      getPriceQuote:       "Get price quote",
+      calculating:         "Calculating…",
+      // Step 3
+      checkoutTitle:       "Checkout & Review",
+      withoutScoutcut:     "WITHOUT SCOUTCUT",
+      withScoutcut:        "SCOUTCUT",
+      traditionalEditor:   "Traditional Editor",
+      scoutcutHybrid:      "ScoutCut Hybrid",
+      allInTotal:          "All-in total",
+      costBreakdown:       "ScoutCut hybrid cost breakdown",
+      processingFee:       "ScoutCut Processing Fee",
+      finalEditorReview:   "Final Editor Review",
+      oneTimeFee:          "One-time professional finishing & quality pass",
+      totalYouPay:         "Total you pay",
+      yourSavings:         "Your Savings",
+      youSave:             "You save",
+      vsTraditional:       "vs. a traditional editor",
+      savingsOff:          "off",
+      savings:             "savings",
+      whatsIncluded:       "What's included",
+      proceedToPayment:    "Proceed to payment",
+      // Step 4
+      paymentTitle:        "Payment",
+      paymentSubtitle:     "Choose your preferred payment method.",
+      orderTotal:          "Order total",
+      pay:                 "Pay",
+      processing:          "Processing…",
+      applePayLabel:       "Apple Pay",
+      applePayDesc:        "Pay with Face ID or Touch ID",
+      googlePayLabel:      "Google Pay",
+      googlePayDesc:       "Pay with your Google account",
+      creditCardLabel:     "Credit / Debit Card",
+      creditCardDesc:      "Visa, Mastercard, Amex",
+      bitLabel:            "Bit",
+      bitDesc:             "Israeli mobile payment",
+      // Step 5
+      deliveryTitle:       "Delivery",
+      deliverySubtitle:    "Where should we send your download link?",
+      emailMethod:         "Email",
+      whatsappMethod:      "WhatsApp",
+      emailLabel:          "Email address",
+      phoneLabel:          "Phone number (with country code)",
+      emailPlaceholder:    "you@example.com",
+      phonePlaceholder:    "+972 50 123 4567",
+      submitJob:           "Submit job",
+      submitting:          "Submitting…",
+      // Step 6
+      processingTitle:     "Processing",
+      processingSubtitle:  "Your highlights are being compiled.",
+      pending:             "Pending",
+      completed:           "Highlights ready!",
+      failed:              "Job failed",
+      completedMsg:        "Check your",
+      completedMsg2:       "for the download link.",
+      downloadLinks:       "Download links",
+      startNew:            "Start a new job",
+      jobRef:              "Job ID",
+      waitingServer:       "Waiting for server response…",
+      back:                "Back",
+    },
+    he: {
+      appTagline:          "עורך קטעי וידאו",
+      steps:               ["קליפים","הגדרות","סקירה","תשלום","משלוח","סטטוס"],
+      // Step 1
+      step1Title:          "הוסף את הקליפים שלך",
+      step1Subtitle:       "הזן כל וידאו מקור עם כותרתו והטיימקודים שברצונך לחלץ.",
+      jobTitleLabel:       "כותרת פרויקט",
+      jobTitlePlaceholder: 'למשל: "ניתוח יום משחק 12"',
+      exportJob:           "ייצוא עבודה",
+      importJob:           "ייבוא עבודה",
+      videoUrl:            "קישור וידאו",
+      videoUrlPlaceholder: "https://you.pixellot.link/… או https://app.veo.co/…",
+      titleLabel:          "כותרת / תגית (אופציונלי)",
+      titlePlaceholder:    "למשל: קריית גת נגד כפר יונה",
+      timecodesLabel:      "טיימקודים",
+      timecodesHint:       "(אחד בכל שורה)",
+      timecodesPlaceholder:"47:29\n58:31-58:45\n1:02:10",
+      clip:                "קליפ",
+      clips:               "קליפים",
+      videoSingular:       "וידאו",
+      videoPlural:         "וידאו",
+      untitled:            "ללא כותרת",
+      addVideo:            "הוסף וידאו נוסף",
+      configureProcessing: "הגדרות עיבוד",
+      // Step 2
+      configTitle:         "הגדרות עיבוד",
+      configSubtitle:      "שלוט בכמות ההקשר הנכלל סביב כל קליפ.",
+      padBefore:           "שניות לפני כל קליפ",
+      padAfter:            "שניות אחרי כל קליפ",
+      outputFormat:        "פורמט פלט",
+      singleFile:          "קובץ יחיד",
+      singleFileDesc:      "כל הקליפים מחוברים לוידאו אחד",
+      multipleFiles:       "קובץ לכל קישור",
+      multipleFilesDesc:   "קובץ הדגשים נפרד לכל וידאו מקור",
+      getPriceQuote:       "קבל הצעת מחיר",
+      calculating:         "מחשב…",
+      // Step 3
+      checkoutTitle:       "סיכום הזמנה",
+      withoutScoutcut:     "ללא SCOUTCUT",
+      withScoutcut:        "עם SCOUTCUT",
+      traditionalEditor:   "עורך מסורתי",
+      scoutcutHybrid:      "גישת ScoutCut",
+      allInTotal:          "סה״כ כולל",
+      costBreakdown:       "פירוט עלות ScoutCut",
+      processingFee:       "עלות עיבוד ScoutCut",
+      finalEditorReview:   "עריכה סופית",
+      oneTimeFee:          "תשלום חד-פעמי לאיכות מקצועית",
+      totalYouPay:         "סה״כ לתשלום",
+      yourSavings:         "החיסכון שלך",
+      youSave:             "אתה חוסך",
+      vsTraditional:       "לעומת עורך מסורתי",
+      savingsOff:          "הנחה",
+      savings:             "חיסכון",
+      whatsIncluded:       "מה כולל",
+      proceedToPayment:    "המשך לתשלום",
+      // Step 4
+      paymentTitle:        "תשלום",
+      paymentSubtitle:     "בחר את אמצעי התשלום המועדף.",
+      orderTotal:          "סה״כ הזמנה",
+      pay:                 "שלם",
+      processing:          "מעבד…",
+      applePayLabel:       "Apple Pay",
+      applePayDesc:        "שלם עם Face ID או Touch ID",
+      googlePayLabel:      "Google Pay",
+      googlePayDesc:       "שלם עם חשבון Google שלך",
+      creditCardLabel:     "כרטיס אשראי / דביט",
+      creditCardDesc:      "ויזה, מאסטרקארד, אמקס",
+      bitLabel:            "ביט",
+      bitDesc:             "תשלום סלולרי ישראלי",
+      // Step 5
+      deliveryTitle:       "משלוח",
+      deliverySubtitle:    "לאן לשלוח את קישור ההורדה?",
+      emailMethod:         "אימייל",
+      whatsappMethod:      "וואטסאפ",
+      emailLabel:          "כתובת אימייל",
+      phoneLabel:          "מספר טלפון (כולל קידומת מדינה)",
+      emailPlaceholder:    "you@example.com",
+      phonePlaceholder:    "+972 50 123 4567",
+      submitJob:           "שלח עבודה",
+      submitting:          "שולח…",
+      // Step 6
+      processingTitle:     "מעבד...",
+      processingSubtitle:  "הקטעים שלך נמצאים בעיבוד.",
+      pending:             "ממתין",
+      completed:           "הקטעים מוכנים!",
+      failed:              "העבודה נכשלה",
+      completedMsg:        "בדוק את",
+      completedMsg2:       "שלך לקישור ההורדה.",
+      downloadLinks:       "קישורי הורדה",
+      startNew:            "התחל עבודה חדשה",
+      jobRef:              "מזהה עבודה",
+      waitingServer:       "ממתין לתגובת שרת…",
+      back:                "חזור",
     }
+  }
+
+  // ── Payment method definitions ──────────────────────────────────────────────
+  const PAYMENT_METHODS = [
+    {
+      id: "apple_pay",
+      labelKey: "applePayLabel",
+      descKey:  "applePayDesc",
+      nisOnly:  false,
+      icon:     `<svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>`
+    },
+    {
+      id: "google_pay",
+      labelKey: "googlePayLabel",
+      descKey:  "googlePayDesc",
+      nisOnly:  false,
+      icon:     `<svg class="w-6 h-6" viewBox="0 0 32 32"><text y="24" font-size="22" font-weight="bold"><tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">P</tspan><tspan fill="#FBBC05">a</tspan><tspan fill="#34A853">y</tspan></text></svg>`
+    },
+    {
+      id: "credit_card",
+      labelKey: "creditCardLabel",
+      descKey:  "creditCardDesc",
+      nisOnly:  false,
+      icon:     `<svg class="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>`
+    },
+    {
+      id: "bit",
+      labelKey: "bitLabel",
+      descKey:  "bitDesc",
+      nisOnly:  true,   // ← only shown when currency === 'NIS'
+      icon:     `<span class="text-xl font-black text-blue-400">bit</span>`
+    }
+  ]
+
+  // ── Alpine component ────────────────────────────────────────────────────────
+  function scoutcut() {
+    return {
+      // Global preferences
+      lang:     "en",
+      currency: "USD",
+
+      // Step tracking
+      step:      1,
+      stepCount: 6,
+
+      // Step 1
+      jobTitle:    "",
+      rows:        [{ url: "", title: "", timecodes: "" }],
+      importError: "",
+
+      // Step 2
+      config: { pad_before: 5, pad_after: 5, output_strategy: "single" },
+
+      // Step 3
+      quote:       null,
+      quoteLoading: false,
+
+      // Step 4
+      selectedPayment: null,
+      paymentToken:    null,
+      paymentLoading:  false,
+
+      // Step 5
+      delivery:      { method: "email", contact: "" },
+      submitLoading: false,
+
+      // Step 6
+      jobId:      null,
+      jobStatus:  null,
+      _pollTimer: null,
+
+      // ── Init ────────────────────────────────────────────────────────────────
+      init() {
+        document.documentElement.dir  = "ltr"
+        document.documentElement.lang = "en"
+      },
+
+      // ── i18n ────────────────────────────────────────────────────────────────
+      t(key) {
+        return (TRANSLATIONS[this.lang] || TRANSLATIONS.en)[key] ?? key
+      },
+
+      // ── Locale setters ───────────────────────────────────────────────────────
+      setLang(l) {
+        this.lang = l
+        document.documentElement.dir  = l === "he" ? "rtl" : "ltr"
+        document.documentElement.lang = l
+        if (this.quote) this.quote = null  // stale — will re-fetch at next config step
+      },
+
+      setCurrency(c) {
+        this.currency = c
+        if (this.quote) this.quote = null  // stale — prices change with currency
+      },
+
+      // ── Computed ─────────────────────────────────────────────────────────────
+      get dir()     { return this.lang === "he" ? "rtl" : "ltr" },
+
+      get totalClips() {
+        return this.rows.reduce((s, r) => s + this.countTimecodes(r), 0)
+      },
+
+      get canProceedFromStep1() {
+        return this.jobTitle.trim() !== "" &&
+               this.rows.some(r => r.url.trim() && this.countTimecodes(r) > 0)
+      },
+
+      get visiblePaymentMethods() {
+        return PAYMENT_METHODS.filter(pm => !pm.nisOnly || this.currency === "NIS")
+      },
+
+      // ── Row helpers ───────────────────────────────────────────────────────────
+      countTimecodes(row) {
+        if (!row.timecodes) return 0
+        return row.timecodes.split("\n").filter(t => t.trim()).length
+      },
+
+      addRow()    { this.rows.push({ url: "", title: "", timecodes: "" }) },
+      removeRow(i){ if (this.rows.length > 1) this.rows.splice(i, 1) },
+      goToConfig(){ if (this.canProceedFromStep1) this.step = 2 },
+
+      // ── Export ───────────────────────────────────────────────────────────────
+      exportJob() {
+        const payload = {
+          _schema:      "scoutcut-job-v1",
+          _exported_at: new Date().toISOString(),
+          job_title:    this.jobTitle,
+          rows:         this.rows,
+          config:       this.config,
+          preferences:  { lang: this.lang, currency: this.currency },
+        }
+        const slug = this.jobTitle.trim().toLowerCase().replace(/\s+/g, "-") || "job"
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+        const a    = document.createElement("a")
+        a.href     = URL.createObjectURL(blob)
+        a.download = `scoutcut-${slug}-${Date.now()}.json`
+        a.click()
+        URL.revokeObjectURL(a.href)
+      },
+
+      // ── Import ───────────────────────────────────────────────────────────────
+      importJob(event) {
+        this.importError = ""
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result)
+
+            // Schema validation
+            if (data._schema !== "scoutcut-job-v1")
+              throw new Error(`Unknown schema: ${data._schema}`)
+            if (!Array.isArray(data.rows) || data.rows.length === 0)
+              throw new Error("rows must be a non-empty array")
+            for (const r of data.rows)
+              if (typeof r.url !== "string")
+                throw new Error("Each row must have a url string")
+
+            // Restore state
+            this.jobTitle = data.job_title  || ""
+            this.rows     = data.rows.map(r => ({
+              url:       r.url       ?? "",
+              title:     r.title     ?? "",
+              timecodes: r.timecodes ?? "",
+            }))
+            if (data.config) {
+              this.config = { ...this.config, ...data.config }
+            }
+            if (data.preferences) {
+              if (data.preferences.lang)     this.setLang(data.preferences.lang)
+              if (data.preferences.currency) this.setCurrency(data.preferences.currency)
+            }
+            this.quote = null
+            this.step  = 1
+          } catch (err) {
+            this.importError = this.t("invalidFile") + ": " + err.message
+          }
+        }
+        reader.readAsText(file)
+        // Reset the input so the same file can be imported again
+        event.target.value = ""
+      },
+
+      // ── Payload builder ───────────────────────────────────────────────────────
+      _buildVideoRows() {
+        return this.rows
+          .filter(r => r.url.trim() && this.countTimecodes(r) > 0)
+          .map(r => ({
+            url:       r.url.trim(),
+            title:     r.title.trim(),
+            timecodes: r.timecodes.split("\n").map(t => t.trim()).filter(Boolean),
+          }))
+      },
+
+      // ── API: fetch quote ──────────────────────────────────────────────────────
+      async fetchQuote() {
+        this.quoteLoading = true
+        try {
+          const res = await fetch("/api/jobs/quote", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+              video_rows: this._buildVideoRows(),
+              config:     this.config,
+              currency:   this.currency,
+              language:   this.lang,
+            }),
+          })
+          if (!res.ok) {
+            const err = await res.json()
+            alert(this.t("quoteError") + ": " + (err.detail || JSON.stringify(err)))
+            return
+          }
+          this.quote = await res.json()
+          this.step  = 3
+        } finally {
+          this.quoteLoading = false
+        }
+      },
+
+      // ── API: verify payment ───────────────────────────────────────────────────
+      async verifyPayment() {
+        if (!this.selectedPayment) return
+        this.paymentLoading = true
+        try {
+          const res = await fetch("/api/payments/verify", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+              method:   this.selectedPayment,
+              amount:   this.quote.hybrid_total_cost,
+              currency: this.currency,
+            }),
+          })
+          const data = await res.json()
+          if (!data.success) throw new Error(data.message)
+          this.paymentToken = data.payment_token
+          this.step = 5
+        } catch (err) {
+          alert(this.t("paymentFailed") + ": " + err.message)
+        } finally {
+          this.paymentLoading = false
+        }
+      },
+
+      // ── API: submit job ───────────────────────────────────────────────────────
+      async submitJob() {
+        if (!this.delivery.contact.trim()) return
+        this.submitLoading = true
+        try {
+          const res = await fetch("/api/jobs/create", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+              job_title:     this.jobTitle,
+              video_rows:    this._buildVideoRows(),
+              config:        this.config,
+              delivery:      this.delivery,
+              payment_token: this.paymentToken,
+              currency:      this.currency,
+              language:      this.lang,
+            }),
+          })
+          if (!res.ok) {
+            const err = await res.json()
+            alert(this.t("submitError") + ": " + (err.detail || JSON.stringify(err)))
+            return
+          }
+          const data    = await res.json()
+          this.jobId    = data.job_id
+          this.step     = 6
+          this._startPolling()
+        } finally {
+          this.submitLoading = false
+        }
+      },
+
+      // ── Polling ───────────────────────────────────────────────────────────────
+      _startPolling() {
+        this._pollTimer = setInterval(async () => {
+          try {
+            const res = await fetch(`/api/jobs/${this.jobId}/status`)
+            if (!res.ok) return
+            this.jobStatus = await res.json()
+            if (["completed", "failed"].includes(this.jobStatus.status))
+              clearInterval(this._pollTimer)
+          } catch { /* network hiccup — retry next tick */ }
+        }, 3000)
+      },
+
+      // ── Reset ─────────────────────────────────────────────────────────────────
+      resetForm() {
+        if (this._pollTimer) clearInterval(this._pollTimer)
+        this.step            = 1
+        this.jobTitle        = ""
+        this.rows            = [{ url: "", title: "", timecodes: "" }]
+        this.config          = { pad_before: 5, pad_after: 5, output_strategy: "single" }
+        this.quote           = null
+        this.selectedPayment = null
+        this.paymentToken    = null
+        this.delivery        = { method: "email", contact: "" }
+        this.jobId           = null
+        this.jobStatus       = null
+        this.importError     = ""
+      },
+    }
+  }
   </script>
 </body>
 </html>
