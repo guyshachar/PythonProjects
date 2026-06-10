@@ -97,9 +97,10 @@ class JobCreateRequest(BaseModel):
 
 
 class JobCreateResponse(BaseModel):
-    job_id:  str
-    status:  str
-    message: str
+    job_id:     str
+    status:     str
+    status_url: str   # shareable URL: /jobs/{job_id}
+    message:    str
 
 
 class JobStatusResponse(BaseModel):

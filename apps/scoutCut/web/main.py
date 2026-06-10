@@ -3,19 +3,21 @@ ScoutCut — FastAPI application.
 
 Routes:
     GET  /                         → serve frontend SPA
-    POST /api/payments/verify      → mock payment gateway
+    GET  /jobs/{id}                → job status page (shareable URL)
+    POST /api/payments/verify      → payment processor dispatcher
     POST /api/jobs/quote           → price quote (no side-effects)
-    POST /api/calculate-price      → alias for /api/jobs/quote (spec alias)
+    POST /api/calculate-price      → alias for /api/jobs/quote
     POST /api/jobs/create          → create + enqueue job
-    GET  /api/jobs/{id}/status     → poll job status
+    GET  /api/jobs/{id}/status     → poll job status (JSON)
 """
 
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -30,6 +32,9 @@ from web.models import (
     PaymentVerifyResponse,
 )
 from web.pricing import calculate_job_price
+from web.payments import process_payment
+
+log = logging.getLogger(__name__)
 
 # ── Boot ───────────────────────────────────────────────────────────────────────
 create_tables()
@@ -40,27 +45,41 @@ _static = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(_static)), name="static")
 
 
-# ── Frontend ───────────────────────────────────────────────────────────────────
+# ── Frontend SPA ───────────────────────────────────────────────────────────────
 
 @app.get("/", include_in_schema=False)
 def frontend():
     return FileResponse(str(_static / "index.html"))
 
 
-# ── Payments (mock) ────────────────────────────────────────────────────────────
+# ── Shareable job status page ──────────────────────────────────────────────────
+
+@app.get("/jobs/{job_id}", include_in_schema=False)
+def job_status_page(job_id: str, db: Session = Depends(get_db)):
+    """
+    Human-friendly shareable URL the user receives after submitting a job.
+    Renders the SPA with the job_id pre-loaded so the status step opens directly.
+    """
+    job: JobRecord | None = db.get(JobRecord, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    # Read the SPA and inject the job_id so Alpine can pick it up on load.
+    html = (_static / "index.html").read_text(encoding="utf-8")
+    inject = f"""<script>window.__SCOUTCUT_JOB_ID__ = "{job_id}";</script>"""
+    html = html.replace("</head>", inject + "\n</head>", 1)
+    return HTMLResponse(content=html)
+
+
+# ── Payments ───────────────────────────────────────────────────────────────────
 
 @app.post("/api/payments/verify", response_model=PaymentVerifyResponse, tags=["payments"])
 def verify_payment(req: PaymentVerifyRequest):
     """
-    Mock payment gateway. Always approves in dev.
-    Production: integrate Stripe, Apple Pay, Google Pay, or Bit SDK here.
+    Dispatch to the correct payment processor based on req.method.
+    Returns a payment_token used to authorise job creation.
     """
-    token = str(uuid.uuid4())
-    return PaymentVerifyResponse(
-        success=True,
-        payment_token=token,
-        message=f"Payment of ${req.amount:.2f} via {req.method} approved.",
-    )
+    return process_payment(req)
 
 
 # ── Pricing ────────────────────────────────────────────────────────────────────
@@ -78,21 +97,14 @@ def _validate_quote_request(req: JobQuoteRequest) -> None:
 
 @app.post("/api/jobs/quote", response_model=JobQuoteResponse, tags=["jobs"])
 def quote_job(req: JobQuoteRequest):
-    """
-    Return a full pricing breakdown: traditional cost, ScoutCut hybrid cost,
-    and client savings. No DB writes — safe to call as often as needed.
-    """
+    """Full pricing breakdown in the requested currency. No DB writes."""
     _validate_quote_request(req)
     return JobQuoteResponse(**calculate_job_price(req))
 
 
 @app.post("/api/calculate-price", response_model=JobQuoteResponse, tags=["pricing"])
 def calculate_price(req: JobQuoteRequest):
-    """
-    Canonical pricing endpoint (alias of /api/jobs/quote).
-    Returns the same financial breakdown; exists as a named route
-    for direct integration by external tools or the spec.
-    """
+    """Canonical pricing endpoint — alias of /api/jobs/quote."""
     _validate_quote_request(req)
     return JobQuoteResponse(**calculate_job_price(req))
 
@@ -101,15 +113,14 @@ def calculate_price(req: JobQuoteRequest):
 
 @app.post("/api/jobs/create", response_model=JobCreateResponse, tags=["jobs"])
 def create_job(req: JobCreateRequest, db: Session = Depends(get_db)):
-    """
-    Validate payment token, persist the job record, and enqueue the Celery task.
-    """
+    """Validate payment token, persist the job record, and enqueue the Celery task."""
     try:
         uuid.UUID(req.payment_token)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payment token.")
 
-    quote_req  = JobQuoteRequest(video_rows=req.video_rows, config=req.config)
+    quote_req  = JobQuoteRequest(video_rows=req.video_rows, config=req.config,
+                                  currency=req.currency, language=req.language)
     price_data = calculate_job_price(quote_req)
 
     job_id = str(uuid.uuid4())
@@ -117,20 +128,24 @@ def create_job(req: JobCreateRequest, db: Session = Depends(get_db)):
         id=job_id,
         status="pending",
         payload=req.model_dump(),
-        price=price_data["hybrid_total_cost"],   # store the all-in total
+        price=price_data["hybrid_total_cost"],
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
     db.add(job)
     db.commit()
 
-    from web.tasks import process_job  # late import avoids circular at module load
+    from web.tasks import process_job   # late import avoids circular at module load
     process_job.apply_async(args=[job_id, req.model_dump()], task_id=job_id)
+
+    status_url = f"/jobs/{job_id}"
+    log.info("Job %s created — status URL: %s", job_id, status_url)
 
     return JobCreateResponse(
         job_id=job_id,
         status="pending",
-        message="Job queued. You will be notified when processing is complete.",
+        status_url=status_url,
+        message="Job queued. Bookmark the status URL to check progress anytime.",
     )
 
 

@@ -655,22 +655,62 @@
 
           <template x-if="jobStatus.output_links && jobStatus.output_links.length > 0">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 class="text-sm font-semibold text-slate-300 mb-3" x-text="t('downloadLinks')"></h3>
-              <div class="space-y-2">
-                <template x-for="(link, i) in jobStatus.output_links" :key="i">
+              <h3 class="text-sm font-semibold text-slate-300 mb-4" x-text="t('downloadLinks')"></h3>
+
+              <template x-for="(link, i) in jobStatus.output_links" :key="i">
+                <div class="mb-5">
+
+                  <!-- Embedded video player (Google Drive preview) ────────── -->
+                  <template x-if="driveEmbedUrl(link)">
+                    <div class="mb-3 rounded-xl overflow-hidden bg-black border border-slate-700"
+                         style="position:relative;padding-top:56.25%">
+                      <iframe :src="driveEmbedUrl(link)"
+                              allow="autoplay"
+                              allowfullscreen
+                              style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+                              loading="lazy"
+                              :title="t('videoPreview') + ' ' + (i+1)">
+                      </iframe>
+                    </div>
+                  </template>
+
+                  <!-- Download link row ─────────────────────────────────── -->
                   <a :href="link" target="_blank" rel="noopener"
-                     class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg hover:bg-slate-700
-                            transition-colors text-sm group">
+                     class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg
+                            hover:bg-slate-700 transition-colors text-sm group">
                     <svg class="w-4 h-4 text-slate-400 flex-shrink-0 group-hover:text-indigo-400 transition-colors"
                          fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                     <span class="truncate text-indigo-300 ltr-value" x-text="link"></span>
+                    <span class="flex-shrink-0 text-xs text-slate-500" x-text="t('openInDrive')"></span>
                   </a>
-                </template>
-              </div>
+
+                </div>
+              </template>
             </div>
           </template>
+
+          <!-- Shareable status URL ─────────────────────────────────────── -->
+          <div x-show="statusUrl"
+               class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+            <p class="text-xs font-semibold text-slate-400 mb-2" x-text="t('statusLinkLabel')"></p>
+            <div class="flex items-center gap-2">
+              <input readonly :value="statusUrl ? (location.origin + statusUrl) : ''"
+                     class="ltr-value flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2
+                            text-xs font-mono text-indigo-300 focus:outline-none focus:ring-1
+                            focus:ring-indigo-500 min-w-0" />
+              <button @click="copyStatusUrl()"
+                      class="flex-shrink-0 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg
+                             text-xs font-medium transition-colors flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                </svg>
+                <span x-text="t('copy')"></span>
+              </button>
+            </div>
+            <p class="text-xs text-slate-600 mt-2" x-text="t('statusLinkHint')"></p>
+          </div>
 
           <div class="text-center text-xs text-slate-600">
             <span x-text="t('jobRef')"></span>:
@@ -792,6 +832,11 @@
       startNew:            "Start a new job",
       jobRef:              "Job ID",
       waitingServer:       "Waiting for server response…",
+      videoPreview:        "Video preview",
+      openInDrive:         "Open in Drive ↗",
+      statusLinkLabel:     "Your job status link — bookmark or share this URL",
+      statusLinkHint:      "Anyone with this link can track the processing status.",
+      copy:                "Copy",
       back:                "Back",
     },
     he: {
@@ -886,6 +931,11 @@
       startNew:            "התחל עבודה חדשה",
       jobRef:              "מזהה עבודה",
       waitingServer:       "ממתין לתגובת שרת…",
+      videoPreview:        "תצוגה מקדימה",
+      openInDrive:         "פתח ב-Drive ↗",
+      statusLinkLabel:     "קישור למעקב אחר העבודה — שמור או שתף",
+      statusLinkHint:      "כל מי שיש לו את הקישור יכול לעקוב אחר סטטוס העיבוד.",
+      copy:                "העתק",
       back:                "חזור",
     }
   }
@@ -956,6 +1006,7 @@
 
       // Step 6
       jobId:      null,
+      statusUrl:  null,
       jobStatus:  null,
       _pollTimer: null,
 
@@ -963,6 +1014,14 @@
       init() {
         document.documentElement.dir  = "ltr"
         document.documentElement.lang = "en"
+        // If opened via a shareable /jobs/{id} URL the server injects the ID
+        const preloaded = window.__SCOUTCUT_JOB_ID__
+        if (preloaded) {
+          this.jobId     = preloaded
+          this.statusUrl = `/jobs/${preloaded}`
+          this.step      = 6
+          this._startPolling()
+        }
       },
 
       // ── i18n ────────────────────────────────────────────────────────────────
@@ -1158,12 +1217,33 @@
             alert(this.t("submitError") + ": " + (err.detail || JSON.stringify(err)))
             return
           }
-          const data    = await res.json()
-          this.jobId    = data.job_id
-          this.step     = 6
+          const data      = await res.json()
+          this.jobId      = data.job_id
+          this.statusUrl  = data.status_url
+          this.step       = 6
           this._startPolling()
         } finally {
           this.submitLoading = false
+        }
+      },
+
+      // ── Drive embed URL ───────────────────────────────────────────────────────
+      // Converts a Google Drive share link to a /preview embed URL.
+      // Returns null for non-Drive links so the iframe is not rendered.
+      driveEmbedUrl(link) {
+        const m = link.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/)
+        return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null
+      },
+
+      // ── Copy status URL to clipboard ──────────────────────────────────────────
+      async copyStatusUrl() {
+        const full = location.origin + this.statusUrl
+        try {
+          await navigator.clipboard.writeText(full)
+        } catch {
+          // fallback: select the input
+          const inp = document.querySelector('input[readonly]')
+          if (inp) { inp.select(); document.execCommand('copy') }
         }
       },
 
@@ -1192,6 +1272,7 @@
         this.paymentToken    = null
         this.delivery        = { method: "email", contact: "" }
         this.jobId           = null
+        this.statusUrl       = null
         this.jobStatus       = null
         this.importError     = ""
       },
