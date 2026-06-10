@@ -1,8 +1,15 @@
 version: "3.9"
 
+# ── Prerequisites ─────────────────────────────────────────────────────────────
+# 1. Copy .env.example → .env and fill in secrets before first run.
+# 2. Place credentials.json (Google OAuth client) in the project root.
+# 3. Run `python veo_scraper.py` once locally to populate veo_profile/ (Veo login).
+# Then: docker compose up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
 
-  # ── Redis — broker + result backend ──────────────────────────────────────────
+  # ── Redis: Celery broker + result backend ─────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:
@@ -14,7 +21,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── FastAPI web server ────────────────────────────────────────────────────────
+  # ── FastAPI API server ────────────────────────────────────────────────────
   api:
     build: .
     command: uvicorn web.main:app --host 0.0.0.0 --port 8000 --reload
@@ -22,28 +29,54 @@ services:
       - "8000:8000"
     environment:
       REDIS_URL:    redis://redis:6379/0
-      DATABASE_URL: sqlite:///./scoutcut.db
-    env_file: .env
+      DATABASE_URL: sqlite:////app/data/scoutcut.db
+      # PLAYWRIGHT_BROWSERS_PATH is baked into the image via ENV in Dockerfile
+    env_file:
+      - path: .env
+        required: false    # Docker Compose ≥2.24; silently skipped if file absent
     volumes:
-      - .:/app
-      - ./runs:/app/runs
+      - .:/app                              # live-reload source in dev
+      - runs:/app/runs                      # job output: persisted across restarts
+      - data:/app/data                      # SQLite DB
+      - ./credentials.json:/app/credentials.json:ro   # Google OAuth client secret
+      - token:/app/token.json               # OAuth token — writable for refresh
+      - veo_profile:/app/veo_profile        # Playwright persistent session for Veo
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Celery worker — one job at a time ─────────────────────────────────────────
+  # ── Celery worker: runs scoutCut.py jobs ─────────────────────────────────
   worker:
     build: .
-    command: celery -A web.celery_app worker --loglevel=info --concurrency=1
+    command: >
+      celery -A web.celery_app worker
+        --loglevel=info
+        --concurrency=1
+        --max-tasks-per-child=5
     environment:
       REDIS_URL:    redis://redis:6379/0
-      DATABASE_URL: sqlite:///./scoutcut.db
-    env_file: .env
+      DATABASE_URL: sqlite:////app/data/scoutcut.db
+      # Chromium needs this in headless mode inside the container
+      DISPLAY: ""
+    env_file:
+      - path: .env
+        required: false
     volumes:
-      - .:/app
-      - ./runs:/app/runs
+      - .:/app                              # scoutCut.py, scrapers, etc.
+      - runs:/app/runs                      # output files (shared with api)
+      - data:/app/data                      # shared SQLite DB
+      - ./credentials.json:/app/credentials.json:ro
+      - token:/app/token.json
+      - veo_profile:/app/veo_profile
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  runs:         # rendered video files (large — consider an external NFS/S3 mount)
+  data:         # SQLite database
+  token:        # Google OAuth refresh token (single file, managed by scoutCut.py)
+  veo_profile:  # Playwright browser session for live.veo.co authentication

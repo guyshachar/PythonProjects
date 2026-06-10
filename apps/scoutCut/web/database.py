@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from web.models import Base, JobRecord  # noqa: F401 (re-exported)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./scoutcut.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./scoutcut.db")  # Docker default: sqlite:////app/data/scoutcut.db
 
 engine = create_engine(
     DATABASE_URL,
