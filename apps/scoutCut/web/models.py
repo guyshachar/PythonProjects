@@ -58,11 +58,22 @@ class JobQuoteRequest(BaseModel):
 
 
 class JobQuoteResponse(BaseModel):
-    total_clips:            int
-    unique_urls:            int
-    estimated_duration_mins: float
-    price:                  float
-    breakdown:              Dict[str, float]
+    # ── Input counts ──────────────────────────────────────────────────────────
+    number_of_links: int
+    total_clips:     int
+
+    # ── Financial breakdown (all values in USD) ───────────────────────────────
+    traditional_cost:     float   # what the client would pay without ScoutCut
+    pure_app_revenue:     float   # ScoutCut's processing fee
+    fixed_final_edit_fee: float   # one-time final editor fee (constant)
+    hybrid_total_cost:    float   # pure_app_revenue + fixed_final_edit_fee
+    client_savings:       float   # traditional_cost − hybrid_total_cost
+    savings_percentage:   float   # client_savings / traditional_cost × 100
+
+    # ── Config snapshot (for formula display in the UI) ───────────────────────
+    rate_per_link:    float
+    rate_per_clip:    float
+    traditional_rate: float
 
 
 class JobCreateRequest(BaseModel):
