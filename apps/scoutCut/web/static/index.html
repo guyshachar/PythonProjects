@@ -381,7 +381,8 @@
             <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4"
                 x-text="t('costBreakdown')"></h3>
 
-            <div class="flex items-start justify-between gap-4 mb-3">
+            <!-- Processing fee: gross (formula) -->
+            <div class="flex items-start justify-between gap-4 mb-2">
               <div>
                 <p class="text-sm font-medium text-slate-200" x-text="t('processingFee')"></p>
                 <p class="text-xs text-slate-500 mt-0.5 ltr-value">
@@ -392,12 +393,44 @@
                   × <span x-text="quote.currency_symbol"></span><span x-text="quote.rate_per_clip"></span>)
                 </p>
               </div>
-              <span class="text-sm font-semibold text-slate-200 whitespace-nowrap ltr-value">
+              <!-- Strike through gross if there's a discount -->
+              <span class="text-sm whitespace-nowrap ltr-value"
+                    :class="quote.volume_discount_pct > 0 ? 'text-slate-500 line-through' : 'font-semibold text-slate-200'">
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.gross_app_revenue"></span>
+              </span>
+            </div>
+
+            <!-- Volume discount row — only shown when discount > 0 -->
+            <div x-show="quote.volume_discount_pct > 0"
+                 class="flex items-start justify-between gap-4 mb-2
+                        bg-emerald-950/40 border border-emerald-800/40 rounded-lg px-3 py-2">
+              <div>
+                <p class="text-sm font-medium text-emerald-300" x-text="t('volumeDiscount')"></p>
+                <p class="text-xs text-emerald-600 mt-0.5 ltr-value">
+                  <span x-text="quote.number_of_links"></span>
+                  <span x-text="quote.number_of_links===1 ? t('game') : t('games')"></span>
+                  × <span x-text="discountPctPerGame"></span>% =
+                  <span x-text="quote.volume_discount_pct"></span>%
+                  <span x-text="t('off')"></span>
+                </p>
+              </div>
+              <span class="text-sm font-semibold text-emerald-400 whitespace-nowrap ltr-value">
+                −<span x-text="quote.currency_symbol"></span><span x-text="quote.volume_discount_amount"></span>
+              </span>
+            </div>
+
+            <!-- Net processing fee after discount -->
+            <div x-show="quote.volume_discount_pct > 0"
+                 class="flex items-center justify-between gap-4 mb-3 ps-2">
+              <span class="text-xs text-slate-500" x-text="t('afterDiscount')"></span>
+              <span class="text-sm font-semibold text-slate-200 ltr-value">
                 <span x-text="quote.currency_symbol"></span><span x-text="quote.pure_app_revenue"></span>
               </span>
             </div>
 
-            <div class="flex items-start justify-between gap-4 mb-3">
+            <!-- Final editor fee -->
+            <div class="flex items-start justify-between gap-4 mb-3"
+                 :class="quote.volume_discount_pct === 0 ? 'mt-1' : ''">
               <div>
                 <p class="text-sm font-medium text-slate-200" x-text="t('finalEditorReview')"></p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="t('oneTimeFee')"></p>
@@ -407,6 +440,7 @@
               </span>
             </div>
 
+            <!-- Total -->
             <div class="border-t border-slate-700 pt-3 flex items-center justify-between">
               <span class="font-bold text-sm" x-text="t('totalYouPay')"></span>
               <span class="text-lg font-black text-white ltr-value">
@@ -415,23 +449,38 @@
             </div>
           </div>
 
-          <!-- Savings callout -->
-          <div class="flex items-center gap-4 bg-green-950/30 border border-green-700/50
-                      rounded-xl px-5 py-4 mb-6">
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold text-green-300">
-                <span x-text="t('youSave')"></span>
-                <strong class="text-green-200 ltr-value">
-                  <span x-text="quote.currency_symbol"></span><span x-text="quote.client_savings"></span>
-                </strong>
-                <span x-text="t('vsTraditional')"></span>
-              </p>
-              <p class="text-xs text-slate-500 mt-0.5 ltr-value">
-                <span class="text-green-500 font-medium"><span x-text="quote.savings_percentage"></span>%</span>
-                <span x-text="' ' + t('savingsOff')"></span>
-              </p>
-            </div>
-            <div class="hidden sm:flex flex-col items-end gap-1 flex-shrink-0">
+          <!-- Savings callout — green if positive, amber warning if negative -->
+          <div class="flex items-center gap-4 rounded-xl px-5 py-4 mb-6"
+               :class="quote.client_savings >= 0
+                 ? 'bg-green-950/30 border border-green-700/50'
+                 : 'bg-amber-950/30 border border-amber-700/50'">
+            <!-- Positive savings -->
+            <template x-if="quote.client_savings >= 0">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-green-300">
+                  <span x-text="t('youSave')"></span>
+                  <strong class="text-green-200 ltr-value">
+                    <span x-text="quote.currency_symbol"></span><span x-text="quote.client_savings"></span>
+                  </strong>
+                  <span x-text="t('vsTraditional')"></span>
+                </p>
+                <p class="text-xs text-slate-500 mt-0.5 ltr-value">
+                  <span class="text-green-500 font-medium"><span x-text="quote.savings_percentage"></span>%</span>
+                  <span x-text="' ' + t('savingsOff')"></span>
+                </p>
+              </div>
+            </template>
+            <!-- Negative savings (1 game: fixed editor fee dominates) -->
+            <template x-if="quote.client_savings < 0">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-amber-300" x-text="t('singleGameNote')"></p>
+                <p class="text-xs text-slate-500 mt-0.5" x-text="t('singleGameHint')"></p>
+              </div>
+            </template>
+
+            <!-- Savings percentage bar (positive only) -->
+            <div x-show="quote.client_savings >= 0"
+                 class="hidden sm:flex flex-col items-end gap-1 flex-shrink-0">
               <span class="text-2xl font-extrabold text-green-300 ltr-value">
                 <span x-text="quote.savings_percentage"></span>%
               </span>
@@ -795,6 +844,14 @@
       savings:             "savings",
       whatsIncluded:       "What's included",
       proceedToPayment:    "Proceed to payment",
+      // Volume discount
+      volumeDiscount:      "Volume Discount",
+      game:                "game",
+      games:               "games",
+      off:                 "off",
+      afterDiscount:       "Processing fee after discount",
+      singleGameNote:      "More value with more games!",
+      singleGameHint:      "The fixed final-edit fee is included. Add more games to unlock volume savings.",
       // Step 4
       paymentTitle:        "Payment",
       paymentSubtitle:     "Choose your preferred payment method.",
@@ -894,6 +951,14 @@
       savings:             "חיסכון",
       whatsIncluded:       "מה כולל",
       proceedToPayment:    "המשך לתשלום",
+      // Volume discount
+      volumeDiscount:      "הנחת כמות",
+      game:                "משחק",
+      games:               "משחקים",
+      off:                 "הנחה",
+      afterDiscount:       "עלות עיבוד לאחר הנחה",
+      singleGameNote:      "יותר משחקים — יותר חיסכון!",
+      singleGameHint:      "עמלת העריכה הסופית כלולה. הוסף עוד משחקים לקבל הנחת כמות.",
       // Step 4
       paymentTitle:        "תשלום",
       paymentSubtitle:     "בחר את אמצעי התשלום המועדף.",
@@ -1056,6 +1121,11 @@
 
       get visiblePaymentMethods() {
         return PAYMENT_METHODS.filter(pm => !pm.nisOnly || this.currency === "NIS")
+      },
+
+      get discountPctPerGame() {
+        if (!this.quote || !this.quote.number_of_links) return 10
+        return Math.round(this.quote.volume_discount_pct / this.quote.number_of_links)
       },
 
       // ── Row helpers ───────────────────────────────────────────────────────────

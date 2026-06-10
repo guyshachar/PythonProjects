@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     traditional_editor_rate: float = 300.0  # NIS/video — industry day-rate baseline
     fixed_final_edit_fee:    float = 300.0  # NIS — one-time final polish fee
 
+    # ── Volume discount on ScoutCut processing fee ───────────────────────────
+    # discount % = number_of_links × APP_DISCOUNT_PCT_PER_LINK, capped at max.
+    # e.g. defaults: 1 game=10%, 2 games=20%, 3 games=30%, 5+ games=50% (cap)
+    app_discount_pct_per_link: int = 10   # percentage points added per unique URL
+    app_max_discount_pct:      int = 50   # hard cap (50% = 5 games)
+
     # ── Currency & localisation ───────────────────────────────────────────────
     usd_to_nis_exchange_rate: float = 3.70  # divide NIS values by this to get USD
     default_language:         str   = "en"  # "en" | "he"

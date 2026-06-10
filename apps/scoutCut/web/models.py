@@ -70,13 +70,18 @@ class JobQuoteResponse(BaseModel):
     currency:        str   # "USD" | "NIS"
     currency_symbol: str   # "$" | "₪"
 
+    # Volume discount on the ScoutCut processing fee
+    volume_discount_pct:    int   # e.g. 30  (number_of_links × 10, capped)
+    volume_discount_amount: int   # absolute amount saved, display currency
+
     # Financial breakdown — all values are whole integers in the requested currency
-    traditional_cost:     int
-    pure_app_revenue:     int
+    gross_app_revenue:    int   # processing fee before discount
+    pure_app_revenue:     int   # processing fee after discount
     fixed_final_edit_fee: int
     hybrid_total_cost:    int
+    traditional_cost:     int
     client_savings:       int
-    savings_percentage:   float   # still a float (e.g. 43.1%)
+    savings_percentage:   float  # e.g. 43.1
 
     # Config snapshot for formula display in the UI
     rate_per_link:    int
