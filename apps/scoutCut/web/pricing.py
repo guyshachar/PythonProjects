@@ -14,9 +14,9 @@ Pricing model (NIS, post-discount):
     gross_app_revenue     = (links × BASE_FEE_PER_LINK) + (clips × FEE_PER_CLIP)
     volume_discount_amount = gross_app_revenue × discount_pct / 100
     pure_app_revenue      = gross_app_revenue − volume_discount_amount
-    hybrid_total_cost     = pure_app_revenue + FIXED_FINAL_EDIT_FEE
+    hybrid_total_cost     = pure_app_revenue   (app charge only — editor fee billed separately)
     traditional_cost      = links × TRADITIONAL_EDITOR_RATE
-    client_savings        = traditional_cost − hybrid_total_cost
+    client_savings        = traditional_cost − (pure_app_revenue + FIXED_FINAL_EDIT_FEE)
 """
 
 from web.config import settings
@@ -58,8 +58,9 @@ def calculate_job_price(req: JobQuoteRequest) -> dict:
     pure_app_revenue_nis  = gross_app_revenue_nis - discount_nis
 
     # ── Step 4: Totals ─────────────────────────────────────────────────────────
-    hybrid_total_cost_nis  = pure_app_revenue_nis + settings.fixed_final_edit_fee
-    client_savings_nis     = traditional_cost_nis - hybrid_total_cost_nis
+    # hybrid_total_cost is the app charge only (editor fee billed separately)
+    hybrid_total_cost_nis  = pure_app_revenue_nis
+    client_savings_nis     = traditional_cost_nis - (pure_app_revenue_nis + settings.fixed_final_edit_fee)
 
     # ── Step 5: Convert + strict integer rounding ──────────────────────────────
     traditional_cost       = _to_display(traditional_cost_nis,     currency)

@@ -428,21 +428,28 @@
               </span>
             </div>
 
-            <!-- Final editor fee -->
-            <div class="flex items-start justify-between gap-4 mb-3"
+            <!-- Final editor fee — informational only, billed separately -->
+            <div class="flex items-start justify-between gap-4 mb-1"
                  :class="quote.volume_discount_pct === 0 ? 'mt-1' : ''">
               <div>
-                <p class="text-sm font-medium text-slate-200" x-text="t('finalEditorReview')"></p>
+                <p class="text-sm font-medium text-slate-400 flex items-center gap-2">
+                  <span x-text="t('finalEditorReview')"></span>
+                  <span class="text-xs font-normal bg-slate-700 text-slate-300 rounded px-1.5 py-0.5"
+                        x-text="t('billedSeparately')"></span>
+                </p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="t('oneTimeFee')"></p>
               </div>
-              <span class="text-sm font-semibold text-slate-200 whitespace-nowrap ltr-value">
+              <span class="text-sm font-semibold text-slate-400 whitespace-nowrap ltr-value">
                 <span x-text="quote.currency_symbol"></span><span x-text="quote.fixed_final_edit_fee"></span>
               </span>
             </div>
 
-            <!-- Total -->
-            <div class="border-t border-slate-700 pt-3 flex items-center justify-between">
-              <span class="font-bold text-sm" x-text="t('totalYouPay')"></span>
+            <!-- Total — app charge only (editor fee excluded) -->
+            <div class="border-t border-slate-700 pt-3 mt-2 flex items-center justify-between">
+              <div>
+                <span class="font-bold text-sm" x-text="t('totalYouPay')"></span>
+                <p class="text-xs text-slate-500 mt-0.5" x-text="t('appChargeOnly')"></p>
+              </div>
               <span class="text-lg font-black text-white ltr-value">
                 <span x-text="quote.currency_symbol"></span><span x-text="quote.hybrid_total_cost"></span>
               </span>
@@ -831,7 +838,9 @@
       withScoutcut:        "SCOUTCUT",
       traditionalEditor:   "Traditional Editor",
       scoutcutHybrid:      "ScoutCut Hybrid",
-      allInTotal:          "All-in total",
+      allInTotal:          "App charge",
+      billedSeparately:    "billed separately",
+      appChargeOnly:       "ScoutCut app charge (editor fee billed separately)",
       costBreakdown:       "ScoutCut hybrid cost breakdown",
       processingFee:       "ScoutCut Processing Fee",
       finalEditorReview:   "Final Editor Review",
@@ -938,7 +947,9 @@
       withScoutcut:        "עם SCOUTCUT",
       traditionalEditor:   "עורך מסורתי",
       scoutcutHybrid:      "גישת ScoutCut",
-      allInTotal:          "סה״כ כולל",
+      allInTotal:          "חיוב האפליקציה",
+      billedSeparately:    "חיוב נפרד",
+      appChargeOnly:       "חיוב ScoutCut בלבד (עמלת עורך בחיוב נפרד)",
       costBreakdown:       "פירוט עלות ScoutCut",
       processingFee:       "עלות עיבוד ScoutCut",
       finalEditorReview:   "עריכה סופית",
