@@ -436,71 +436,67 @@ def extract_clip(source: Path, start: float, end: float, output: Path) -> bool:
     return True
 
 
-def concatenate_clips(segments: list[Path], output_path: Path) -> bool:
+def normalize_clip(input_path: Path, output_path: Path) -> bool:
     """
-    Normalise and concatenate segments in a single ffmpeg pass.
-
-    Each input is scaled/padded to 1920×1080, converted to 30 fps and yuv420p,
-    and resampled to stereo 44.1 kHz — eliminating the need for a separate
-    per-clip normalise step.  Inputs without an audio stream automatically
-    receive a silent stereo track.
+    Re-encode one clip to the uniform target spec (1920×1080, 30 fps, H.264
+    CRF 18, yuv420p, AAC stereo 44.1 kHz).  Injects silence if no audio track.
     """
-    n = len(segments)
-
-    # Pre-check which segments have audio so we can inject silence where needed
-    audio_present = [has_audio(p) for p in segments]
-
-    # Append one anullsrc input per silent segment
-    silent_inputs: list[str] = []
-    silent_idx: dict[int, int] = {}   # segment index → its silent-audio input index
-    next_idx = n
-    for i, has_aud in enumerate(audio_present):
-        if not has_aud:
-            silent_inputs += [
-                "-f", "lavfi",
-                "-i", f"anullsrc=channel_layout=stereo:sample_rate={AUDIO_SR}",
-            ]
-            silent_idx[i] = next_idx
-            next_idx += 1
-
     scale_chain = (
         f"scale={VWIDTH}:{VHEIGHT}:force_original_aspect_ratio=decrease,"
         f"pad={VWIDTH}:{VHEIGHT}:(ow-iw)/2:(oh-ih)/2,"
         f"fps={VFPS},"
         f"format=yuv420p"
     )
-
-    v_filters = [f"[{i}:v]{scale_chain}[v{i}]" for i in range(n)]
-    a_filters = [
-        f"[{i}:a]aresample={AUDIO_SR},aformat=channel_layouts=stereo[a{i}]"
-        if audio_present[i]
-        else f"[{silent_idx[i]}:a]aresample={AUDIO_SR}[a{i}]"
-        for i in range(n)
-    ]
-    concat_in  = "".join(f"[v{i}][a{i}]" for i in range(n))
-    filter_complex = ";".join(v_filters + a_filters) + f";{concat_in}concat=n={n}:v=1:a=1[vout][aout]"
-
-    inputs: list[str] = []
-    for p in segments:
-        inputs += ["-i", str(p)]
+    if has_audio(input_path):
+        extra: list[str] = []
+        audio_filter = f"[0:a]aresample={AUDIO_SR},aformat=channel_layouts=stereo[aout]"
+    else:
+        extra = ["-f", "lavfi", "-i", f"anullsrc=channel_layout=stereo:sample_rate={AUDIO_SR}"]
+        audio_filter = f"[1:a]aresample={AUDIO_SR}[aout]"
 
     cmd = [
         "ffmpeg", "-y",
-        *inputs,
-        *silent_inputs,
-        "-filter_complex", filter_complex,
+        "-i", str(input_path), *extra,
+        "-filter_complex", f"[0:v]{scale_chain}[vout];{audio_filter}",
         "-map", "[vout]", "-map", "[aout]",
         "-c:v", "libx264", "-crf", str(VCRF), "-preset", "fast",
         "-c:a", "aac", "-b:a", AUDIO_BR, "-ar", str(AUDIO_SR),
         "-movflags", "+faststart",
         str(output_path),
     ]
-    log.debug("Concat cmd: %s", " ".join(cmd))
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
-        log.error("Concatenation failed:\n%s", r.stderr[-2000:])
+        log.error("Normalisation failed for %s:\n%s", input_path.name, r.stderr[-2000:])
         return False
     return True
+
+
+def concatenate_clips(segments: list[Path], output_path: Path) -> bool:
+    """
+    Join pre-normalised segments (all identical codec/resolution/fps) via the
+    concat demuxer — pure stream-copy, O(1) memory regardless of clip count.
+    """
+    list_path = output_path.with_suffix(".txt")
+    try:
+        with list_path.open("w", encoding="utf-8") as fh:
+            for p in segments:
+                fh.write(f"file '{p.resolve()}'\n")
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0", "-i", str(list_path),
+            "-c", "copy",
+            "-movflags", "+faststart",
+            str(output_path),
+        ]
+        log.debug("Concat cmd: %s", " ".join(cmd))
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0:
+            log.error("Concatenation failed:\n%s", r.stderr[-2000:])
+            return False
+        return True
+    finally:
+        list_path.unlink(missing_ok=True)
 
 
 # ─── Google Drive ─────────────────────────────────────────────────────────────
@@ -853,10 +849,10 @@ def main() -> None:
             # Download full video once per URL, then extract the needed window
             if spec.url not in url_cache:
                 full_stem = temp_dir / f"full_{_url_hash(spec.url)}"
-                log.info("  [1/2] Downloading full video (first use of this URL)...")
+                log.info("  [1/3] Downloading full video (first use of this URL)...")
                 url_cache[spec.url] = download_full_video(spec.url, full_stem, args.browser)
             else:
-                log.info("  [1/2] Using cached video for this URL.")
+                log.info("  [1/3] Using cached video for this URL.")
 
             full_video = url_cache[spec.url]
             if full_video is None:
@@ -865,14 +861,20 @@ def main() -> None:
 
             raw_path = temp_dir / f"raw_{spec.clip_num:03d}.mp4"
             log.info(
-                "  [2/2] Extracting window  %.1fs – %.1fs...",
+                "  [2/3] Extracting window  %.1fs – %.1fs...",
                 spec.start_secs, spec.end_secs,
             )
             if not extract_clip(full_video, spec.start_secs, spec.end_secs, raw_path):
                 log.error("  Extraction failed — skipping clip %d", spec.clip_num)
                 continue
 
-            segments_per_url[spec.url].append(raw_path)
+            norm_path = temp_dir / f"norm_{spec.clip_num:03d}.mp4"
+            log.info("  [3/3] Normalising to %dx%d @ %dfps...", VWIDTH, VHEIGHT, VFPS)
+            if not normalize_clip(raw_path, norm_path):
+                log.error("  Normalisation failed — skipping clip %d", spec.clip_num)
+                continue
+
+            segments_per_url[spec.url].append(norm_path)
             log.info("  Clip %d done.", spec.clip_num)
 
         any_success = any(segs for segs in segments_per_url.values())
