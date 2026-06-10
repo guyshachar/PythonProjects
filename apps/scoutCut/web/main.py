@@ -11,6 +11,7 @@ Routes:
     GET  /api/jobs/{id}/status     → poll job status (JSON)
 """
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime
@@ -30,9 +31,12 @@ from web.models import (
     JobStatusResponse,
     PaymentVerifyRequest,
     PaymentVerifyResponse,
+    UrlValidationRequest,
+    UrlValidationResponse,
 )
 from web.pricing import calculate_job_price
 from web.payments import process_payment
+from web.url_validator import validate_url
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +73,21 @@ def job_status_page(job_id: str, db: Session = Depends(get_db)):
     inject = f"""<script>window.__SCOUTCUT_JOB_ID__ = "{job_id}";</script>"""
     html = html.replace("</head>", inject + "\n</head>", 1)
     return HTMLResponse(content=html)
+
+
+# ── URL validation ────────────────────────────────────────────────────────────
+
+@app.post("/api/jobs/validate-urls", response_model=UrlValidationResponse, tags=["jobs"])
+async def validate_urls(req: UrlValidationRequest):
+    """
+    Validate a list of URLs using scoutCut's classification logic.
+
+    Uses _looks_like_url() and _PLATFORM_MARKERS from scoutCut.py for format
+    and platform detection, then does a lightweight HTTP check per URL.
+    The full Playwright scrapers are NOT invoked — this is a fast pre-flight check.
+    """
+    results = await asyncio.gather(*[validate_url(u) for u in req.urls])
+    return {"results": list(results)}
 
 
 # ── Payments ───────────────────────────────────────────────────────────────────

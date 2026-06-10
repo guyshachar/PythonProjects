@@ -116,6 +116,24 @@ class JobStatusResponse(BaseModel):
     error:        Optional[str]       = None
 
 
+# ── URL validation ────────────────────────────────────────────────────────────
+
+class UrlValidationRequest(BaseModel):
+    urls: List[str]
+
+
+class UrlValidationResult(BaseModel):
+    url:      str
+    valid:    bool
+    status:   str           # "valid" | "warning" | "invalid"
+    message:  str
+    platform: Optional[str] = None   # "Pixellot" | "Veo" | None
+
+
+class UrlValidationResponse(BaseModel):
+    results: List[UrlValidationResult]
+
+
 # ── Payments ───────────────────────────────────────────────────────────────────
 
 class PaymentVerifyRequest(BaseModel):

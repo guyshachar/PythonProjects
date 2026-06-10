@@ -175,8 +175,61 @@
             <div class="sm:col-span-2">
               <label class="block text-xs font-medium text-slate-400 mb-1" x-text="t('videoUrl')"></label>
               <input type="url" x-model="row.url" :placeholder="t('videoUrlPlaceholder')"
-                     class="ltr-value w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm
-                            focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+                     @blur="validateUrl(idx)"
+                     @input="row.validation = null; row.validationMessage = ''"
+                     :class="{
+                       'border-emerald-600 focus:ring-emerald-500': row.validation === 'valid',
+                       'border-amber-500  focus:ring-amber-400':   row.validation === 'warning',
+                       'border-red-600    focus:ring-red-500':     row.validation === 'invalid',
+                       'border-slate-700  focus:ring-indigo-500':  !row.validation || row.validation === 'checking',
+                     }"
+                     class="ltr-value w-full bg-slate-800 rounded-lg px-3 py-2 text-sm border
+                            focus:outline-none focus:ring-2 placeholder-slate-600 transition-colors" />
+
+              <!-- Validation status badge -->
+              <div x-show="row.validation !== null" class="mt-1 flex items-center gap-1.5 text-xs ltr-value">
+
+                <!-- checking -->
+                <template x-if="row.validation === 'checking'">
+                  <span class="flex items-center gap-1 text-slate-400">
+                    <svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    <span x-text="t('urlChecking')"></span>
+                  </span>
+                </template>
+
+                <!-- valid -->
+                <template x-if="row.validation === 'valid'">
+                  <span class="flex items-center gap-1 text-emerald-400">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span x-text="row.validationMessage"></span>
+                  </span>
+                </template>
+
+                <!-- warning (auth-gated — still usable) -->
+                <template x-if="row.validation === 'warning'">
+                  <span class="flex items-center gap-1 text-amber-400">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <span x-text="row.validationMessage"></span>
+                  </span>
+                </template>
+
+                <!-- invalid -->
+                <template x-if="row.validation === 'invalid'">
+                  <span class="flex items-center gap-1 text-red-400">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    <span x-text="row.validationMessage"></span>
+                  </span>
+                </template>
+
+              </div>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-400 mb-1" x-text="t('titleLabel')"></label>
@@ -212,14 +265,29 @@
         <span x-text="t('addVideo')"></span>
       </button>
 
-      <div class="mt-8 flex justify-end">
+      <!-- Invalid URL warning -->
+      <div x-show="rows.some(r => r.url.trim() && r.validation === 'invalid')"
+           class="mt-4 flex items-center gap-2 text-xs text-red-400 bg-red-950/30 border border-red-800/50 rounded-lg px-4 py-2.5">
+        <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        <span x-text="t('urlInvalidBlocked')"></span>
+      </div>
+
+      <div class="mt-4 flex justify-end">
         <button @click="goToConfig()"
-                :disabled="!canProceedFromStep1"
+                :disabled="rows.some(r => r.url.trim() && r.validation === 'invalid')"
                 class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700
                        disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg font-medium
                        text-sm transition-colors flex items-center gap-2">
+          <!-- show spinner while validating on click -->
+          <svg x-show="rows.some(r => r.validation === 'checking')"
+               class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
           <span x-text="t('configureProcessing')"></span>
-          <svg class="w-4 h-4 arrow-fwd" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <svg x-show="!rows.some(r => r.validation === 'checking')"
+               class="w-4 h-4 arrow-fwd" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
         </button>
@@ -819,6 +887,8 @@
       videoPlural:         "videos",
       untitled:            "Untitled",
       addVideo:            "Add another video",
+      urlChecking:         "Checking…",
+      urlInvalidBlocked:   "Fix the invalid URL(s) above before continuing.",
       configureProcessing: "Configure processing",
       // Step 2
       configTitle:         "Processing options",
@@ -928,6 +998,8 @@
       videoPlural:         "וידאו",
       untitled:            "ללא כותרת",
       addVideo:            "הוסף וידאו נוסף",
+      urlChecking:         "בודק…",
+      urlInvalidBlocked:   "יש לתקן את הקישורים הלא תקינים לפני המשך.",
       configureProcessing: "הגדרות עיבוד",
       // Step 2
       configTitle:         "הגדרות עיבוד",
@@ -1061,7 +1133,7 @@
 
       // Step 1
       jobTitle:    "",
-      rows:        [{ url: "", title: "", timecodes: "" }],
+      rows:        [{ url: "", title: "", timecodes: "", validation: null, validationMessage: "" }],
       importError: "",
 
       // Step 2
@@ -1126,8 +1198,10 @@
       },
 
       get canProceedFromStep1() {
-        return this.jobTitle.trim() !== "" &&
-               this.rows.some(r => r.url.trim() && this.countTimecodes(r) > 0)
+        const hasContent = this.jobTitle.trim() !== "" &&
+                           this.rows.some(r => r.url.trim() && this.countTimecodes(r) > 0)
+        const hasInvalid = this.rows.some(r => r.url.trim() && r.validation === "invalid")
+        return hasContent && !hasInvalid
       },
 
       get visiblePaymentMethods() {
@@ -1145,9 +1219,36 @@
         return row.timecodes.split("\n").filter(t => t.trim()).length
       },
 
-      addRow()    { this.rows.push({ url: "", title: "", timecodes: "" }) },
+      addRow()    { this.rows.push({ url: "", title: "", timecodes: "", validation: null, validationMessage: "" }) },
       removeRow(i){ if (this.rows.length > 1) this.rows.splice(i, 1) },
-      goToConfig(){ if (this.canProceedFromStep1) this.step = 2 },
+
+      async validateUrl(i) {
+        const url = this.rows[i].url.trim()
+        if (!url) { this.rows[i].validation = null; this.rows[i].validationMessage = ""; return }
+        this.rows[i].validation = "checking"
+        try {
+          const res = await fetch("/api/jobs/validate-urls", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ urls: [url] }),
+          })
+          const data = await res.json()
+          const r = data.results[0]
+          this.rows[i].validation = r.status
+          this.rows[i].validationMessage = r.message
+        } catch {
+          this.rows[i].validation = "invalid"
+          this.rows[i].validationMessage = "Could not reach validation service"
+        }
+      },
+
+      async goToConfig() {
+        if (!this.jobTitle.trim() || !this.rows.some(r => r.url.trim() && this.countTimecodes(r) > 0)) return
+        // Validate any unchecked URLs before advancing
+        const unchecked = this.rows.map((r, i) => ({ r, i })).filter(({r}) => r.url.trim() && r.validation === null)
+        if (unchecked.length) await Promise.all(unchecked.map(({i}) => this.validateUrl(i)))
+        if (!this.rows.some(r => r.url.trim() && r.validation === "invalid")) this.step = 2
+      },
 
       // ── Export ───────────────────────────────────────────────────────────────
       exportJob() {
@@ -1191,9 +1292,11 @@
             // Restore state
             this.jobTitle = data.job_title  || ""
             this.rows     = data.rows.map(r => ({
-              url:       r.url       ?? "",
-              title:     r.title     ?? "",
-              timecodes: r.timecodes ?? "",
+              url:               r.url       ?? "",
+              title:             r.title     ?? "",
+              timecodes:         r.timecodes ?? "",
+              validation:        null,   // re-validate after import
+              validationMessage: "",
             }))
             if (data.config) {
               this.config = { ...this.config, ...data.config }
@@ -1216,7 +1319,7 @@
       // ── Payload builder ───────────────────────────────────────────────────────
       _buildVideoRows() {
         return this.rows
-          .filter(r => r.url.trim() && this.countTimecodes(r) > 0)
+          .filter(r => r.url.trim() && this.countTimecodes(r) > 0 && r.validation !== "invalid")
           .map(r => ({
             url:       r.url.trim(),
             title:     r.title.trim(),
