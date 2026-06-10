@@ -524,14 +524,14 @@
               </span>
             </div>
 
-            <!-- Total — app charge only (editor fee excluded) -->
+            <!-- Total — app charge only (editor fee billed separately) -->
             <div class="border-t border-slate-700 pt-3 mt-2 flex items-center justify-between">
               <div>
                 <span class="font-bold text-sm" x-text="t('totalYouPay')"></span>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="t('appChargeOnly')"></p>
               </div>
               <span class="text-lg font-black text-white ltr-value">
-                <span x-text="quote.currency_symbol"></span><span x-text="quote.hybrid_total_cost"></span>
+                <span x-text="quote.currency_symbol"></span><span x-text="quote.app_charge"></span>
               </span>
             </div>
           </div>
@@ -652,7 +652,7 @@
         <div class="bg-slate-900 border border-slate-800 rounded-xl px-5 py-4 flex items-center justify-between mb-6">
           <span class="text-sm text-slate-400" x-text="t('orderTotal')"></span>
           <span class="text-xl font-bold text-green-400 ltr-value">
-            <span x-text="quote.currency_symbol"></span><span x-text="quote.hybrid_total_cost"></span>
+            <span x-text="quote.currency_symbol"></span><span x-text="quote.app_charge"></span>
           </span>
         </div>
       </template>
@@ -674,7 +674,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
-          <span x-text="paymentLoading ? t('processing') : (t('pay') + ' ' + (quote ? quote.currency_symbol + quote.hybrid_total_cost : ''))"></span>
+          <span x-text="paymentLoading ? t('processing') : (t('pay') + ' ' + (quote ? quote.currency_symbol + quote.app_charge : ''))"></span>
         </button>
       </div>
     </div>
@@ -1036,9 +1036,12 @@
           </div>
 
           <div class="flex justify-between font-bold text-sm pt-2 border-t border-slate-700">
-            <span x-text="t('totalYouPay')"></span>
+            <div>
+              <span x-text="t('totalYouPay')"></span>
+              <p class="text-xs font-normal text-slate-500 mt-0.5" x-text="t('appChargeOnly')"></p>
+            </div>
             <span class="text-white ltr-value">
-              <span x-text="simQuote?.currency_symbol"></span><span x-text="simQuote?.hybrid_total_cost"></span>
+              <span x-text="simQuote?.currency_symbol"></span><span x-text="simQuote?.app_charge"></span>
             </span>
           </div>
         </div>
@@ -1167,7 +1170,7 @@
       withScoutcut:        "SCOUTCUT",
       traditionalEditor:   "Traditional Editor",
       scoutcutHybrid:      "ScoutCut Hybrid",
-      allInTotal:          "App charge",
+      allInTotal:          "All-in total",
       billedSeparately:    "billed separately",
       appChargeOnly:       "ScoutCut app charge (editor fee billed separately)",
       costBreakdown:       "ScoutCut hybrid cost breakdown",
@@ -1289,7 +1292,7 @@
       withScoutcut:        "עם SCOUTCUT",
       traditionalEditor:   "עורך מסורתי",
       scoutcutHybrid:      "גישת ScoutCut",
-      allInTotal:          "חיוב האפליקציה",
+      allInTotal:          "סה״כ כולל",
       billedSeparately:    "חיוב נפרד",
       appChargeOnly:       "חיוב ScoutCut בלבד (עמלת עורך בחיוב נפרד)",
       costBreakdown:       "פירוט עלות ScoutCut",
@@ -1690,7 +1693,7 @@
             headers: { "Content-Type": "application/json" },
             body:    JSON.stringify({
               method:   this.selectedPayment,
-              amount:   this.quote.hybrid_total_cost,
+              amount:   this.quote.app_charge,
               currency: this.currency,
             }),
           })

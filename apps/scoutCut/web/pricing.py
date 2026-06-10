@@ -58,9 +58,11 @@ def calculate_job_price(req: JobQuoteRequest) -> dict:
     pure_app_revenue_nis  = gross_app_revenue_nis - discount_nis
 
     # ── Step 4: Totals ─────────────────────────────────────────────────────────
-    # hybrid_total_cost is the app charge only (editor fee billed separately)
-    hybrid_total_cost_nis  = pure_app_revenue_nis
-    client_savings_nis     = traditional_cost_nis - (pure_app_revenue_nis + settings.fixed_final_edit_fee)
+    # hybrid_total_cost = full client cost (app + editorial) — used for comparison
+    # app_charge        = what the app actually collects (editorial billed separately)
+    hybrid_total_cost_nis  = pure_app_revenue_nis + settings.fixed_final_edit_fee
+    app_charge_nis         = pure_app_revenue_nis
+    client_savings_nis     = traditional_cost_nis - hybrid_total_cost_nis
 
     # ── Step 5: Convert + strict integer rounding ──────────────────────────────
     traditional_cost       = _to_display(traditional_cost_nis,     currency)
@@ -69,6 +71,7 @@ def calculate_job_price(req: JobQuoteRequest) -> dict:
     pure_app_revenue       = _to_display(pure_app_revenue_nis,     currency)
     fixed_final_edit_fee   = _to_display(settings.fixed_final_edit_fee, currency)
     hybrid_total_cost      = _to_display(hybrid_total_cost_nis,    currency)
+    app_charge             = _to_display(app_charge_nis,           currency)
     client_savings         = _to_display(client_savings_nis,       currency)
 
     rate_per_link          = _to_display(settings.app_base_fee_per_link,   currency)
@@ -97,7 +100,8 @@ def calculate_job_price(req: JobQuoteRequest) -> dict:
         "gross_app_revenue":     gross_app_revenue,      # before discount
         "pure_app_revenue":      pure_app_revenue,        # after discount
         "fixed_final_edit_fee":  fixed_final_edit_fee,
-        "hybrid_total_cost":     hybrid_total_cost,
+        "hybrid_total_cost":     hybrid_total_cost,  # app + editorial (for comparison)
+        "app_charge":            app_charge,          # app only (what payment collects)
         "traditional_cost":      traditional_cost,
         "client_savings":        client_savings,
         "savings_percentage":    savings_pct,

@@ -78,7 +78,8 @@ class JobQuoteResponse(BaseModel):
     gross_app_revenue:    int   # processing fee before discount
     pure_app_revenue:     int   # processing fee after discount
     fixed_final_edit_fee: int
-    hybrid_total_cost:    int
+    hybrid_total_cost:    int   # app + editorial (shown on comparison card)
+    app_charge:           int   # app only (charged via payment)
     traditional_cost:     int
     client_savings:       int
     savings_percentage:   float  # e.g. 43.1
