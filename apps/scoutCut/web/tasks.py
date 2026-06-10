@@ -35,6 +35,68 @@ _GDRIVE_RE = re.compile(
 _LOCAL_PATH_RE = re.compile(r"Output saved[:\s]+(.+\.mp4)", re.IGNORECASE)
 
 
+# ── Job report ────────────────────────────────────────────────────────────────
+
+def _build_report(
+    job_id: str,
+    job_title: str,
+    video_rows: list,
+    skipped_rows: list,
+    output_links: list,
+) -> str:
+    """
+    Build a human-readable completion report covering:
+      - all processed URLs with captions and timecode ranges
+      - all skipped URLs with skip reason
+      - output links
+    """
+    SEP  = "═" * 54
+    DASH = "─" * 54
+    lines: list[str] = [SEP, "  ScoutCut Job Report"]
+    if job_title:
+        lines.append(f"  Job:    {job_title}")
+    lines.append(f"  Job ID: {job_id}")
+    lines.append(SEP)
+    lines.append("")
+
+    # Processed
+    total_clips = sum(len(r.get("timecodes", [])) for r in video_rows)
+    lines.append(f"✓  PROCESSED  —  {len(video_rows)} video(s)  ·  {total_clips} clip(s)")
+    lines.append(DASH)
+    for i, row in enumerate(video_rows, 1):
+        lines.append(f"  {i}. {row['url']}")
+        if row.get("title"):
+            lines.append(f"     Caption   : {row['title']}")
+        tcs = row.get("timecodes", [])
+        if tcs:
+            lines.append(f"     Timecodes ({len(tcs)}): {' · '.join(tcs)}")
+        lines.append("")
+
+    # Skipped
+    if skipped_rows:
+        lines.append(f"✗  SKIPPED  —  {len(skipped_rows)} video(s)  (invalid URL, not processed)")
+        lines.append(DASH)
+        for i, row in enumerate(skipped_rows, 1):
+            lines.append(f"  {i}. {row.get('url', '')}")
+            if row.get("title"):
+                lines.append(f"     Caption : {row['title']}")
+            tcs = row.get("timecodes", [])
+            if tcs:
+                lines.append(f"     Timecodes ({len(tcs)}): {' · '.join(tcs)}")
+            if row.get("skip_reason"):
+                lines.append(f"     Reason  : {row['skip_reason']}")
+        lines.append("")
+
+    # Output links
+    lines.append("⬇  OUTPUT LINKS")
+    lines.append(DASH)
+    for i, link in enumerate(output_links, 1):
+        lines.append(f"  {i}. {link}")
+    lines.append("")
+    lines.append(SEP)
+    return "\n".join(lines)
+
+
 # ── CSV generation ─────────────────────────────────────────────────────────────
 
 def _write_csv(video_rows: list, dest: Path) -> Path:
@@ -141,14 +203,25 @@ def process_job(self, job_id: str, payload: dict) -> dict:
                     "No output links found in scoutCut.py output.\n" + full_output[-1000:]
                 )
 
-            # ── 5. Persist + notify ─────────────────────────────────────────
+            # ── 5. Build report ─────────────────────────────────────────────
+            report = _build_report(
+                job_id=job_id,
+                job_title=payload.get("job_title", ""),
+                video_rows=payload["video_rows"],
+                skipped_rows=payload.get("skipped_rows", []),
+                output_links=links,
+            )
+
+            # ── 6. Persist + notify ─────────────────────────────────────────
             update_job(job_id, status="completed", output_links=links,
-                       progress=f"Done — {len(links)} file(s) ready.")
+                       progress=f"Done — {len(links)} file(s) ready.",
+                       report=report)
             send_delivery_notification(
                 contact_method=delivery["method"],
                 contact=delivery["contact"],
                 links=links,
                 job_id=job_id,
+                report=report,
             )
             log.info("[job %s] completed: %d link(s)", job_id, len(links))
             return {"status": "completed", "links": links}

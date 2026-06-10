@@ -24,6 +24,14 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
+    # Add report column to existing DBs (safe no-op if column already exists)
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN report TEXT"))
+            conn.commit()
+    except Exception:
+        pass
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -41,6 +49,7 @@ def update_job(
     progress: str | None = None,
     output_links: list | None = None,
     error: str | None = None,
+    report: str | None = None,
 ) -> None:
     """Thread/process-safe helper used from the Celery worker."""
     db = SessionLocal()
@@ -56,6 +65,8 @@ def update_job(
             job.output_links = output_links
         if error is not None:
             job.error = error
+        if report is not None:
+            job.report = report
         job.updated_at = datetime.utcnow()
         db.commit()
     finally:

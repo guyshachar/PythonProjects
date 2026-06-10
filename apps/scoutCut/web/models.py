@@ -29,6 +29,7 @@ class JobRecord(Base):
     output_links = Column(JSON,    nullable=True)
     progress     = Column(Text,    nullable=True)
     error        = Column(Text,    nullable=True)
+    report       = Column(Text,    nullable=True)
     created_at   = Column(DateTime, default=datetime.utcnow)
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -92,9 +93,18 @@ class JobQuoteResponse(BaseModel):
 
 # ── Job lifecycle ──────────────────────────────────────────────────────────────
 
+class SkippedVideoRow(BaseModel):
+    """A video row excluded from processing due to a failed URL validation."""
+    url:         str
+    title:       str = ""
+    timecodes:   List[str] = Field(default_factory=list)
+    skip_reason: str = ""
+
+
 class JobCreateRequest(BaseModel):
     job_title:     str = ""               # user-set project name / header
     video_rows:    List[VideoRow]
+    skipped_rows:  List[SkippedVideoRow] = Field(default_factory=list)
     config:        ProcessingConfig
     delivery:      DeliveryInfo
     payment_token: str
@@ -115,6 +125,7 @@ class JobStatusResponse(BaseModel):
     progress:     Optional[str]       = None
     output_links: Optional[List[str]] = None
     error:        Optional[str]       = None
+    report:       Optional[str]       = None
 
 
 # ── URL validation ────────────────────────────────────────────────────────────

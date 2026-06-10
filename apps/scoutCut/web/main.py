@@ -180,4 +180,5 @@ def job_status(job_id: str, db: Session = Depends(get_db)):
         progress=job.progress,
         output_links=job.output_links,
         error=job.error,
+        report=job.report,
     )

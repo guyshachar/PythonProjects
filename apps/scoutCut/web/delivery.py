@@ -17,6 +17,7 @@ def send_delivery_notification(
     contact: str,
     links: List[str],
     job_id: str,
+    report: str = "",
 ) -> bool:
     """
     Notify the user that their job is ready.
@@ -37,6 +38,8 @@ def send_delivery_notification(
         f"Links are available for 7 days.\n"
         f"Powered by ScoutCut"
     )
+    if report:
+        message += f"\n\n{report}"
 
     if contact_method == "email":
         return _send_email(contact, "ScoutCut: your highlights are ready", message)
