@@ -2,6 +2,9 @@
 credentials.json
 token.json
 
+# Local pricing overrides — edit to change rates without touching code
+web/config.json
+
 # Run artifacts
 runs/
 temp_clips/
