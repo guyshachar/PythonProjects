@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.8'
 
 # ── Prerequisites ─────────────────────────────────────────────────────────────
 # 1. Copy .env.example → .env and fill in secrets before first run.
@@ -11,7 +11,7 @@ version: "3.9"
 services:
 
   # ── Redis: Celery broker + result backend ─────────────────────────────────
-  redis1:
+  redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -44,7 +44,10 @@ services:
       - ./credentials.json:/app/credentials.json:ro   # Google OAuth client secret
       - ./token.json:/app/token.json               # OAuth token — writable for refresh
       - ./veo_profile:/app/veo_profile        # Playwright persistent session for Veo
-      - ./web/config.json:/app/web/config.json:ro  # local pricing overrides (gitignored)
+    configs:
+      - source: scoutcut_config
+        target: /app/web/config.json
+        mode: 0444
     depends_on:
       redis:
         condition: service_healthy
@@ -70,12 +73,15 @@ services:
         required: false
     volumes:
       - .:/app                              # scoutCut.py, scrapers, etc.
-      - runs:/app/runs                      # output files (shared with api)
-      - data:/app/data                      # shared SQLite DB
+      - ./runs:/app/runs                      # output files (shared with api)
+      - ./data:/app/data                      # shared SQLite DB
       - ./credentials.json:/app/credentials.json:ro
-      - token:/app/token.json
-      - veo_profile:/app/veo_profile
-      - ./web/config.json:/app/web/config.json:ro  # local pricing overrides (gitignored)
+      - ./token.json:/app/token.json
+      - ./veo_profile:/app/veo_profile
+    configs:
+      - source: scoutcut_config
+        target: /app/web/config.json
+        mode: 0444
     depends_on:
       redis:
         condition: service_healthy
@@ -87,6 +93,15 @@ volumes:
   data:         # SQLite database
   token:        # Google OAuth refresh token (single file, managed by scoutCut.py)
   veo_profile:  # Playwright browser session for live.veo.co authentication
+
+# ── Docker Configs (Compose + Swarm) ──────────────────────────────────────────
+# file: reference works in both modes:
+#   docker compose up        → reads file directly, mounts as tmpfs at target path
+#   docker stack deploy      → creates a Swarm config object from the file, distributes to all nodes
+# To update pricing in Swarm: edit web/config.json then re-deploy the stack.
+configs:
+  scoutcut_config:
+    file: ./web/config.json
 
 networks:
   refereex_shared_net:

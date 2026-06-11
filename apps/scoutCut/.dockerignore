@@ -1,0 +1,34 @@
+# Large runtime artifacts — never needed in the image
+runs/
+data/
+backup/
+dump.rdb
+
+# Playwright browser session — mounted as a volume at runtime
+veo_profile/
+
+# OAuth tokens — mounted as volumes at runtime
+credentials.json
+token.json
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Dev / editor
+.venv/
+venv/
+*.egg-info/
+.env
+.env.*
+.git/
+.gitignore
+*.code-workspace
+
+# Temp / OS
+*.tmp
+*.log
+.DS_Store
