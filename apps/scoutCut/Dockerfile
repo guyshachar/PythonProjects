@@ -6,7 +6,9 @@
 #   • Playwright + Chromium browser (pixellot_scraper, veo_scraper)
 #   • FastAPI / Celery web layer
 #
-# Build:   docker build -t scoutcut .
+# Build:   ./deploy.sh                                          (arm64, default)
+#          SCOUTCUT_PLATFORM=linux/amd64 ./deploy.sh           (x86-64 override)
+#          docker buildx build --platform linux/arm64 -t scoutcut .   (manual)
 # Run:     docker compose up
 
 FROM python:3.11-slim

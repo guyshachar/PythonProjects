@@ -11,11 +11,11 @@
 #   ./deploy.sh bump major               # bump major, then build + push
 #   SKIP_ECR=1 ./deploy.sh               # Docker Hub only, skip ECR
 #   SKIP_DOCKERHUB=1 ./deploy.sh         # ECR only, skip Docker Hub
-#   SCOUTCUT_PLATFORM=linux/arm64 ./deploy.sh   # override build platform
+#   SCOUTCUT_PLATFORM=linux/amd64 ./deploy.sh   # override to x86-64
 #
 # Environment overrides:
 #   VERSION                  explicit version tag
-#   SCOUTCUT_PLATFORM        buildx platform   (default: linux/amd64 for EC2)
+#   SCOUTCUT_PLATFORM        buildx platform   (default: linux/arm64 for Graviton/ARM EC2)
 #   SCOUTCUT_DOCKERHUB_REPO  Docker Hub repo   (default: guyshacharacc/scoutcut)
 #   SCOUTCUT_ECR_REPOSITORY  ECR repo path     (default: refereex-repo/scoutcut)
 #   AWS_REGION               AWS region        (default: from aws configure)
@@ -70,8 +70,8 @@ if [[ "${1:-}" =~ ^(-h|--help|help)$ ]]; then
 fi
 
 # ── Config ────────────────────────────────────────────────────────────────────
-# EC2 is x86_64; override with SCOUTCUT_PLATFORM=linux/arm64 for ARM hosts
-PLATFORM="${SCOUTCUT_PLATFORM:-linux/amd64}"
+# ARM64 target (EC2 Graviton / arm64); override with SCOUTCUT_PLATFORM=linux/amd64 for x86 hosts
+PLATFORM="${SCOUTCUT_PLATFORM:-linux/arm64}"
 DOCKERHUB_REPO="${SCOUTCUT_DOCKERHUB_REPO:-guyshacharacc/scoutcut}"
 ECR_REPOSITORY="${SCOUTCUT_ECR_REPOSITORY:-refereex-repo/scoutcut}"
 LOCAL_IMAGE="scoutcut"
