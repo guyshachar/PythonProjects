@@ -1482,13 +1482,13 @@
         this.lang = l
         document.documentElement.dir  = l === "he" ? "rtl" : "ltr"
         document.documentElement.lang = l
-        if (this.quote) this.quote = null
+        if (this.quote) this.step === 3 ? this.fetchQuote() : (this.quote = null)
         if (this.showSimulator) this._fetchSimQuote()
       },
 
       setCurrency(c) {
         this.currency = c
-        if (this.quote) this.quote = null
+        if (this.quote) this.step === 3 ? this.fetchQuote() : (this.quote = null)
         if (this.showSimulator) this._fetchSimQuote()
       },
 
