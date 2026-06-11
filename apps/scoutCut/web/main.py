@@ -174,11 +174,14 @@ def job_status(job_id: str, db: Session = Depends(get_db)):
     job: JobRecord | None = db.get(JobRecord, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found.")
+    links = job.output_links
+    if links:
+        links = list(dict.fromkeys(links))  # dedup preserving order (worker may store duplicates)
     return JobStatusResponse(
         job_id=job.id,
         status=job.status,
         progress=job.progress,
-        output_links=job.output_links,
+        output_links=links,
         error=job.error,
         report=job.report,
     )
