@@ -4,13 +4,14 @@ version: "3.9"
 # 1. Copy .env.example → .env and fill in secrets before first run.
 # 2. Place credentials.json (Google OAuth client) in the project root.
 # 3. Run `python veo_scraper.py` once locally to populate veo_profile/ (Veo login).
+# 4. Edit web/config.json to set local pricing constants (gitignored).
 # Then: docker compose up --build
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
 
   # ── Redis: Celery broker + result backend ─────────────────────────────────
-  redis:
+  redis1:
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -22,9 +23,11 @@ services:
       retries: 5
 
   # ── FastAPI API server ────────────────────────────────────────────────────
-  api:
+  scoutcut-api:
     build: .
     command: uvicorn web.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - refereex_shared_net
     ports:
       - "8000:8000"
     environment:
@@ -36,11 +39,12 @@ services:
         required: false    # Docker Compose ≥2.24; silently skipped if file absent
     volumes:
       - .:/app                              # live-reload source in dev
-      - runs:/app/runs                      # job output: persisted across restarts
-      - data:/app/data                      # SQLite DB
+      - ./runs:/app/runs                      # job output: persisted across restarts
+      - ./data:/app/data                      # SQLite DB
       - ./credentials.json:/app/credentials.json:ro   # Google OAuth client secret
-      - token:/app/token.json               # OAuth token — writable for refresh
-      - veo_profile:/app/veo_profile        # Playwright persistent session for Veo
+      - ./token.json:/app/token.json               # OAuth token — writable for refresh
+      - ./veo_profile:/app/veo_profile        # Playwright persistent session for Veo
+      - ./web/config.json:/app/web/config.json:ro  # local pricing overrides (gitignored)
     depends_on:
       redis:
         condition: service_healthy
@@ -54,6 +58,8 @@ services:
         --loglevel=info
         --concurrency=1
         --max-tasks-per-child=5
+    networks:
+      - refereex_shared_net
     environment:
       REDIS_URL:    redis://redis:6379/0
       DATABASE_URL: sqlite:////app/data/scoutcut.db
@@ -69,6 +75,7 @@ services:
       - ./credentials.json:/app/credentials.json:ro
       - token:/app/token.json
       - veo_profile:/app/veo_profile
+      - ./web/config.json:/app/web/config.json:ro  # local pricing overrides (gitignored)
     depends_on:
       redis:
         condition: service_healthy
@@ -80,3 +87,9 @@ volumes:
   data:         # SQLite database
   token:        # Google OAuth refresh token (single file, managed by scoutCut.py)
   veo_profile:  # Playwright browser session for live.veo.co authentication
+
+networks:
+  refereex_shared_net:
+    external: true
+    driver: bridge
+    name: refereex_shared_net
