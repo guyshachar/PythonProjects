@@ -1,12 +1,23 @@
 """
 Delivery notification dispatcher.
 
-Production replacements are marked with # TODO comments.
-Currently logs to stdout so the system works end-to-end without external deps.
+Required environment variables for email (set in .env or docker-compose):
+    SMTP_HOST   e.g. smtp.gmail.com
+    SMTP_PORT   e.g. 587  (STARTTLS) or 465 (SSL)
+    SMTP_USER   e.g. you@gmail.com
+    SMTP_PASS   app password or SMTP credential
+    SMTP_FROM   sender address (defaults to SMTP_USER)
+
+For WhatsApp (Twilio):
+    TWILIO_ACCOUNT_SID
+    TWILIO_AUTH_TOKEN
+    TWILIO_WHATSAPP_FROM   e.g. +14155238886
 """
 
 import logging
 import os
+import smtplib
+from email.message import EmailMessage
 from typing import List
 
 log = logging.getLogger(__name__)
@@ -19,17 +30,6 @@ def send_delivery_notification(
     job_id: str,
     report: str = "",
 ) -> bool:
-    """
-    Notify the user that their job is ready.
-
-    Args:
-        contact_method: "email" or "whatsapp"
-        contact:        email address or phone number (+countrycode...)
-        links:          list of download/share URLs
-        job_id:         job UUID (for reference)
-
-    Returns True on success.
-    """
     links_block = "\n".join(f"  {i+1}. {url}" for i, url in enumerate(links))
     message = (
         f"Your ScoutCut highlights are ready!\n\n"
@@ -53,41 +53,69 @@ def send_delivery_notification(
 # ── Email ──────────────────────────────────────────────────────────────────────
 
 def _send_email(to: str, subject: str, body: str) -> bool:
-    """
-    Send an email notification.
+    host = os.getenv("SMTP_HOST", "")
+    user = os.getenv("SMTP_USER", "")
+    passwd = os.getenv("SMTP_PASS", "")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    from_addr = os.getenv("SMTP_FROM", user)
 
-    TODO: Replace log with smtplib / SendGrid:
+    if not host or not user or not passwd:
+        log.warning(
+            "[EMAIL] SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS missing) — "
+            "logging message instead. To: %s | Subject: %s\n%s",
+            to, subject, body,
+        )
+        return False
 
-        import smtplib
-        from email.message import EmailMessage
-        msg = EmailMessage()
-        msg["Subject"] = subject
-        msg["From"]    = os.getenv("SMTP_FROM")
-        msg["To"]      = to
-        msg.set_content(body)
-        with smtplib.SMTP_SSL(os.getenv("SMTP_HOST"), 465) as s:
-            s.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASS"))
-            s.send_message(msg)
-    """
-    log.info("[EMAIL] To: %s | Subject: %s\n%s", to, subject, body)
-    return True
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to
+    msg.set_content(body)
+
+    try:
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port) as s:
+                s.login(user, passwd)
+                s.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port) as s:
+                s.ehlo()
+                s.starttls()
+                s.login(user, passwd)
+                s.send_message(msg)
+        log.info("[EMAIL] Sent to %s (job %s)", to, msg.get("Subject", ""))
+        return True
+    except Exception as exc:
+        log.error("[EMAIL] Failed to send to %s: %s", to, exc)
+        return False
 
 
 # ── WhatsApp ───────────────────────────────────────────────────────────────────
 
 def _send_whatsapp(to: str, message: str) -> bool:
-    """
-    Send a WhatsApp message via Twilio.
+    sid   = os.getenv("TWILIO_ACCOUNT_SID", "")
+    token = os.getenv("TWILIO_AUTH_TOKEN", "")
+    from_ = os.getenv("TWILIO_WHATSAPP_FROM", "")
 
-    TODO: Replace log with Twilio:
+    if not sid or not token or not from_:
+        log.warning(
+            "[WHATSAPP] Twilio not configured (TWILIO_ACCOUNT_SID/AUTH_TOKEN/WHATSAPP_FROM missing) — "
+            "logging message instead. To: %s\n%s",
+            to, message,
+        )
+        return False
 
+    try:
         from twilio.rest import Client
-        client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
+        client = Client(sid, token)
         client.messages.create(
-            from_=f"whatsapp:{os.getenv('TWILIO_WHATSAPP_FROM')}",
+            from_=f"whatsapp:{from_}",
             body=message,
             to=f"whatsapp:{to}",
         )
-    """
-    log.info("[WHATSAPP] To: %s\n%s", to, message)
-    return True
+        log.info("[WHATSAPP] Sent to %s", to)
+        return True
+    except Exception as exc:
+        log.error("[WHATSAPP] Failed to send to %s: %s", to, exc)
+        return False

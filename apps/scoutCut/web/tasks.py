@@ -128,10 +128,9 @@ def _write_csv(video_rows: list, dest: Path) -> Path:
 # ── Output link extraction ─────────────────────────────────────────────────────
 
 def _extract_links(output: str) -> List[str]:
-    links = _GDRIVE_RE.findall(output)
+    links = list(dict.fromkeys(_GDRIVE_RE.findall(output)))  # dedup, preserve order
     if not links:
-        # fall back to local mp4 paths
-        links = _LOCAL_PATH_RE.findall(output)
+        links = list(dict.fromkeys(_LOCAL_PATH_RE.findall(output)))
     return links
 
 
