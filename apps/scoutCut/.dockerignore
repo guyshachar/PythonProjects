@@ -11,6 +11,10 @@ veo_profile/
 credentials.json
 token.json
 
+# PyInstaller build output (large binaries)
+dist/
+build/
+
 # Python caches
 __pycache__/
 **/__pycache__/
