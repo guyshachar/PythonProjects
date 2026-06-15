@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScoutCut Admin — Jobs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body class="min-h-screen" x-data="adminApp()" x-init="init()" x-cloak>
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-indigo-400 font-bold text-lg tracking-tight">ScoutCut</span>
+      <span class="text-slate-500">/</span>
+      <span class="text-slate-300 font-medium">Admin Jobs</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="text-xs text-slate-500" x-text="lastRefreshed ? 'Updated ' + lastRefreshed : ''"></span>
+      <label class="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+        <input type="checkbox" x-model="autoRefresh" class="accent-indigo-500" />
+        Auto-refresh (5s)
+      </label>
+      <button @click="load()" class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+        ↻ Refresh
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="px-6 py-3 border-b border-slate-800 flex gap-6 text-xs text-slate-400">
+    <span>Total: <strong class="text-slate-200" x-text="total"></strong></span>
+    <template x-for="[s, count] in Object.entries(counts)" :key="s">
+      <span x-show="count > 0">
+        <span :class="statusColor(s)" x-text="s"></span>:
+        <strong class="text-slate-200" x-text="count"></strong>
+      </span>
+    </template>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-800 text-xs text-slate-500 uppercase tracking-wider">
+          <th class="px-4 py-3 text-left font-medium">Job</th>
+          <th class="px-4 py-3 text-left font-medium">Status</th>
+          <th class="px-4 py-3 text-left font-medium">Progress / Error</th>
+          <th class="px-4 py-3 text-left font-medium">Created</th>
+          <th class="px-4 py-3 text-left font-medium">Updated</th>
+          <th class="px-4 py-3 text-left font-medium">Clips</th>
+          <th class="px-4 py-3 text-left font-medium">Price</th>
+          <th class="px-4 py-3 text-left font-medium">Worker</th>
+          <th class="px-4 py-3 text-left font-medium">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/60">
+        <template x-if="jobs.length === 0">
+          <tr>
+            <td colspan="9" class="px-4 py-12 text-center text-slate-500">No jobs found.</td>
+          </tr>
+        </template>
+        <template x-for="job in jobs" :key="job.job_id">
+          <tr class="hover:bg-slate-900/40 transition-colors">
+
+            <!-- Job ID + title -->
+            <td class="px-4 py-3 max-w-[220px]">
+              <div class="font-medium text-slate-200 truncate" x-text="job.job_title || '—'"></div>
+              <a :href="'/jobs/' + job.job_id" target="_blank"
+                 class="mono text-xs text-slate-500 hover:text-indigo-400 transition-colors"
+                 x-text="job.job_id.slice(0,8) + '…'"></a>
+            </td>
+
+            <!-- Status badge -->
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border"
+                    :class="statusBadge(job.status)">
+                <span x-text="job.status"></span>
+              </span>
+            </td>
+
+            <!-- Progress / error -->
+            <td class="px-4 py-3 max-w-xs">
+              <p x-show="job.error" class="text-xs text-red-400 truncate" x-text="job.error"></p>
+              <template x-if="!job.error && job.status === 'processing' && parseProgress(job.progress).pct !== null">
+                <div>
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-slate-300 font-mono" x-text="Math.round(parseProgress(job.progress).pct) + '%'"></span>
+                    <span class="text-slate-500" x-show="parseProgress(job.progress).eta" x-text="'ETA ' + parseProgress(job.progress).eta"></span>
+                  </div>
+                  <div class="w-full bg-slate-700 rounded-full h-1.5">
+                    <div class="bg-indigo-500 h-1.5 rounded-full" :style="'width:' + parseProgress(job.progress).pct + '%'"></div>
+                  </div>
+                </div>
+              </template>
+              <p x-show="!job.error && !(job.status === 'processing' && parseProgress(job.progress).pct !== null) && job.progress"
+                 class="text-xs text-slate-400 truncate" x-text="job.progress"></p>
+            </td>
+
+            <!-- Created -->
+            <td class="px-4 py-3 mono text-xs text-slate-400 whitespace-nowrap" x-text="localTime(job.created_at)"></td>
+
+            <!-- Updated -->
+            <td class="px-4 py-3 mono text-xs text-slate-400 whitespace-nowrap" x-text="localTime(job.updated_at)"></td>
+
+            <!-- Clips -->
+            <td class="px-4 py-3 text-xs text-slate-300 text-center" x-text="job.num_clips"></td>
+
+            <!-- Price -->
+            <td class="px-4 py-3 text-xs text-slate-300 whitespace-nowrap"
+                x-text="job.price != null ? '$' + job.price : '—'"></td>
+
+            <!-- Worker -->
+            <td class="px-4 py-3 mono text-xs text-slate-400 whitespace-nowrap"
+                x-text="job.worker || '—'"></td>
+
+            <!-- Actions -->
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2 flex-wrap">
+
+                <!-- Input list -->
+                <button x-show="job.video_rows && job.video_rows.length"
+                        @click="inputJob = job"
+                        class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700
+                               text-slate-300 transition-colors whitespace-nowrap">
+                  Input
+                </button>
+
+                <!-- View report -->
+                <button x-show="job.has_report"
+                        @click="openReport(job)"
+                        class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700
+                               text-slate-300 transition-colors whitespace-nowrap">
+                  Report
+                </button>
+
+                <!-- Output links -->
+                <template x-if="job.output_links && job.output_links.length">
+                  <template x-for="(link, i) in job.output_links" :key="i">
+                    <a :href="link" target="_blank"
+                       class="px-2.5 py-1 text-xs rounded-md bg-indigo-900/50 hover:bg-indigo-800/60
+                              text-indigo-300 transition-colors whitespace-nowrap">
+                      Link <span x-text="job.output_links.length > 1 ? i+1 : ''"></span>
+                    </a>
+                  </template>
+                </template>
+
+                <!-- Cancel -->
+                <button x-show="['pending','processing'].includes(job.status)"
+                        @click="cancelJob(job)"
+                        class="px-2.5 py-1 text-xs rounded-md border border-red-800
+                               text-red-400 hover:bg-red-900/30 transition-colors whitespace-nowrap">
+                  Cancel
+                </button>
+
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="px-6 py-4 flex items-center gap-4 text-xs text-slate-500 border-t border-slate-800"
+       x-show="total > pageSize">
+    <button @click="prevPage()" :disabled="offset === 0"
+            class="px-3 py-1.5 rounded bg-slate-800 disabled:opacity-40 hover:bg-slate-700 transition-colors text-slate-300">
+      ← Prev
+    </button>
+    <span x-text="(offset + 1) + ' – ' + Math.min(offset + pageSize, total) + ' of ' + total"></span>
+    <button @click="nextPage()" :disabled="offset + pageSize >= total"
+            class="px-3 py-1.5 rounded bg-slate-800 disabled:opacity-40 hover:bg-slate-700 transition-colors text-slate-300">
+      Next →
+    </button>
+  </div>
+
+  <!-- Input list modal -->
+  <div x-show="inputJob" x-transition
+       class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+       @click.self="inputJob = null">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[80vh]
+                flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <div>
+          <p class="font-semibold text-slate-100" x-text="inputJob?.job_title || 'Input List'"></p>
+          <p class="text-xs text-slate-500 mt-0.5">
+            <span x-text="(inputJob?.video_rows?.length || 0)"></span> video(s) ·
+            <span x-text="inputJob?.num_clips || 0"></span> clip(s)
+            <template x-if="inputJob?.skipped_rows?.length">
+              <span class="text-yellow-500 ml-1">· <span x-text="inputJob.skipped_rows.length"></span> skipped</span>
+            </template>
+          </p>
+        </div>
+        <button @click="inputJob = null"
+                class="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none">×</button>
+      </div>
+      <div class="overflow-y-auto px-6 py-4 flex-1 space-y-4">
+
+        <!-- Processed rows -->
+        <template x-for="(row, i) in (inputJob?.video_rows || [])" :key="i">
+          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="text-xs font-semibold text-slate-300" x-text="row.title || ('Video ' + (i+1))"></span>
+              <div class="flex items-center gap-1.5">
+                <span x-show="row.offset" class="mono text-xs bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded" x-text="'+' + row.offset"></span>
+                <span class="text-xs text-slate-500" x-text="(row.timecodes?.length || 0) + ' clip(s)'"></span>
+              </div>
+            </div>
+            <a :href="row.url" target="_blank"
+               class="mono text-xs text-indigo-400 hover:text-indigo-300 break-all block mb-2"
+               x-text="row.url"></a>
+            <div class="flex flex-wrap gap-1.5">
+              <template x-for="(tc, ti) in (row.timecodes || [])" :key="ti">
+                <span class="mono text-xs bg-slate-700/60 text-slate-300 px-2 py-0.5 rounded"
+                      x-text="tc"></span>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Skipped rows -->
+        <template x-if="inputJob?.skipped_rows?.length">
+          <div>
+            <p class="text-xs font-semibold text-yellow-500 mb-2">Skipped</p>
+            <template x-for="(row, i) in (inputJob?.skipped_rows || [])" :key="i">
+              <div class="bg-yellow-950/20 border border-yellow-800/40 rounded-xl p-4 mb-2">
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <span class="text-xs font-semibold text-slate-400" x-text="row.title || ('Video ' + (i+1))"></span>
+                </div>
+                <p class="mono text-xs text-slate-500 break-all mb-1" x-text="row.url"></p>
+                <p x-show="row.skip_reason" class="text-xs text-yellow-600" x-text="row.skip_reason"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Report modal -->
+  <div x-show="reportJob" x-transition
+       class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+       @click.self="reportJob = null">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[80vh]
+                flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <div>
+          <p class="font-semibold text-slate-100" x-text="reportJob?.job_title || 'Job Report'"></p>
+          <p class="mono text-xs text-slate-500 mt-0.5" x-text="reportJob?.job_id"></p>
+        </div>
+        <button @click="reportJob = null"
+                class="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none">×</button>
+      </div>
+      <div class="overflow-y-auto px-6 py-4 flex-1">
+        <pre class="mono text-xs text-slate-300 leading-relaxed" x-text="reportJob?.report"></pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+function adminApp() {
+  return {
+    jobs:         [],
+    total:        0,
+    counts:       {},
+    offset:       0,
+    pageSize:     50,
+    autoRefresh:  true,
+    lastRefreshed: null,
+    reportJob:    null,
+    inputJob:     null,
+    _timer:       null,
+
+    async init() {
+      await this.load()
+      this.$watch('autoRefresh', v => {
+        if (v) this._startTimer(); else clearInterval(this._timer)
+      })
+      this._startTimer()
+    },
+
+    _startTimer() {
+      clearInterval(this._timer)
+      this._timer = setInterval(() => { if (this.autoRefresh) this.load() }, 5000)
+    },
+
+    async load() {
+      try {
+        const res  = await fetch(`/api/admin/jobs?limit=${this.pageSize}&offset=${this.offset}`)
+        const data = await res.json()
+        this.jobs  = data.jobs
+        this.total = data.total
+        this.counts = {}
+        for (const j of data.jobs) {
+          this.counts[j.status] = (this.counts[j.status] || 0) + 1
+        }
+        const now = new Date()
+        this.lastRefreshed = now.toLocaleTimeString()
+      } catch { /* ignore */ }
+    },
+
+    localTime(utcStr) {
+      if (!utcStr) return '—'
+      const d = new Date(utcStr.replace(' ', 'T') + 'Z')
+      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+    },
+
+    prevPage() { this.offset = Math.max(0, this.offset - this.pageSize); this.load() },
+    nextPage() { this.offset += this.pageSize; this.load() },
+
+    openReport(job) { this.reportJob = job },
+
+    async cancelJob(job) {
+      if (!confirm(`Cancel job "${job.job_title || job.job_id.slice(0,8)}"?`)) return
+      const res = await fetch(`/api/jobs/${job.job_id}`, { method: 'DELETE' })
+      if (res.ok) await this.load()
+    },
+
+    parseProgress(progress) {
+      if (!progress) return { pct: null, eta: null }
+      const pctM = progress.match(/\(([\d.]+)%\)/)
+      const etaM = progress.match(/ETA\s+([\dhmsmhms ]+?)(?:\s{2}|$)/)
+      return {
+        pct: pctM ? parseFloat(pctM[1]) : null,
+        eta: etaM ? etaM[1].trim() : null,
+      }
+    },
+
+    statusBadge(s) {
+      return {
+        pending:    'bg-yellow-950/60 border-yellow-800 text-yellow-300',
+        processing: 'bg-indigo-950/60 border-indigo-700 text-indigo-300',
+        completed:  'bg-green-950/60  border-green-800  text-green-300',
+        failed:     'bg-red-950/60    border-red-800    text-red-300',
+        cancelled:  'bg-slate-800     border-slate-700  text-slate-400',
+      }[s] || 'bg-slate-800 border-slate-700 text-slate-400'
+    },
+
+    statusColor(s) {
+      return {
+        pending:    'text-yellow-400',
+        processing: 'text-indigo-400',
+        completed:  'text-green-400',
+        failed:     'text-red-400',
+        cancelled:  'text-slate-400',
+      }[s] || 'text-slate-400'
+    },
+  }
+}
+</script>
+</body>
+</html>
