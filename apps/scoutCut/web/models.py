@@ -30,8 +30,20 @@ class JobRecord(Base):
     progress     = Column(Text,    nullable=True)
     error        = Column(Text,    nullable=True)
     report       = Column(Text,    nullable=True)
+    worker       = Column(String,  nullable=True)   # Celery worker hostname that ran the job
+    from_cache   = Column(String,  nullable=True)   # cache_key if result was served from cache
     created_at   = Column(DateTime, default=datetime.utcnow)
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CachedResult(Base):
+    """Stores processed output links keyed by a hash of the job inputs (7-day TTL)."""
+    __tablename__ = "link_cache"
+
+    cache_key    = Column(String,   primary_key=True)
+    output_links = Column(JSON,     nullable=False)
+    created_at   = Column(DateTime, default=datetime.utcnow)
+    expires_at   = Column(DateTime, nullable=False)
 
 
 # ── Shared sub-models ──────────────────────────────────────────────────────────
@@ -40,12 +52,14 @@ class VideoRow(BaseModel):
     url:       str
     title:     str = ""
     timecodes: List[str] = Field(default_factory=list)
+    offset:    str = ""
 
 
 class ProcessingConfig(BaseModel):
     pad_before:       int     = Field(default=5, ge=0, le=120)
     pad_after:        int     = Field(default=5, ge=0, le=120)
     output_strategy:  Literal["single", "multiple"] = "single"
+    quality:          Literal["fast", "balanced", "high", "ultra", "best"] = "balanced"
 
 
 class DeliveryInfo(BaseModel):

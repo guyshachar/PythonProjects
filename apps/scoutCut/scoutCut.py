@@ -37,11 +37,14 @@ import argparse
 import csv
 import hashlib
 import logging
+import fcntl
 import re
 import shutil
 import subprocess
 import sys
 import textwrap
+import time
+import uuid
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,12 +58,27 @@ log = logging.getLogger(__name__)
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-RUNS_DIR    = Path("runs")
+RUNS_DIR            = Path("runs")
+DOWNLOAD_CACHE_DIR  = Path("download_cache")  # persisted full-video cache shared across jobs
 TITLE_SECS  = 2        # title card duration in seconds
 VWIDTH      = 1920
 VHEIGHT     = 1080
 VFPS        = 30
-VCRF        = 18       # visually-lossless H.264
+# Quality presets: (crf, x264_preset)
+# "fast"     – CRF 26, ultrafast  → smallest file, fastest encode, visible artefacts on busy scenes
+# "balanced" – CRF 23, veryfast   → good quality, ~2-3× slower than fast
+# "high"     – CRF 18, medium     → near-lossless, ~15-20× slower than fast
+# "ultra"    – CRF 16, slow       → very high quality, ~3-4× slower than high
+# "best"     – CRF 14, veryslow   → maximum quality, ~8-10× slower than high
+QUALITY_PRESETS: dict[str, tuple[int, str]] = {
+    "fast":     (26, "ultrafast"),
+    "balanced": (23, "veryfast"),
+    "high":     (18, "medium"),
+    "ultra":    (16, "slow"),
+    "best":     (14, "veryslow"),
+}
+_DEFAULT_QUALITY = "balanced"
+VCRF, VPRESET = QUALITY_PRESETS[_DEFAULT_QUALITY]
 AUDIO_SR    = 44100    # Hz
 AUDIO_BR    = "192k"
 
@@ -77,7 +95,8 @@ class ClipSpec:
     end_secs: float    # padded extraction end
     clip_num: int      # sequential 1-based clip number across all rows
     row_num: int       # 1-based source CSV row number
-    caption: str = "" # optional section title shown before the first clip of this URL
+    caption: str = ""     # optional section title shown before the first clip of this URL
+    offset_str: str = ""  # raw offset value from the 'offset' CSV column
 
 
 # ─── Timecode Helpers ─────────────────────────────────────────────────────────
@@ -97,19 +116,22 @@ def _tc_to_secs(tc: str) -> float:
     raise ValueError(f"Unrecognised timecode format: {tc!r}")
 
 
-def parse_timecode(raw: str, pad_before: float, pad_after: float) -> tuple[float, float]:
+def parse_timecode(
+    raw: str, pad_before: float, pad_after: float, offset_secs: float = 0.0
+) -> tuple[float, float]:
     """
     Parse a raw timecode string and apply padding.
     Accepts "MM:SS", "HH:MM:SS", or "START-END" range forms.
+    offset_secs is added to both endpoints before padding is applied.
     Returns (start_secs, end_secs) with start clamped to >= 0.
     """
     raw = raw.strip()
     m = re.fullmatch(r"([\d:.]+)\s*-\s*([\d:.]+)", raw)
     if m:
-        start = _tc_to_secs(m.group(1))
-        end   = _tc_to_secs(m.group(2))
+        start = _tc_to_secs(m.group(1)) + offset_secs
+        end   = _tc_to_secs(m.group(2)) + offset_secs
     else:
-        point = _tc_to_secs(raw)
+        point = _tc_to_secs(raw) + offset_secs
         start = point
         end   = point
 
@@ -153,6 +175,7 @@ def has_audio(path: Path) -> bool:
     return bool(result.stdout.strip())
 
 
+
 # ─── Pipeline Steps ───────────────────────────────────────────────────────────
 
 def generate_caption_card(caption: str, output_path: Path) -> bool:
@@ -180,7 +203,7 @@ def generate_caption_card(caption: str, output_path: Path) -> bool:
         "-loop", "1", "-framerate", str(VFPS), "-i", str(png_path),
         "-f", "lavfi", "-i", f"anullsrc=channel_layout=stereo:sample_rate={AUDIO_SR}",
         "-t", str(TITLE_SECS),
-        "-c:v", "libx264", "-crf", str(VCRF), "-preset", "fast",
+        "-c:v", "libx264", "-crf", str(VCRF), "-preset", VPRESET, "-threads", "0",
         "-c:a", "aac", "-b:a", AUDIO_BR, "-ar", str(AUDIO_SR),
         "-pix_fmt", "yuv420p", "-shortest",
         str(output_path),
@@ -260,7 +283,7 @@ def generate_title_card(
         "-loop", "1", "-framerate", str(VFPS), "-i", str(png_path),
         "-f", "lavfi", "-i", f"anullsrc=channel_layout=stereo:sample_rate={AUDIO_SR}",
         "-t", str(TITLE_SECS),
-        "-c:v", "libx264", "-crf", str(VCRF), "-preset", "fast",
+        "-c:v", "libx264", "-crf", str(VCRF), "-preset", VPRESET, "-threads", "0",
         "-c:a", "aac", "-b:a", AUDIO_BR, "-ar", str(AUDIO_SR),
         "-pix_fmt", "yuv420p", "-shortest",
         str(output_path),
@@ -291,7 +314,7 @@ def _url_hash(url: str) -> str:
     return hashlib.md5(url.encode()).hexdigest()[:10]
 
 
-_PLATFORM_MARKERS = ("pixellot.link", "live.veo.co")
+_PLATFORM_MARKERS = ("pixellot.link", "live.veo.co", "app.veo.co")
 
 
 def _resolve_url(url: str) -> str:
@@ -310,10 +333,10 @@ def _resolve_url(url: str) -> str:
         except Exception as exc:
             log.warning("  Pixellot scraper error (%s) — keeping original", exc)
 
-    if "live.veo.co" in url:
+    if "live.veo.co" in url or "app.veo.co" in url:
         try:
             from veo_scraper import extract_stream_url as _veo
-            log.info("  Resolving live.veo.co URL…")
+            log.info("  Resolving Veo URL…")
             resolved = _veo(url)
             if resolved:
                 log.info("  → %s", resolved)
@@ -341,13 +364,16 @@ def resolve_csv(input_path: Path, out_dir: Optional[Path] = None) -> Path:
     if not any(m in text for m in _PLATFORM_MARKERS):
         return input_path
 
-    # Collect every unique platform URL appearing anywhere in the file
+    # Collect every unique platform URL appearing anywhere in the file.
+    # Keep the original token (trailing slash included) as the replacement key;
+    # use the normalised form only for marker/URL checks.
     platform_urls: list[str] = []
     for token in re.split(r'[\s,"]+', text):
-        token = token.strip().rstrip("/")
-        if _looks_like_url(token) and any(m in token for m in _PLATFORM_MARKERS):
-            if token not in platform_urls:
-                platform_urls.append(token)
+        original  = token.strip()                 # preserve trailing slash
+        normalised = original.rstrip("/")
+        if _looks_like_url(normalised) and any(m in normalised for m in _PLATFORM_MARKERS):
+            if original not in platform_urls:
+                platform_urls.append(original)
 
     if not platform_urls:
         return input_path
@@ -384,7 +410,7 @@ def download_full_video(url: str, stem: Path, browser: Optional[str] = None) -> 
     """
     template = str(stem) + ".%(ext)s"
     ydl_opts: dict = {
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+        "format": "bestvideo+bestaudio/best",
         "outtmpl": template,
         "merge_output_format": "mp4",
         "quiet": True,
@@ -414,44 +440,60 @@ def download_full_video(url: str, stem: Path, browser: Optional[str] = None) -> 
         return None
 
 
-def extract_clip(source: Path, start: float, end: float, output: Path) -> bool:
+def _locked_download(url: str, url_hash: str, browser: Optional[str]) -> Optional[Path]:
     """
-    Cut a time window from a local video file using ffmpeg stream-copy (fast).
-    Uses input-side -ss for keyframe seek, -t for duration.
+    Download url into DOWNLOAD_CACHE_DIR under an exclusive per-URL file lock.
+
+    If two jobs request the same URL concurrently the second one blocks on the
+    lock, then finds the completed file and returns it without re-downloading.
+    Uses fcntl.flock (Linux/macOS) — safe inside Docker on any filesystem that
+    supports POSIX locks (ext4, overlayfs, bind-mounts).
+    """
+    full_stem = DOWNLOAD_CACHE_DIR / f"full_{url_hash}"
+    lock_path = DOWNLOAD_CACHE_DIR / f"full_{url_hash}.lock"
+    lock_path.touch(exist_ok=True)
+
+    with open(lock_path) as lf:
+        log.info("  [1/3] Acquiring download lock for %s…", url_hash)
+        fcntl.flock(lf, fcntl.LOCK_EX)          # blocks until no other process holds it
+        try:
+            # Re-check: another process may have finished while we were waiting
+            existing = [
+                p for p in DOWNLOAD_CACHE_DIR.glob(f"full_{url_hash}.*")
+                if p.suffix.lower() in VIDEO_EXTS
+            ]
+            if existing:
+                log.info("  [1/3] Cache hit after lock — skipping download.")
+                return existing[0]
+            log.info("  [1/3] Downloading full video…")
+            return download_full_video(url, full_stem, browser)
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
+
+
+_FFMPEG_TIME_RE = re.compile(r"time=(\d+):(\d+):([\d.]+)")
+
+
+def extract_and_normalize_clip(
+    source: Path, start: float, end: float, output: Path, duration_secs: float = 0
+) -> bool:
+    """
+    Seek to start in source and re-encode the [start, end] window to the uniform
+    target spec in one ffmpeg pass, eliminating the intermediate stream-copy file.
+
+    Input-side -ss gives a fast keyframe seek; -t caps output duration; setpts
+    resets timestamps to 0 so the clip mixes cleanly with title cards and other
+    segments during concatenation.
     """
     duration = end - start
-    cmd = [
-        "ffmpeg", "-y",
-        "-ss", str(start),
-        "-i", str(source),
-        "-t", str(duration),
-        "-c", "copy",
-        str(output),
-    ]
-    log.debug("Extract clip cmd: %s", " ".join(cmd))
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0:
-        log.error("Clip extraction failed:\n%s", r.stderr[-2000:])
-        return False
-    return True
-
-
-def normalize_clip(input_path: Path, output_path: Path) -> bool:
-    """
-    Re-encode one clip to the uniform target spec (1920×1080, 30 fps, H.264
-    CRF 18, yuv420p, AAC stereo 44.1 kHz).  Injects silence if no audio track.
-    """
-    # setpts resets video timestamps to 0 — stream-copy preserves source offsets
-    # (e.g. 447 s) which would create a huge sparse moov atom when mixed with
-    # anullsrc (which always starts at 0).
     scale_chain = (
-        f"scale={VWIDTH}:{VHEIGHT}:force_original_aspect_ratio=decrease,"
+        f"scale={VWIDTH}:{VHEIGHT}:force_original_aspect_ratio=decrease:flags=lanczos,"
         f"pad={VWIDTH}:{VHEIGHT}:(ow-iw)/2:(oh-ih)/2,"
         f"fps={VFPS},"
         f"setpts=PTS-STARTPTS,"
         f"format=yuv420p"
     )
-    if has_audio(input_path):
+    if has_audio(source):
         extra: list[str] = []
         audio_filter = f"[0:a]aresample={AUDIO_SR},asetpts=PTS-STARTPTS,aformat=channel_layouts=stereo[aout]"
     else:
@@ -460,19 +502,41 @@ def normalize_clip(input_path: Path, output_path: Path) -> bool:
 
     cmd = [
         "ffmpeg", "-y",
-        "-i", str(input_path), *extra,
+        "-ss", str(start),
+        "-i", str(source), *extra,
         "-filter_complex", f"[0:v]{scale_chain}[vout];{audio_filter}",
         "-map", "[vout]", "-map", "[aout]",
-        "-c:v", "libx264", "-crf", str(VCRF), "-preset", "fast",
+        "-t", str(duration),
+        "-c:v", "libx264", "-crf", str(VCRF), "-preset", VPRESET, "-threads", "0",
         "-c:a", "aac", "-b:a", AUDIO_BR, "-ar", str(AUDIO_SR),
         "-shortest",
         "-movflags", "+faststart",
-        str(output_path),
+        str(output),
     ]
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0:
-        log.error("Normalisation failed for %s:\n%s", input_path.name, r.stderr[-2000:])
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    assert proc.stderr is not None
+
+    stderr_buf: list[str] = []
+    last_milestone = 0
+    for line in proc.stderr:
+        stderr_buf.append(line)
+        if duration_secs > 0:
+            m = _FFMPEG_TIME_RE.search(line)
+            if m:
+                encoded = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+                pct = min(100, int(encoded / duration_secs * 100))
+                milestone = (pct // 25) * 25
+                if milestone > last_milestone:
+                    log.info("    Encoding: %d%%", milestone)
+                    last_milestone = milestone
+
+    proc.wait()
+    if proc.returncode != 0:
+        log.error("Extract+normalise failed at %.1fs:\n%s", start, "".join(stderr_buf[-40:]))
         return False
+    if last_milestone < 100:
+        log.info("    Encoding: 100%")
     return True
 
 
@@ -688,6 +752,14 @@ def build_clip_specs(
             log.warning("Row %d: missing 'url' — skipped", row_num)
             continue
 
+        offset_secs = 0.0
+        raw_offset = row.get("offset", "").strip()
+        if raw_offset:
+            try:
+                offset_secs = _tc_to_secs(raw_offset)
+            except ValueError as exc:
+                log.warning("Row %d: bad offset %r (%s) — treating as 0", row_num, raw_offset, exc)
+
         # Collect values from every column whose name starts with 'timecode'
         timecodes = [v for k, v in row.items() if k.startswith("timecode") and v]
         if not timecodes:
@@ -696,7 +768,7 @@ def build_clip_specs(
 
         for tc in timecodes:
             try:
-                start, end = parse_timecode(tc, pad_before, pad_after)
+                start, end = parse_timecode(tc, pad_before, pad_after, offset_secs)
             except ValueError as exc:
                 log.warning("Row %d: bad timecode %r (%s) — skipped", row_num, tc, exc)
                 continue
@@ -710,9 +782,69 @@ def build_clip_specs(
                     clip_num=clip_num,
                     row_num=row_num,
                     caption=row.get("caption", ""),
+                    offset_str=raw_offset,
                 )
             )
     return specs
+
+
+def merge_overlapping_specs(specs: list[ClipSpec]) -> list[ClipSpec]:
+    """
+    Within each URL, merge any ClipSpecs whose padded windows overlap or touch.
+    The merged spec spans from the earliest start to the latest end; the
+    raw_timecode is a joined summary and clip_num / caption come from the first
+    spec in each group.
+    """
+    if not specs:
+        return specs
+
+    # Group by URL, preserving original order
+    url_order: list[str] = []
+    by_url: dict[str, list[ClipSpec]] = {}
+    for s in specs:
+        if s.url not in by_url:
+            url_order.append(s.url)
+            by_url[s.url] = []
+        by_url[s.url].append(s)
+
+    result: list[ClipSpec] = []
+    for url in url_order:
+        group = sorted(by_url[url], key=lambda s: s.start_secs)
+        merged_start  = group[0].start_secs
+        merged_end    = group[0].end_secs
+        merged_tcs    = [group[0].raw_timecode]
+        first         = group[0]
+
+        for s in group[1:]:
+            if s.start_secs <= merged_end:          # overlaps or touches
+                merged_end = max(merged_end, s.end_secs)
+                merged_tcs.append(s.raw_timecode)
+            else:
+                result.append(ClipSpec(
+                    url=url,
+                    raw_timecode=" + ".join(merged_tcs),
+                    start_secs=merged_start,
+                    end_secs=merged_end,
+                    clip_num=first.clip_num,
+                    row_num=first.row_num,
+                    caption=first.caption,
+                ))
+                merged_start = s.start_secs
+                merged_end   = s.end_secs
+                merged_tcs   = [s.raw_timecode]
+                first        = s
+
+        result.append(ClipSpec(
+            url=url,
+            raw_timecode=" + ".join(merged_tcs),
+            start_secs=merged_start,
+            end_secs=merged_end,
+            clip_num=first.clip_num,
+            row_num=first.row_num,
+            caption=first.caption,
+        ))
+
+    return result
 
 
 # ─── CLI ──────────────────────────────────────────────────────────────────────
@@ -756,8 +888,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Produce one output video per URL instead of a single combined file",
     )
     p.add_argument(
+        "--quality", default=_DEFAULT_QUALITY,
+        choices=list(QUALITY_PRESETS),
+        help=(
+            "Encode quality/speed tradeoff: "
+            "fast (CRF 26, ultrafast), "
+            "balanced (CRF 23, veryfast, default), "
+            "high (CRF 18, fast)"
+        ),
+    )
+    p.add_argument(
         "--verbose", "-v", action="store_true",
         help="Enable DEBUG-level logging",
+    )
+    p.add_argument(
+        "--job-id", default=None, metavar="JOB_ID",
+        help="Job ID from the web layer; first segment is used as the run_id suffix",
     )
     return p
 
@@ -765,8 +911,11 @@ def build_parser() -> argparse.ArgumentParser:
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    global VCRF, VPRESET
     args = build_parser().parse_args()
     setup_logging(args.verbose)
+    VCRF, VPRESET = QUALITY_PRESETS[args.quality]
+    log.info("Encode quality: %s  (CRF %d, preset %s)", args.quality, VCRF, VPRESET)
 
     if not check_dependencies():
         sys.exit(1)
@@ -776,7 +925,8 @@ def main() -> None:
         sys.exit(1)
 
     # Create run dir early so resolved CSV and logs land inside it
-    run_id   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    job_suffix = args.job_id.split("-")[0] if args.job_id else uuid.uuid4().hex[:6]
+    run_id     = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + job_suffix
     csv_stem = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
     run_dir  = RUNS_DIR / f"{csv_stem}_{run_id}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -793,23 +943,34 @@ def main() -> None:
 
     rows = preprocess_rows(rows)
     specs = build_clip_specs(rows, args.pad_before, args.pad_after)
+    specs = merge_overlapping_specs(specs)
+    for i, spec in enumerate(specs, 1):
+        spec.clip_num = i
     if not specs:
         log.error("No valid clip specs parsed from CSV.")
         sys.exit(1)
 
     log.info(
-        "Starting: %d clip(s), pad_before=%.1fs, pad_after=%.1fs",
-        len(specs), args.pad_before, args.pad_after,
+        "Starting: %d clip(s), pad_before=%.1fs, pad_after=%.1fs, quality=%s",
+        len(specs), args.pad_before, args.pad_after, args.quality,
     )
 
     temp_dir = run_dir / "temp"
     temp_dir.mkdir(exist_ok=True)
+    DOWNLOAD_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     output = args.output or run_dir / f"highlights_{csv_stem}_{run_id}.mp4"
+
+    # Timing accumulators
+    t_download = 0.0
+    t_clipping = 0.0
+    t_job_start = time.time()
 
     # Cache: url -> downloaded full-video Path (or None if download failed)
     url_cache: dict[str, Optional[Path]] = {}
     title_emitted: set[str] = set()
+    clips_done = 0
+    total_clips = len(specs)
 
     unique_urls = list(dict.fromkeys(s.url for s in specs))
     log.info(
@@ -821,7 +982,8 @@ def main() -> None:
     url_timecodes: dict[str, list[str]] = {}
     url_captions:  dict[str, str]       = {}
     for s in specs:
-        url_timecodes.setdefault(s.url, []).append(s.raw_timecode)
+        tc_display = f"{s.raw_timecode} (+{s.offset_str})" if s.offset_str else s.raw_timecode
+        url_timecodes.setdefault(s.url, []).append(tc_display)
         url_captions.setdefault(s.url, s.caption)
 
     # segments_per_url preserves URL order and collects title card + raw clips
@@ -830,8 +992,8 @@ def main() -> None:
     try:
         for spec in specs:
             log.info(
-                "── Clip %d/%d  (row %d)  timecode=%s  window=[%.1fs, %.1fs]  url=%s",
-                spec.clip_num, len(specs), spec.row_num,
+                "── Clip %d/%d  (row %d/%d)  timecode=%s  window=[%.1fs, %.1fs]  url=%s",
+                spec.clip_num, len(specs), spec.row_num, len(rows),
                 spec.raw_timecode, spec.start_secs, spec.end_secs,
                 spec.url,
             )
@@ -851,36 +1013,53 @@ def main() -> None:
                 segments_per_url[spec.url].append(title_path)
                 title_emitted.add(spec.url)
 
-            # Download full video once per URL, then extract the needed window
+            # Download full video once per URL, then extract the needed window.
+            # Persistent cache lives in DOWNLOAD_CACHE_DIR; a file lock serialises
+            # concurrent jobs that request the same URL so only one download runs.
             if spec.url not in url_cache:
-                full_stem = temp_dir / f"full_{_url_hash(spec.url)}"
-                log.info("  [1/3] Downloading full video (first use of this URL)...")
-                url_cache[spec.url] = download_full_video(spec.url, full_stem, args.browser)
+                url_hash = _url_hash(spec.url)
+                # Fast path: cache hit without taking the lock
+                existing = [
+                    p for p in DOWNLOAD_CACHE_DIR.glob(f"full_{url_hash}.*")
+                    if p.suffix.lower() in VIDEO_EXTS
+                ]
+                if existing:
+                    log.info("  [1/3] Persistent download cache hit — skipping download.")
+                    url_cache[spec.url] = existing[0]
+                else:
+                    _t0 = time.time()
+                    url_cache[spec.url] = _locked_download(spec.url, url_hash, args.browser)
+                    t_download += time.time() - _t0
             else:
-                log.info("  [1/3] Using cached video for this URL.")
+                log.info("  [1/3] Using in-memory video cache for this URL.")
 
             full_video = url_cache[spec.url]
             if full_video is None:
                 log.error("  Video unavailable — skipping clip %d", spec.clip_num)
                 continue
 
-            raw_path = temp_dir / f"raw_{spec.clip_num:03d}.mp4"
-            log.info(
-                "  [2/3] Extracting window  %.1fs – %.1fs...",
-                spec.start_secs, spec.end_secs,
-            )
-            if not extract_clip(full_video, spec.start_secs, spec.end_secs, raw_path):
-                log.error("  Extraction failed — skipping clip %d", spec.clip_num)
-                continue
-
             norm_path = temp_dir / f"norm_{spec.clip_num:03d}.mp4"
-            log.info("  [3/3] Normalising to %dx%d @ %dfps...", VWIDTH, VHEIGHT, VFPS)
-            if not normalize_clip(raw_path, norm_path):
-                log.error("  Normalisation failed — skipping clip %d", spec.clip_num)
+            clip_duration = spec.end_secs - spec.start_secs
+            log.info(
+                "  [2/2] Extracting+normalising  %.1fs – %.1fs  →  %dx%d @ %dfps  (%.1fs)...",
+                spec.start_secs, spec.end_secs, VWIDTH, VHEIGHT, VFPS, clip_duration,
+            )
+            _t0 = time.time()
+            if not extract_and_normalize_clip(
+                full_video, spec.start_secs, spec.end_secs, norm_path,
+                duration_secs=clip_duration,
+            ):
+                log.error("  Extract+normalise failed — skipping clip %d", spec.clip_num)
                 continue
+            t_clipping += time.time() - _t0
 
             segments_per_url[spec.url].append(norm_path)
-            log.info("  Clip %d done.", spec.clip_num)
+            clips_done += 1
+            log.info(
+                "  Clip %d done.  [Progress: %d/%d clips (%.0f%%)]",
+                spec.clip_num, clips_done, total_clips,
+                clips_done / total_clips * 100,
+            )
 
         any_success = any(segs for segs in segments_per_url.values())
         if not any_success:
@@ -922,6 +1101,11 @@ def main() -> None:
                     print(f"\nShareable Google Drive link ({out_file.name}):\n  {link}\n")
                 else:
                     log.error("Google Drive upload failed for %s", out_file.name)
+
+        log.info(
+            "[TIMING] download=%.1f clipping=%.1f total=%.1f",
+            t_download, t_clipping, time.time() - t_job_start,
+        )
 
     finally:
         if not args.keep_temp:
