@@ -264,10 +264,18 @@
           <p class="font-semibold text-slate-100" x-text="logJob?.job_title || 'Job Log'"></p>
           <p class="mono text-xs text-slate-500 mt-0.5" x-text="logRunDir || logJob?.job_id"></p>
         </div>
-        <button @click="logJob = null"
-                class="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none">×</button>
+        <div class="flex items-center gap-3">
+          <button @click="$refs.logBody.scrollTo({top:0,behavior:'smooth'})"
+                  title="Scroll to top"
+                  class="text-slate-500 hover:text-slate-300 transition-colors text-lg leading-none">↑</button>
+          <button @click="$refs.logBody.scrollTo({top:$refs.logBody.scrollHeight,behavior:'smooth'})"
+                  title="Scroll to bottom"
+                  class="text-slate-500 hover:text-slate-300 transition-colors text-lg leading-none">↓</button>
+          <button @click="logJob = null"
+                  class="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none">×</button>
+        </div>
       </div>
-      <div class="overflow-y-auto px-6 py-4 flex-1 min-h-0">
+      <div x-ref="logBody" class="overflow-y-auto px-6 py-4 flex-1 min-h-0">
         <template x-if="logLoading">
           <p class="text-xs text-slate-500">Loading…</p>
         </template>
