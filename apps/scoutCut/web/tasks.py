@@ -82,6 +82,7 @@ def _mark_orphaned_jobs_failed(sender, **kwargs):
 
 SCOUTCUT  = Path(__file__).parent.parent / "scoutCut.py"
 PYTHON    = sys.executable
+RUNS_DIR  = SCOUTCUT.parent / "runs"
 
 # Matches Google Drive share links written by upload_to_gdrive()
 _GDRIVE_RE = re.compile(
@@ -359,10 +360,16 @@ def process_job(self, job_id: str, payload: dict) -> dict:
     all_rows        = payload["video_rows"]
 
     job_started_at = datetime.now(_TZ)
+
+    # ── 1. Create run dir immediately so run.log exists from the start ─────────
+    RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    run_dir = RUNS_DIR / f"job_{job_id.split('-')[0]}_{datetime.now(_TZ).strftime('%Y%m%d_%H%M%S')}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
     update_job(job_id, status="processing", progress="Resolving video URLs…",
                worker=self.request.hostname)
 
-    # ── 1. Resolve every URL ───────────────────────────────────────────────────
+    # ── 2. Resolve every URL ───────────────────────────────────────────────────
     resolved_urls = []
     for row in all_rows:
         original = row["url"]
@@ -370,35 +377,34 @@ def process_job(self, job_id: str, payload: dict) -> dict:
         log.info("[job %s] original=%s → resolved=%s", job_id, original, resolved)
         resolved_urls.append(resolved)
 
-    with tempfile.TemporaryDirectory(prefix=f"scoutcut_{job_id[:8]}_") as tmp:
-        tmp_dir = Path(tmp)
-        try:
-            proc: Optional[subprocess.Popen] = None
-            proc_start: float = time.time()
+    try:
+        proc: Optional[subprocess.Popen] = None
+        proc_start: float = time.time()
 
-            # ── 3. Build rows for scoutCut with pre-resolved URLs ───────────
-            rows_to_process = []
-            for i, row in enumerate(all_rows):
-                r = dict(row)
-                r["url"] = resolved_urls[i]   # pre-resolved so scoutCut skips re-resolution
-                rows_to_process.append(r)
+        # ── 3. Build rows for scoutCut with pre-resolved URLs ───────────────
+        rows_to_process = []
+        for i, row in enumerate(all_rows):
+            r = dict(row)
+            r["url"] = resolved_urls[i]
+            rows_to_process.append(r)
 
-            # ── 4. Write CSV ────────────────────────────────────────────────
-            csv_path = _write_csv(rows_to_process, tmp_dir)
-            update_job(job_id, progress="Input CSV ready, launching scoutCut…")
+        # ── 4. Write CSV into run dir ────────────────────────────────────────
+        csv_path = _write_csv(rows_to_process, run_dir)
+        update_job(job_id, progress="Input CSV ready, launching scoutCut…")
 
-            # ── 5. Build command ────────────────────────────────────────────
-            cmd: list[str] = [
-                PYTHON, str(SCOUTCUT),
-                str(csv_path),
-                "--pad-before", str(config["pad_before"]),
-                "--pad-after",  str(config["pad_after"]),
-                "--quality",    config.get("quality", "balanced"),
-                "--upload-gdrive",
-                "--job-id",     job_id,
-            ]
-            if output_strategy == "multiple":
-                cmd.append("--split")
+        # ── 5. Build command ────────────────────────────────────────────────
+        cmd: list[str] = [
+            PYTHON, str(SCOUTCUT),
+            str(csv_path),
+            "--pad-before", str(config["pad_before"]),
+            "--pad-after",  str(config["pad_after"]),
+            "--quality",    config.get("quality", "balanced"),
+            "--upload-gdrive",
+            "--run-dir",    str(run_dir),
+            "--job-id",     job_id,
+        ]
+        if output_strategy == "multiple":
+            cmd.append("--split")
 
             log.info("[job %s] cmd: %s", job_id, " ".join(cmd))
 
@@ -490,17 +496,17 @@ def process_job(self, job_id: str, payload: dict) -> dict:
             log.info("[job %s] completed: %d link(s)", job_id, len(all_links))
             return {"status": "completed", "links": all_links}
 
-        except SoftTimeLimitExceeded:
-            if proc is not None and proc.poll() is None:
-                proc.kill()
-            elapsed_min = int((time.time() - proc_start) / 60)
-            msg = f"Job timed out after {elapsed_min} minutes (limit: {celery_app.conf.task_soft_time_limit // 60} min)"
-            log.error("[job %s] %s", job_id, msg)
-            update_job(job_id, status="failed", error=msg)
-            raise
+    except SoftTimeLimitExceeded:
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+        elapsed_min = int((time.time() - proc_start) / 60)
+        msg = f"Job timed out after {elapsed_min} minutes (limit: {celery_app.conf.task_soft_time_limit // 60} min)"
+        log.error("[job %s] %s", job_id, msg)
+        update_job(job_id, status="failed", error=msg)
+        raise
 
-        except Exception as exc:
-            msg = str(exc)[:500]
-            log.exception("[job %s] failed: %s", job_id, msg)
-            update_job(job_id, status="failed", error=msg)
-            raise
+    except Exception as exc:
+        msg = str(exc)[:500]
+        log.exception("[job %s] failed: %s", job_id, msg)
+        update_job(job_id, status="failed", error=msg)
+        raise

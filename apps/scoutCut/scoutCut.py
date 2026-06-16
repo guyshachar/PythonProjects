@@ -905,6 +905,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--job-id", default=None, metavar="JOB_ID",
         help="Job ID from the web layer; first segment is used as the run_id suffix",
     )
+    p.add_argument(
+        "--run-dir", default=None, metavar="PATH", type=Path,
+        help="Pre-created run directory; skips creating a new one (used by the web worker)",
+    )
     return p
 
 
@@ -924,12 +928,16 @@ def main() -> None:
         log.error("CSV file not found: %s", args.csv_file)
         sys.exit(1)
 
-    # Create run dir early so resolved CSV and logs land inside it
-    job_suffix = args.job_id.split("-")[0] if args.job_id else uuid.uuid4().hex[:6]
-    run_id     = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + job_suffix
-    csv_stem = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
-    run_dir  = RUNS_DIR / f"{csv_stem}_{run_id}"
-    run_dir.mkdir(parents=True, exist_ok=True)
+    # Use pre-created run dir from web worker, or create one for CLI use
+    if args.run_dir:
+        run_dir = args.run_dir
+        run_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        job_suffix = args.job_id.split("-")[0] if args.job_id else uuid.uuid4().hex[:6]
+        run_id     = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + job_suffix
+        csv_stem   = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
+        run_dir    = RUNS_DIR / f"{csv_stem}_{run_id}"
+        run_dir.mkdir(parents=True, exist_ok=True)
     add_file_logging(run_dir / "run.log")
 
     # Copy original CSV into run folder, then resolve platform URLs

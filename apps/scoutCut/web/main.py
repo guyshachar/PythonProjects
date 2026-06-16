@@ -277,9 +277,13 @@ _RUNS_DIR = Path(__file__).parent.parent / "runs"
 
 @app.get("/api/admin/jobs/{job_id}/log", tags=["admin"])
 def get_job_log(job_id: str):
-    """Return the raw run.log for a job, located by the job_id prefix in the runs/ directory."""
-    job_suffix = job_id.split("-")[0]
-    matches = sorted(_RUNS_DIR.glob(f"*_{job_suffix}"), reverse=True)
+    """Return the raw run.log for a job from its deterministic run directory."""
+    # Primary: new deterministic path created by the worker as its first step
+    prefix = job_id.split("-")[0]
+    matches = sorted(_RUNS_DIR.glob(f"job_{prefix}_*"), reverse=True)
+    # Fallback: legacy path created by scoutCut.py itself (older jobs)
+    if not matches:
+        matches = sorted(_RUNS_DIR.glob(f"*_{prefix}"), reverse=True)
     for run_dir in matches:
         log_file = run_dir / "run.log"
         if log_file.exists():
