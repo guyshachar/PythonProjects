@@ -764,7 +764,21 @@
                   <div class="w-3 h-3 rounded-full bg-indigo-500 pulse-dot" style="animation-delay:.4s"></div>
                 </div>
                 <p class="text-lg font-semibold" x-text="t(jobStatus.status)"></p>
-                <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.progress" x-text="jobStatus.progress"></p>
+                <template x-if="jobStatus.status==='processing' && statusProgress(jobStatus.progress).pct !== null">
+                  <div class="mt-3 mb-1 px-4">
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                      <span x-text="statusProgress(jobStatus.progress).pct + '%'"></span>
+                      <span x-show="statusProgress(jobStatus.progress).eta" x-text="'ETA ' + statusProgress(jobStatus.progress).eta"></span>
+                    </div>
+                    <div class="w-full bg-slate-700 rounded-full h-1.5">
+                      <div class="bg-indigo-500 h-1.5 rounded-full transition-all duration-500"
+                           :style="'width:' + statusProgress(jobStatus.progress).pct + '%'"></div>
+                    </div>
+                  </div>
+                </template>
+                <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.progress &&
+                   !(jobStatus.status==='processing' && statusProgress(jobStatus.progress).pct !== null)"
+                   x-text="jobStatus.progress"></p>
                 <button @click="cancelJob()"
                         class="mt-4 px-4 py-1.5 text-xs font-medium rounded-lg border border-red-700
                                text-red-400 hover:bg-red-900/30 transition-colors">
@@ -1522,6 +1536,16 @@
       // Step 6
       jobId:      null,
       statusUrl:  null,
+
+      statusProgress(progress) {
+        if (!progress) return { pct: null, eta: null }
+        const pctM = progress.match(/\(([\d.]+)%\)/)
+        const etaM = progress.match(/ETA\s+(.+?)\s*$/)
+        return {
+          pct: pctM ? Math.round(parseFloat(pctM[1])) : null,
+          eta: etaM ? etaM[1].trim() : null,
+        }
+      },
       jobStatus:  null,
       _pollTimer: null,
 

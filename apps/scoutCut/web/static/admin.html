@@ -140,6 +140,14 @@
                   Report
                 </button>
 
+                <!-- View log -->
+                <button x-show="['processing','completed','failed','cancelled'].includes(job.status)"
+                        @click="openLog(job)"
+                        class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700
+                               text-slate-300 transition-colors whitespace-nowrap">
+                  Log
+                </button>
+
                 <!-- Output links -->
                 <template x-if="job.output_links && job.output_links.length">
                   <template x-for="(link, i) in job.output_links" :key="i">
@@ -245,6 +253,34 @@
     </div>
   </div>
 
+  <!-- Log modal -->
+  <div x-show="logJob" x-transition
+       class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+       @click.self="logJob = null">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[85vh]
+                flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <div>
+          <p class="font-semibold text-slate-100" x-text="logJob?.job_title || 'Job Log'"></p>
+          <p class="mono text-xs text-slate-500 mt-0.5" x-text="logRunDir || logJob?.job_id"></p>
+        </div>
+        <button @click="logJob = null"
+                class="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none">×</button>
+      </div>
+      <div class="overflow-y-auto px-6 py-4 flex-1">
+        <template x-if="logLoading">
+          <p class="text-xs text-slate-500">Loading…</p>
+        </template>
+        <template x-if="!logLoading && logError">
+          <p class="text-xs text-red-400" x-text="logError"></p>
+        </template>
+        <template x-if="!logLoading && !logError">
+          <pre class="mono text-xs text-slate-300 leading-relaxed whitespace-pre-wrap" x-text="logContent"></pre>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <!-- Report modal -->
   <div x-show="reportJob" x-transition
        class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
@@ -277,6 +313,11 @@ function adminApp() {
     lastRefreshed: null,
     reportJob:    null,
     inputJob:     null,
+    logJob:       null,
+    logContent:   "",
+    logRunDir:    "",
+    logLoading:   false,
+    logError:     "",
     _timer:       null,
 
     async init() {
@@ -318,6 +359,25 @@ function adminApp() {
 
     openReport(job) { this.reportJob = job },
 
+    async openLog(job) {
+      this.logJob     = job
+      this.logContent = ""
+      this.logRunDir  = ""
+      this.logError   = ""
+      this.logLoading = true
+      try {
+        const res  = await fetch(`/api/admin/jobs/${job.job_id}/log`)
+        const data = await res.json()
+        if (!res.ok) { this.logError = data.detail || "Failed to load log."; return }
+        this.logContent = data.log
+        this.logRunDir  = data.run_dir || ""
+      } catch (e) {
+        this.logError = "Network error: " + e.message
+      } finally {
+        this.logLoading = false
+      }
+    },
+
     async cancelJob(job) {
       if (!confirm(`Cancel job "${job.job_title || job.job_id.slice(0,8)}"?`)) return
       const res = await fetch(`/api/jobs/${job.job_id}`, { method: 'DELETE' })
@@ -327,7 +387,7 @@ function adminApp() {
     parseProgress(progress) {
       if (!progress) return { pct: null, eta: null }
       const pctM = progress.match(/\(([\d.]+)%\)/)
-      const etaM = progress.match(/ETA\s+([\dhmsmhms ]+?)(?:\s{2}|$)/)
+      const etaM = progress.match(/ETA\s+(.+?)\s*$/)
       return {
         pct: pctM ? parseFloat(pctM[1]) : null,
         eta: etaM ? etaM[1].trim() : null,

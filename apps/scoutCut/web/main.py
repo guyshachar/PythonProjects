@@ -2,13 +2,15 @@
 ScoutCut — FastAPI application.
 
 Routes:
-    GET  /                         → serve frontend SPA
-    GET  /jobs/{id}                → job status page (shareable URL)
-    POST /api/payments/verify      → payment processor dispatcher
-    POST /api/jobs/quote           → price quote (no side-effects)
-    POST /api/calculate-price      → alias for /api/jobs/quote
-    POST /api/jobs/create          → create + enqueue job
-    GET  /api/jobs/{id}/status     → poll job status (JSON)
+    GET    /                         → serve frontend SPA
+    GET    /jobs/{id}                → job status page (shareable URL)
+    POST   /api/payments/verify      → payment processor dispatcher
+    POST   /api/jobs/quote           → price quote (no side-effects)
+    POST   /api/calculate-price      → alias for /api/jobs/quote
+    POST   /api/jobs/create          → create + enqueue job
+    GET    /api/jobs/{id}/status     → poll job status (JSON)
+    DELETE /api/jobs/{id}            → cancel a pending/processing job
+    GET    /api/admin/jobs/{id}/log  → raw run.log for a job (admin)
 """
 
 import asyncio
@@ -142,11 +144,17 @@ def create_job(req: JobCreateRequest, db: Session = Depends(get_db)):
                                   currency=req.currency, language=req.language)
     price_data = calculate_job_price(quote_req)
 
-    job_id = str(uuid.uuid4())
+    job_id     = str(uuid.uuid4())
+    status_url = f"/jobs/{job_id}"
+
+    # Cache keys and deduplication are computed in the worker after URL resolution,
+    # so the cache is keyed by the resolved CDN URL (not the original platform URL).
+    payload = req.model_dump()
+
     job = JobRecord(
         id=job_id,
         status="pending",
-        payload=req.model_dump(),
+        payload=payload,
         price=price_data["hybrid_total_cost"],
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
@@ -154,12 +162,10 @@ def create_job(req: JobCreateRequest, db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
 
-    from web.tasks import process_job   # late import avoids circular at module load
-    process_job.apply_async(args=[job_id, req.model_dump()], task_id=job_id)
+    from web.tasks import process_job
+    process_job.apply_async(args=[job_id, payload], task_id=job_id)
 
-    status_url = f"/jobs/{job_id}"
     log.info("Job %s created — status URL: %s", job_id, status_url)
-
     return JobCreateResponse(
         job_id=job_id,
         status="pending",
@@ -185,3 +191,97 @@ def job_status(job_id: str, db: Session = Depends(get_db)):
         error=job.error,
         report=job.report,
     )
+
+
+# ── Admin ──────────────────────────────────────────────────────────────────────
+
+@app.get("/admin/jobs", include_in_schema=False)
+def admin_jobs_page():
+    return FileResponse(str(_static / "admin.html"))
+
+
+@app.get("/api/admin/jobs", tags=["admin"])
+def admin_list_jobs(
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    """Return all jobs sorted newest-first, with summary fields for the admin UI."""
+    from sqlalchemy import desc
+    jobs = (
+        db.query(JobRecord)
+        .order_by(desc(JobRecord.created_at))
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    total = db.query(JobRecord).count()
+
+    def _fmt(dt) -> str | None:
+        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
+
+    return {
+        "total": total,
+        "jobs": [
+            {
+                "job_id":      j.id,
+                "job_title":   (j.payload or {}).get("job_title", ""),
+                "status":      j.status,
+                "progress":    j.progress,
+                "error":       j.error,
+                "price":       j.price,
+                "output_links": j.output_links or [],
+                "worker":      j.worker,
+                "has_report":  bool(j.report),
+                "report":      j.report,
+                "created_at":  _fmt(j.created_at),
+                "updated_at":  _fmt(j.updated_at),
+                "num_clips":   sum(
+                    sum(1 for tc in r.get("timecodes", []) if tc and tc.strip())
+                    for r in (j.payload or {}).get("video_rows", [])
+                ),
+                "video_rows":    (j.payload or {}).get("video_rows", []),
+                "skipped_rows":  (j.payload or {}).get("skipped_rows", []),
+            }
+            for j in jobs
+        ],
+    }
+
+
+@app.delete("/api/jobs/{job_id}", tags=["jobs"])
+def cancel_job(job_id: str, db: Session = Depends(get_db)):
+    """
+    Cancel a pending or processing job.
+    Revokes the Celery task (SIGTERM to the worker subprocess) and marks the
+    job as cancelled in the DB. No-op if the job is already finished.
+    """
+    job: JobRecord | None = db.get(JobRecord, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    if job.status in ("completed", "failed", "cancelled"):
+        return {"job_id": job_id, "status": job.status, "message": "Job already finished — nothing to cancel."}
+
+    from web.celery_app import celery_app
+    celery_app.control.revoke(job_id, terminate=True, signal="SIGTERM")
+    log.info("Job %s cancelled (Celery revoke + SIGTERM sent)", job_id)
+
+    from web.database import update_job
+    update_job(job_id, status="cancelled", progress="Cancelled by user.")
+
+    return {"job_id": job_id, "status": "cancelled", "message": "Job cancelled."}
+
+
+_RUNS_DIR = Path(__file__).parent.parent / "runs"
+
+
+@app.get("/api/admin/jobs/{job_id}/log", tags=["admin"])
+def get_job_log(job_id: str):
+    """Return the raw run.log for a job, located by the job_id prefix in the runs/ directory."""
+    job_suffix = job_id.split("-")[0]
+    matches = sorted(_RUNS_DIR.glob(f"*_{job_suffix}"), reverse=True)
+    for run_dir in matches:
+        log_file = run_dir / "run.log"
+        if log_file.exists():
+            return {"log": log_file.read_text(errors="replace"), "run_dir": run_dir.name}
+    raise HTTPException(status_code=404, detail="Log file not found.")
