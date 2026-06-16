@@ -940,8 +940,10 @@ def main() -> None:
         run_dir.mkdir(parents=True, exist_ok=True)
     add_file_logging(run_dir / "run.log")
 
-    # Copy original CSV into run folder, then resolve platform URLs
-    shutil.copy2(args.csv_file, run_dir / args.csv_file.name)
+    # Copy original CSV into run folder (skip if it's already there)
+    csv_dest = run_dir / args.csv_file.name
+    if args.csv_file.resolve() != csv_dest.resolve():
+        shutil.copy2(args.csv_file, csv_dest)
     csv_path = resolve_csv(args.csv_file, out_dir=run_dir)
 
     rows = read_csv(csv_path)
