@@ -30,7 +30,6 @@ class JobRecord(Base):
     progress     = Column(Text,    nullable=True)
     error        = Column(Text,    nullable=True)
     report       = Column(Text,    nullable=True)
-    log          = Column(Text,    nullable=True)
     worker       = Column(String,  nullable=True)   # Celery worker hostname that ran the job
     from_cache   = Column(String,  nullable=True)   # cache_key if result was served from cache
     created_at   = Column(DateTime, default=datetime.utcnow)
