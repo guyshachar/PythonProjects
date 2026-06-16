@@ -1,6 +1,7 @@
 import os
 
 from celery import Celery
+from web.config import settings
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -11,6 +12,9 @@ celery_app = Celery(
     include=["web.tasks"],
 )
 
+_soft_limit = settings.task_time_limit_hours * 3600
+_hard_limit = _soft_limit + 600  # 10 min grace for cleanup
+
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
@@ -20,6 +24,6 @@ celery_app.conf.update(
     task_track_started=True,
     task_acks_late=True,
     worker_prefetch_multiplier=1,   # one video job at a time per worker process
-    task_soft_time_limit=7200,      # 2 h soft limit
-    task_time_limit=7800,           # 2 h 10 min hard limit
+    task_soft_time_limit=_soft_limit,
+    task_time_limit=_hard_limit,
 )

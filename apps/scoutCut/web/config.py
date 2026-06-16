@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     default_language:           str   = "en"
     default_currency:           str   = "USD"
 
+    # ── Celery task limits ────────────────────────────────────────────────────
+    task_time_limit_hours:      int   = 8   # soft limit; hard limit = this + 10 min
+
     @classmethod
     def settings_customise_sources(
         cls,
