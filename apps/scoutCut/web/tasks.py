@@ -361,11 +361,19 @@ def process_job(self, job_id: str, payload: dict) -> dict:
 
     job_started_at = datetime.now(_TZ)
 
-    # ── 1. Create run dir and empty run.log immediately ────────────────────────
+    # ── 1. Create run dir and seed run.log immediately ─────────────────────────
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     run_dir = RUNS_DIR / f"job_{datetime.now(_TZ).strftime('%Y%m%d_%H%M%S')}_{job_id.split('-')[0]}"
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "run.log").touch()
+    job_title = payload.get("job_title", "")
+    (run_dir / "run.log").write_text(
+        f"{job_started_at.strftime('%Y-%m-%d %H:%M:%S')} [INFO] Job started\n"
+        f"{job_started_at.strftime('%Y-%m-%d %H:%M:%S')} [INFO] Job ID  : {job_id}\n"
+        + (f"{job_started_at.strftime('%Y-%m-%d %H:%M:%S')} [INFO] Title  : {job_title}\n" if job_title else "")
+        + f"{job_started_at.strftime('%Y-%m-%d %H:%M:%S')} [INFO] Videos : {len(all_rows)}\n"
+        f"{job_started_at.strftime('%Y-%m-%d %H:%M:%S')} [INFO] Status : processing\n",
+        encoding="utf-8",
+    )
 
     update_job(job_id, status="processing", progress="Resolving video URLs…",
                worker=self.request.hostname)
