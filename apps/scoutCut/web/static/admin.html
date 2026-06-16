@@ -256,7 +256,7 @@
   <!-- Log modal -->
   <div x-show="logJob" x-transition
        class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-       @click.self="logJob = null">
+       @click.self="closeLog()">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[85vh]
                 flex flex-col overflow-hidden shadow-2xl">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 flex-shrink-0">
@@ -271,7 +271,7 @@
           <button @click="$refs.logBody.scrollTo({top:$refs.logBody.scrollHeight,behavior:'smooth'})"
                   title="Scroll to bottom"
                   class="text-slate-500 hover:text-slate-300 transition-colors text-lg leading-none">↓</button>
-          <button @click="logJob = null"
+          <button @click="closeLog()"
                   class="text-slate-500 hover:text-slate-300 transition-colors text-xl leading-none">×</button>
         </div>
       </div>
@@ -327,6 +327,7 @@ function adminApp() {
     logLoading:   false,
     logError:     "",
     _timer:       null,
+    _logTimer:    null,
 
     async init() {
       await this.load()
@@ -367,25 +368,52 @@ function adminApp() {
 
     openReport(job) { this.reportJob = job },
 
+    closeLog() {
+      clearInterval(this._logTimer)
+      this._logTimer = null
+      this.logJob    = null
+    },
+
     async openLog(job) {
+      clearInterval(this._logTimer)
+      this._logTimer  = null
       this.logJob     = job
       this.logContent = ""
       this.logRunDir  = ""
       this.logError   = ""
       this.logLoading = true
+      await this._fetchLog(true)
+      if (job.status === 'processing' && this.autoRefresh) {
+        this._logTimer = setInterval(() => this._fetchLog(false), 5000)
+      }
+    },
+
+    async _fetchLog(initial) {
+      if (!this.logJob) return
       try {
-        const res  = await fetch(`/api/admin/jobs/${job.job_id}/log`)
+        const res  = await fetch(`/api/admin/jobs/${this.logJob.job_id}/log`)
         const data = await res.json()
         if (!res.ok) { this.logError = data.detail || "Failed to load log."; return }
+        const body = this.$refs.logBody
+        const atBottom = !body || body.scrollHeight - body.scrollTop - body.clientHeight < 60
         this.logContent = data.log
         this.logRunDir  = data.run_dir || ""
-        this.$nextTick(() => {
-          if (this.$refs.logBody) this.$refs.logBody.scrollTop = this.$refs.logBody.scrollHeight
-        })
+        if (initial || atBottom) {
+          this.$nextTick(() => {
+            if (this.$refs.logBody) this.$refs.logBody.scrollTop = this.$refs.logBody.scrollHeight
+          })
+        }
+        // Stop polling once job is no longer processing
+        if (!initial) {
+          const live = this.jobs.find(j => j.job_id === this.logJob?.job_id)
+          if (live && live.status !== 'processing') {
+            clearInterval(this._logTimer); this._logTimer = null
+          }
+        }
       } catch (e) {
-        this.logError = "Network error: " + e.message
+        if (initial) this.logError = "Network error: " + e.message
       } finally {
-        this.logLoading = false
+        if (initial) this.logLoading = false
       }
     },
 
