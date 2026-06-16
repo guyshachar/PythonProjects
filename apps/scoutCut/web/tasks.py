@@ -90,7 +90,9 @@ _GDRIVE_RE = re.compile(
 )
 
 # Also capture local file paths as fallback (when --upload-gdrive is omitted)
-_LOCAL_PATH_RE = re.compile(r"Output saved[:\s]+(.+\.mp4)", re.IGNORECASE)
+_LOCAL_PATH_RE  = re.compile(r"Output saved[:\s]+(.+\.mp4)", re.IGNORECASE)
+# Strips "2026-06-16 11:12:54,145 [INFO] " prefix added by scoutCut's logging format
+_LOG_PREFIX_RE  = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+\s+\[(?:INFO|DEBUG|WARNING|ERROR)\]\s*")
 
 _TC_RANGE_RE = re.compile(r"([\d:.]+)\s*-\s*([\d:.]+)")
 
@@ -433,7 +435,7 @@ def process_job(self, job_id: str, payload: dict) -> dict:
             line = raw.rstrip()
             lines.append(line)
             if any(kw in line for kw in ("[INFO]", "Clip", "Downloading", "Normaliz", "Encoding", "Progress", "Concat", "Upload")):
-                progress_text = line[:200]
+                progress_text = _LOG_PREFIX_RE.sub("", line).strip()[:200]
                 m = _progress_re.search(line)
                 if m:
                     pct = float(m.group(1))
