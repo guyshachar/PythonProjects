@@ -361,10 +361,11 @@ def process_job(self, job_id: str, payload: dict) -> dict:
 
     job_started_at = datetime.now(_TZ)
 
-    # ── 1. Create run dir immediately so run.log exists from the start ─────────
+    # ── 1. Create run dir and empty run.log immediately ────────────────────────
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    run_dir = RUNS_DIR / f"job_{job_id.split('-')[0]}_{datetime.now(_TZ).strftime('%Y%m%d_%H%M%S')}"
+    run_dir = RUNS_DIR / f"job_{datetime.now(_TZ).strftime('%Y%m%d_%H%M%S')}_{job_id.split('-')[0]}"
     run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "run.log").touch()
 
     update_job(job_id, status="processing", progress="Resolving video URLs…",
                worker=self.request.hostname)
