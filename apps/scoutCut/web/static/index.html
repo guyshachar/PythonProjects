@@ -922,7 +922,7 @@
             <span class="font-mono ltr-value" x-text="jobStatus.job_id"></span>
           </div>
 
-          <div class="text-center" x-show="['completed','failed'].includes(jobStatus.status)">
+          <div class="text-center" x-show="['completed','failed','cancelled'].includes(jobStatus.status)">
             <button @click="resetForm()"
                     class="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm
                            font-medium transition-colors" x-text="t('startNew')"></button>
