@@ -250,6 +250,13 @@
                             focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
             </div>
             <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1" x-text="t('offsetLabel')"></label>
+              <input type="text" x-model="row.offset" :placeholder="t('offsetPlaceholder')"
+                     class="ltr-value w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm
+                            font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+              <p class="text-xs text-slate-600 mt-1" x-text="t('offsetHint')"></p>
+            </div>
+            <div>
               <label class="block text-xs font-medium text-slate-400 mb-1">
                 <span x-text="t('timecodesLabel')"></span>
                 <span class="text-slate-600 font-normal" x-text="' ' + t('timecodesHint')"></span>
@@ -330,6 +337,24 @@
               <span class="w-12 text-center text-sm font-mono bg-slate-800 rounded-md px-2 py-1 ltr-value"
                     x-text="config.pad_after + 's'"></span>
             </div>
+          </div>
+        </div>
+
+        <!-- Quality selector -->
+        <div>
+          <label class="block text-sm font-medium mb-3" x-text="t('encodeQuality')"></label>
+          <div class="grid grid-cols-3 gap-2">
+            <template x-for="q in [{id:'fast',icon:'⚡'},{id:'balanced',icon:'⚖️'},{id:'high',icon:'🎬'},{id:'ultra',icon:'💎'},{id:'best',icon:'🏆'}]" :key="q.id">
+              <button @click="config.quality = q.id"
+                      :class="config.quality === q.id
+                                ? 'border-indigo-500 bg-indigo-950 text-white'
+                                : 'border-slate-700 text-slate-400 hover:border-slate-500'"
+                      class="p-3 rounded-xl border-2 text-center transition-all">
+                <div class="text-lg mb-1" x-text="q.icon"></div>
+                <p class="font-medium text-xs" x-text="t('quality_' + q.id)"></p>
+                <p class="text-xs text-slate-500 mt-0.5" x-text="t('quality_' + q.id + '_desc')"></p>
+              </button>
+            </template>
           </div>
         </div>
 
@@ -684,34 +709,19 @@
       <h2 class="text-2xl font-bold mb-1" x-text="t('deliveryTitle')"></h2>
       <p class="text-slate-400 text-sm mb-6" x-text="t('deliverySubtitle')"></p>
 
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-5">
-        <div class="flex gap-3">
-          <button @click="delivery.method = 'email'"
-                  :class="delivery.method==='email' ? 'border-indigo-500 bg-indigo-950 text-white' : 'border-slate-700 text-slate-400'"
-                  class="flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
-            <span x-text="t('emailMethod')"></span>
-          </button>
-          <button @click="delivery.method = 'whatsapp'"
-                  :class="delivery.method==='whatsapp' ? 'border-green-500 bg-green-950 text-white' : 'border-slate-700 text-slate-400'"
-                  class="flex-1 py-2.5 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            <span x-text="t('whatsappMethod')"></span>
-          </button>
-        </div>
-
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
         <div>
-          <label class="block text-sm font-medium mb-2"
-                 x-text="delivery.method==='email' ? t('emailLabel') : t('phoneLabel')"></label>
+          <label class="block text-sm font-medium mb-2" x-text="t('deliveryContactLabel')"></label>
           <input x-model="delivery.contact"
-                 :type="delivery.method==='email' ? 'email' : 'tel'"
-                 :placeholder="delivery.method==='email' ? t('emailPlaceholder') : t('phonePlaceholder')"
+                 @input="delivery.method = delivery.contact.trim().includes('@') ? 'email' : 'whatsapp'"
+                 type="text"
+                 :placeholder="t('deliveryContactPlaceholder')"
                  class="ltr-value w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5
                         text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600" />
+          <p class="text-xs text-slate-500 mt-2" x-show="delivery.contact.trim()">
+            <span x-show="delivery.method === 'email'" x-text="t('detectedEmail')"></span>
+            <span x-show="delivery.method === 'whatsapp'" x-text="t('detectedWhatsapp')"></span>
+          </p>
         </div>
       </div>
 
@@ -755,6 +765,24 @@
                 </div>
                 <p class="text-lg font-semibold" x-text="t(jobStatus.status)"></p>
                 <p class="text-sm text-slate-400 mt-1" x-show="jobStatus.progress" x-text="jobStatus.progress"></p>
+                <button @click="cancelJob()"
+                        class="mt-4 px-4 py-1.5 text-xs font-medium rounded-lg border border-red-700
+                               text-red-400 hover:bg-red-900/30 transition-colors">
+                  <span x-text="t('cancelJob')"></span>
+                </button>
+              </div>
+            </template>
+
+            <template x-if="jobStatus.status==='cancelled'">
+              <div>
+                <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-600
+                            flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <p class="text-xl font-semibold text-slate-300" x-text="t('cancelled')"></p>
+                <p class="text-sm text-slate-500 mt-1" x-text="t('cancelledMsg')"></p>
               </div>
             </template>
 
@@ -772,6 +800,15 @@
                   <span x-text="t(delivery.method + 'Method')"></span>
                   <span x-text="' ' + t('completedMsg2')"></span>
                 </p>
+                <template x-if="jobStatus.progress && jobStatus.progress.includes('cache')">
+                  <p class="mt-2 inline-flex items-center gap-1.5 text-xs text-indigo-300
+                             bg-indigo-950/50 border border-indigo-800/50 rounded-full px-3 py-1">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+                    </svg>
+                    <span x-text="t('servedFromCache')"></span>
+                  </p>
+                </template>
               </div>
             </template>
 
@@ -1147,6 +1184,9 @@
       videoUrlPlaceholder: "https://you.pixellot.link/… or https://app.veo.co/…",
       titleLabel:          "Title / Label (optional)",
       titlePlaceholder:    "e.g. Kiryat Gat vs Kfar Yona",
+      offsetLabel:         "Offset (optional)",
+      offsetPlaceholder:   "e.g. 45:00",
+      offsetHint:          "Added to all timecodes — use when timecodes are relative to a period start",
       timecodesLabel:      "Timecodes",
       timecodesHint:       "(one per line)",
       timecodesPlaceholder:"47:29\n58:31-58:45\n1:02:10",
@@ -1176,6 +1216,17 @@
       configSubtitle:      "Control how much context to include around each clip.",
       padBefore:           "Seconds before each clip",
       padAfter:            "Seconds after each clip",
+      encodeQuality:       "Encode quality",
+      quality_fast:        "Fast",
+      quality_fast_desc:   "Quickest · lower quality",
+      quality_balanced:    "Balanced",
+      quality_balanced_desc: "Good quality · fast",
+      quality_high:        "High",
+      quality_high_desc:   "Best quality · slower",
+      quality_ultra:       "Ultra",
+      quality_ultra_desc:  "Very high quality · slow",
+      quality_best:        "Best",
+      quality_best_desc:   "Maximum quality · slowest",
       outputFormat:        "Output format",
       singleFile:          "Single file",
       singleFileDesc:      "All clips concatenated into one video",
@@ -1231,20 +1282,25 @@
       deliverySubtitle:    "Where should we send your download link?",
       emailMethod:         "Email",
       whatsappMethod:      "WhatsApp",
-      emailLabel:          "Email address",
-      phoneLabel:          "Phone number (with country code)",
-      emailPlaceholder:    "you@example.com",
-      phonePlaceholder:    "+972 50 123 4567",
+      deliveryContactLabel:       "Email address or WhatsApp number",
+      deliveryContactPlaceholder: "you@example.com  or  +972 50 123 4567",
+      detectedEmail:       "Will be sent via Email",
+      detectedWhatsapp:    "Will be sent via WhatsApp",
       submitJob:           "Submit job",
       submitting:          "Submitting…",
       // Step 6
       processingTitle:     "Processing",
       processingSubtitle:  "Your highlights are being compiled.",
       pending:             "Pending",
+      cancelled:           "Cancelled",
+      cancelledMsg:        "This job was cancelled. Start a new job if you'd like to try again.",
+      cancelJob:           "Cancel job",
+      cancelConfirm:       "Cancel this job? The video download and clipping will be stopped.",
       completed:           "Highlights ready!",
       failed:              "Job failed",
       completedMsg:        "Check your",
       completedMsg2:       "for the download link.",
+      servedFromCache:     "⚡ Instant result — served from cache",
       downloadLinks:       "Download links",
       startNew:            "Start a new job",
       jobRef:              "Job ID",
@@ -1270,6 +1326,9 @@
       videoUrlPlaceholder: "https://you.pixellot.link/… או https://app.veo.co/…",
       titleLabel:          "כותרת / תגית (אופציונלי)",
       titlePlaceholder:    "למשל: קריית גת נגד כפר יונה",
+      offsetLabel:         "היסט (אופציונלי)",
+      offsetPlaceholder:   "למשל: 45:00",
+      offsetHint:          "מתווסף לכל הטיימקודים — שימושי כשהטיימקודים יחסיים לתחילת מחצית",
       timecodesLabel:      "טיימקודים",
       timecodesHint:       "(אחד בכל שורה)",
       timecodesPlaceholder:"47:29\n58:31-58:45\n1:02:10",
@@ -1299,6 +1358,17 @@
       configSubtitle:      "שלוט בכמות ההקשר הנכלל סביב כל קליפ.",
       padBefore:           "שניות לפני כל קליפ",
       padAfter:            "שניות אחרי כל קליפ",
+      encodeQuality:       "איכות קידוד",
+      quality_fast:        "מהיר",
+      quality_fast_desc:   "הכי מהיר · איכות נמוכה",
+      quality_balanced:    "מאוזן",
+      quality_balanced_desc: "איכות טובה · מהיר",
+      quality_high:        "גבוה",
+      quality_high_desc:   "איכות מרבית · איטי יותר",
+      quality_ultra:       "אולטרה",
+      quality_ultra_desc:  "איכות גבוהה מאוד · איטי",
+      quality_best:        "הכי טוב",
+      quality_best_desc:   "איכות מקסימלית · הכי איטי",
       outputFormat:        "פורמט פלט",
       singleFile:          "קובץ יחיד",
       singleFileDesc:      "כל הקליפים מחוברים לוידאו אחד",
@@ -1354,16 +1424,20 @@
       deliverySubtitle:    "לאן לשלוח את קישור ההורדה?",
       emailMethod:         "אימייל",
       whatsappMethod:      "וואטסאפ",
-      emailLabel:          "כתובת אימייל",
-      phoneLabel:          "מספר טלפון (כולל קידומת מדינה)",
-      emailPlaceholder:    "you@example.com",
-      phonePlaceholder:    "+972 50 123 4567",
+      deliveryContactLabel:       "כתובת אימייל או מספר וואטסאפ",
+      deliveryContactPlaceholder: "you@example.com  או  +972 50 123 4567",
+      detectedEmail:       "יישלח באימייל",
+      detectedWhatsapp:    "יישלח בוואטסאפ",
       submitJob:           "שלח עבודה",
       submitting:          "שולח…",
       // Step 6
       processingTitle:     "מעבד...",
       processingSubtitle:  "הקטעים שלך נמצאים בעיבוד.",
       pending:             "ממתין",
+      cancelled:           "בוטל",
+      cancelledMsg:        "העבודה בוטלה. ניתן להתחיל עבודה חדשה.",
+      cancelJob:           "ביטול עבודה",
+      cancelConfirm:       "לבטל את העבודה? ההורדה והעיבוד יופסקו.",
       completed:           "הקטעים מוכנים!",
       failed:              "העבודה נכשלה",
       completedMsg:        "בדוק את",
@@ -1426,7 +1500,7 @@
 
       // Step 1
       jobTitle:    "",
-      rows:        [{ url: "", title: "", timecodes: "", validation: null, validationMessage: "" }],
+      rows:        [{ url: "", title: "", offset: "", timecodes: "", validation: null, validationMessage: "" }],
       importError: "",
 
       // Step 2
@@ -1520,7 +1594,7 @@
         return row.timecodes.split("\n").filter(t => t.trim()).length
       },
 
-      addRow()    { this.rows.push({ url: "", title: "", timecodes: "", validation: null, validationMessage: "" }) },
+      addRow()    { this.rows.push({ url: "", title: "", offset: "", timecodes: "", validation: null, validationMessage: "" }) },
       removeRow(i){ if (this.rows.length > 1) this.rows.splice(i, 1) },
 
       async validateUrl(i) {
@@ -1595,7 +1669,7 @@
         // Pre-populate the right number of empty rows then jump to step 1
         const target = this.sim.games
         while (this.rows.length < target)
-          this.rows.push({ url: "", title: "", timecodes: "", validation: null, validationMessage: "" })
+          this.rows.push({ url: "", title: "", offset: "", timecodes: "", validation: null, validationMessage: "" })
         while (this.rows.length > target)
           this.rows.pop()
         this.closeSimulator()
@@ -1646,6 +1720,7 @@
             this.rows     = data.rows.map(r => ({
               url:               r.url       ?? "",
               title:             r.title     ?? "",
+              offset:            r.offset    ?? "",
               timecodes:         r.timecodes ?? "",
               validation:        null,   // re-validate after import
               validationMessage: "",
@@ -1675,6 +1750,7 @@
           .map(r => ({
             url:       r.url.trim(),
             title:     r.title.trim(),
+            offset:    (r.offset || "").trim(),
             timecodes: r.timecodes.split("\n").map(t => t.trim()).filter(Boolean),
           }))
       },
@@ -1802,10 +1878,23 @@
             const res = await fetch(`/api/jobs/${this.jobId}/status`)
             if (!res.ok) return
             this.jobStatus = await res.json()
-            if (["completed", "failed"].includes(this.jobStatus.status))
+            if (["completed", "failed", "cancelled"].includes(this.jobStatus.status))
               clearInterval(this._pollTimer)
           } catch { /* network hiccup — retry next tick */ }
         }, 3000)
+      },
+
+      // ── Cancel ────────────────────────────────────────────────────────────────
+      async cancelJob() {
+        if (!this.jobId) return
+        if (!confirm(this.t('cancelConfirm'))) return
+        try {
+          const res = await fetch(`/api/jobs/${this.jobId}`, { method: 'DELETE' })
+          if (res.ok) {
+            this.jobStatus = { ...this.jobStatus, status: 'cancelled', progress: 'Cancelled by user.' }
+            clearInterval(this._pollTimer)
+          }
+        } catch { /* ignore */ }
       },
 
       // ── Reset ─────────────────────────────────────────────────────────────────
@@ -1813,8 +1902,8 @@
         if (this._pollTimer) clearInterval(this._pollTimer)
         this.step            = 1
         this.jobTitle        = ""
-        this.rows            = [{ url: "", title: "", timecodes: "" }]
-        this.config          = { pad_before: 5, pad_after: 5, output_strategy: "single" }
+        this.rows            = [{ url: "", title: "", offset: "", timecodes: "" }]
+        this.config          = { pad_before: 5, pad_after: 5, output_strategy: "single", quality: "balanced" }
         this.quote           = null
         this.selectedPayment = null
         this.paymentToken    = null
