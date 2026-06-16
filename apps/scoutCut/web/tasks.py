@@ -406,95 +406,95 @@ def process_job(self, job_id: str, payload: dict) -> dict:
         if output_strategy == "multiple":
             cmd.append("--split")
 
-            log.info("[job %s] cmd: %s", job_id, " ".join(cmd))
+        log.info("[job %s] cmd: %s", job_id, " ".join(cmd))
 
-            # ── 6. Stream subprocess output ─────────────────────────────────
-            lines: list[str] = []
-            _progress_re = re.compile(r"\[Progress:\s*\d+/\d+\s+clips\s+\(([\d.]+)%\)\]")
-            proc_start = time.time()
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                cwd=SCOUTCUT.parent,
-            )
-            assert proc.stdout is not None
-            for raw in iter(proc.stdout.readline, ""):
-                line = raw.rstrip()
-                lines.append(line)
-                if any(kw in line for kw in ("[INFO]", "Clip", "Downloading", "Normaliz", "Encoding", "Progress", "Concat", "Upload")):
-                    progress_text = line[:200]
-                    m = _progress_re.search(line)
-                    if m:
-                        pct = float(m.group(1))
-                        if pct > 0:
-                            elapsed = time.time() - proc_start
-                            eta_secs = int(elapsed * (100 - pct) / pct)
-                            h, rem = divmod(eta_secs, 3600)
-                            mins, secs = divmod(rem, 60)
-                            eta_str = (f"{h}h {mins}m" if h else f"{mins}m {secs:02d}s") if eta_secs >= 60 else f"{eta_secs}s"
-                            progress_text += f"  |  ETA {eta_str}"
-                    update_job(job_id, progress=progress_text)
+        # ── 6. Stream subprocess output ─────────────────────────────────
+        lines: list[str] = []
+        _progress_re = re.compile(r"\[Progress:\s*\d+/\d+\s+clips\s+\(([\d.]+)%\)\]")
+        proc_start = time.time()
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=SCOUTCUT.parent,
+        )
+        assert proc.stdout is not None
+        for raw in iter(proc.stdout.readline, ""):
+            line = raw.rstrip()
+            lines.append(line)
+            if any(kw in line for kw in ("[INFO]", "Clip", "Downloading", "Normaliz", "Encoding", "Progress", "Concat", "Upload")):
+                progress_text = line[:200]
+                m = _progress_re.search(line)
+                if m:
+                    pct = float(m.group(1))
+                    if pct > 0:
+                        elapsed = time.time() - proc_start
+                        eta_secs = int(elapsed * (100 - pct) / pct)
+                        h, rem = divmod(eta_secs, 3600)
+                        mins, secs = divmod(rem, 60)
+                        eta_str = (f"{h}h {mins}m" if h else f"{mins}m {secs:02d}s") if eta_secs >= 60 else f"{eta_secs}s"
+                        progress_text += f"  |  ETA {eta_str}"
+                update_job(job_id, progress=progress_text)
 
-            proc.wait()
-            full_output = "\n".join(lines)
+        proc.wait()
+        full_output = "\n".join(lines)
 
-            if proc.returncode != 0:
-                raise RuntimeError(
-                    f"scoutCut.py exited {proc.returncode}.\n" + full_output[-2000:]
-                )
-
-            # ── 7. Back-fill resolved_urls from scoutCut log output ────────
-            # scoutCut.py resolves platform URLs itself when tasks.py resolution
-            # failed; pick up those CDN URLs so the report shows what was used.
-            resolution_map = _parse_resolution_map(full_output)
-            if resolution_map:
-                resolved_urls = [
-                    resolution_map.get(orig, resolved_urls[i])
-                    for i, orig in enumerate(r["url"] for r in all_rows)
-                ]
-
-            # ── 8. Extract new links ────────────────────────────────────────
-            new_links = _extract_links(full_output)
-            if not new_links:
-                raise RuntimeError(
-                    "No output links found in scoutCut.py output.\n" + full_output[-1000:]
-                )
-
-            # ── 9. Collect output links ─────────────────────────────────────
-            all_links = new_links
-
-            # ── 10. Build report ────────────────────────────────────────────
-            timing = _parse_timing(full_output)
-            report = _build_report(
-                job_id=job_id,
-                job_title=payload.get("job_title", ""),
-                video_rows=all_rows,
-                skipped_rows=payload.get("skipped_rows", []),
-                output_links=all_links,
-                resolved_urls=resolved_urls,
-                pad_before=float(config.get("pad_before", 0)),
-                pad_after=float(config.get("pad_after", 0)),
-                quality=config.get("quality", "balanced"),
-                timing=timing,
-                started_at=job_started_at,
-                completed_at=datetime.now(_TZ),
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"scoutCut.py exited {proc.returncode}.\n" + full_output[-2000:]
             )
 
-            # ── 11. Persist + notify ───────────────────────────────────────
-            update_job(job_id, status="completed", output_links=all_links,
-                       progress=f"Done — {len(all_links)} file(s) ready.",
-                       report=report)
-            send_delivery_notification(
-                contact_method=delivery["method"],
-                contact=delivery["contact"],
-                links=all_links,
-                job_id=job_id,
-                report=report,
+        # ── 7. Back-fill resolved_urls from scoutCut log output ────────
+        # scoutCut.py resolves platform URLs itself when tasks.py resolution
+        # failed; pick up those CDN URLs so the report shows what was used.
+        resolution_map = _parse_resolution_map(full_output)
+        if resolution_map:
+            resolved_urls = [
+                resolution_map.get(orig, resolved_urls[i])
+                for i, orig in enumerate(r["url"] for r in all_rows)
+            ]
+
+        # ── 8. Extract new links ────────────────────────────────────────
+        new_links = _extract_links(full_output)
+        if not new_links:
+            raise RuntimeError(
+                "No output links found in scoutCut.py output.\n" + full_output[-1000:]
             )
-            log.info("[job %s] completed: %d link(s)", job_id, len(all_links))
-            return {"status": "completed", "links": all_links}
+
+        # ── 9. Collect output links ─────────────────────────────────────
+        all_links = new_links
+
+        # ── 10. Build report ────────────────────────────────────────────
+        timing = _parse_timing(full_output)
+        report = _build_report(
+            job_id=job_id,
+            job_title=payload.get("job_title", ""),
+            video_rows=all_rows,
+            skipped_rows=payload.get("skipped_rows", []),
+            output_links=all_links,
+            resolved_urls=resolved_urls,
+            pad_before=float(config.get("pad_before", 0)),
+            pad_after=float(config.get("pad_after", 0)),
+            quality=config.get("quality", "balanced"),
+            timing=timing,
+            started_at=job_started_at,
+            completed_at=datetime.now(_TZ),
+        )
+
+        # ── 11. Persist + notify ───────────────────────────────────────
+        update_job(job_id, status="completed", output_links=all_links,
+                   progress=f"Done — {len(all_links)} file(s) ready.",
+                   report=report)
+        send_delivery_notification(
+            contact_method=delivery["method"],
+            contact=delivery["contact"],
+            links=all_links,
+            job_id=job_id,
+            report=report,
+        )
+        log.info("[job %s] completed: %d link(s)", job_id, len(all_links))
+        return {"status": "completed", "links": all_links}
 
     except SoftTimeLimitExceeded:
         if proc is not None and proc.poll() is None:
