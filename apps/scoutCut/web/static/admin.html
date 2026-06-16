@@ -379,6 +379,9 @@ function adminApp() {
         if (!res.ok) { this.logError = data.detail || "Failed to load log."; return }
         this.logContent = data.log
         this.logRunDir  = data.run_dir || ""
+        this.$nextTick(() => {
+          if (this.$refs.logBody) this.$refs.logBody.scrollTop = this.$refs.logBody.scrollHeight
+        })
       } catch (e) {
         this.logError = "Network error: " + e.message
       } finally {
