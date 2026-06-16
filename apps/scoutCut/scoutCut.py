@@ -929,14 +929,14 @@ def main() -> None:
         sys.exit(1)
 
     # Use pre-created run dir from web worker, or create one for CLI use
+    job_suffix = args.job_id.split("-")[0] if args.job_id else uuid.uuid4().hex[:6]
+    run_id     = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + job_suffix
+    csv_stem   = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
     if args.run_dir:
         run_dir = args.run_dir
         run_dir.mkdir(parents=True, exist_ok=True)
     else:
-        job_suffix = args.job_id.split("-")[0] if args.job_id else uuid.uuid4().hex[:6]
-        run_id     = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + job_suffix
-        csv_stem   = re.sub(r"[^\w]+", "_", args.csv_file.stem).strip("_").lower()
-        run_dir    = RUNS_DIR / f"{csv_stem}_{run_id}"
+        run_dir = RUNS_DIR / f"{csv_stem}_{run_id}"
         run_dir.mkdir(parents=True, exist_ok=True)
     add_file_logging(run_dir / "run.log")
 
