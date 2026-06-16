@@ -35,7 +35,7 @@ from celery.signals import worker_ready
 
 from web.celery_app import celery_app
 from web.database import update_job
-from web.delivery import send_delivery_notification
+from web.delivery import send_delivery_notification, send_failure_notification
 
 log = logging.getLogger(__name__)
 
@@ -503,10 +503,24 @@ def process_job(self, job_id: str, payload: dict) -> dict:
         msg = f"Job timed out after {elapsed_min} minutes (limit: {celery_app.conf.task_soft_time_limit // 60} min)"
         log.error("[job %s] %s", job_id, msg)
         update_job(job_id, status="failed", error=msg)
+        send_failure_notification(
+            contact_method=delivery["method"],
+            contact=delivery["contact"],
+            job_id=job_id,
+            status="timeout",
+            reason=msg,
+        )
         raise
 
     except Exception as exc:
         msg = str(exc)[:500]
         log.exception("[job %s] failed: %s", job_id, msg)
         update_job(job_id, status="failed", error=msg)
+        send_failure_notification(
+            contact_method=delivery["method"],
+            contact=delivery["contact"],
+            job_id=job_id,
+            status="failed",
+            reason=msg,
+        )
         raise

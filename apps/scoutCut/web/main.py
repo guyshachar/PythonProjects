@@ -269,6 +269,17 @@ def cancel_job(job_id: str, db: Session = Depends(get_db)):
     from web.database import update_job
     update_job(job_id, status="cancelled", progress="Cancelled by user.")
 
+    payload  = job.payload or {}
+    delivery = payload.get("delivery", {})
+    if delivery.get("method") and delivery.get("contact"):
+        from web.delivery import send_failure_notification
+        send_failure_notification(
+            contact_method=delivery["method"],
+            contact=delivery["contact"],
+            job_id=job_id,
+            status="cancelled",
+        )
+
     return {"job_id": job_id, "status": "cancelled", "message": "Job cancelled."}
 
 

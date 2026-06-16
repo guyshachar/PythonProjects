@@ -50,6 +50,41 @@ def send_delivery_notification(
     return False
 
 
+def send_failure_notification(
+    contact_method: str,
+    contact: str,
+    job_id: str,
+    status: str,
+    reason: str = "",
+) -> bool:
+    """Send a notification when a job is cancelled, failed, or timed out."""
+    subjects = {
+        "cancelled": "ScoutCut: job cancelled",
+        "failed":    "ScoutCut: job failed",
+        "timeout":   "ScoutCut: job timed out",
+    }
+    intros = {
+        "cancelled": "Your ScoutCut job was cancelled before it could complete.",
+        "failed":    "Your ScoutCut job encountered an error and could not complete.",
+        "timeout":   "Your ScoutCut job timed out before it could complete.",
+    }
+    subject = subjects.get(status, f"ScoutCut: job {status}")
+    intro   = intros.get(status, f"Your ScoutCut job ended with status: {status}.")
+
+    message = f"{intro}\n\nJob ID: {job_id}"
+    if reason:
+        message += f"\n\nReason: {reason}"
+    message += "\n\nYou can start a new job at any time.\nPowered by ScoutCut"
+
+    if contact_method == "email":
+        return _send_email(contact, subject, message)
+    if contact_method == "whatsapp":
+        return _send_whatsapp(contact, message)
+
+    log.warning("Unknown delivery method: %s", contact_method)
+    return False
+
+
 # ── Email ──────────────────────────────────────────────────────────────────────
 
 def _send_email(to: str, subject: str, body: str) -> bool:
