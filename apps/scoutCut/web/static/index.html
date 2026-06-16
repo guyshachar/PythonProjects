@@ -922,8 +922,8 @@
             <span class="font-mono ltr-value" x-text="jobStatus.job_id"></span>
           </div>
 
-          <div class="text-center" x-show="['completed','failed','cancelled'].includes(jobStatus.status)">
-            <button @click="resetForm()"
+          <div class="text-center">
+            <button @click="['processing','pending'].includes(jobStatus.status) ? window.open('/', '_blank') : resetForm()"
                     class="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm
                            font-medium transition-colors" x-text="t('startNew')"></button>
           </div>
