@@ -108,7 +108,7 @@ class RefSixClient:
             "guest_team": game.get("guestTeam") or default_guest,
             "date": date_str,
             "time": time_str,
-            "venue": game.get("fieldName") or game.get("venue") or game.get("field") or "",
+            "venue": game.get("fieldName") or game.get("venue") or "",
             "tournament_name": game.get("tournamentName") or game.get("tournament") or "",
         }
 
@@ -496,6 +496,6 @@ if __name__ == "__main__":
     handleRefereeData:HandleRefereeData = container.handle_referee_data()
     refereeGames = handleRefereeData.getRefereeGames(tenantKey=['IL#football#2025-26'], mobileNo='+972547799979', from_date=helpers.localNow() - timedelta(days=1), to_date=helpers.localNow()+timedelta(days=2))
     for refereeGame in refereeGames.values():
-        gameDetail = cacheService.getGameDetail(tenantKey=refereeGame['tenantKey'], game=refereeGame)
+        gameDetail = cacheService.getGameDetail(game=refereeGame)
         result = asyncio.run(refsix_client.create_game_in_refsix(username=username, password=password, game=gameDetail, headless=False))
         print(result)

@@ -181,6 +181,20 @@ def build_config_di(merged_file_config: dict) -> dict:
                 "endpointUrl": ConfigManager.get_env_value('dynamoDbEndpointUrl', _file_env_values)
             }
         },
+        "postgres": {
+            "host":       merged_file_config.get('postgres', {}).get('host',       'localhost'),
+            "port":       ConfigManager.to_int(merged_file_config.get('postgres', {}).get('port', '5432'), 5432),
+            "db":         merged_file_config.get('postgres', {}).get('db',         'postgres'),
+            "user":       merged_file_config.get('postgres', {}).get('user',       'postgres'),
+            "schema":     merged_file_config.get('postgres', {}).get('schema',     'public'),
+            "sslmode":    merged_file_config.get('postgres', {}).get('sslmode',    'prefer'),
+            "use_iam":    ConfigManager.to_bool(merged_file_config.get('postgres', {}).get('use_iam', 'False')),
+            "secret_id":  merged_file_config.get('postgres', {}).get('secret_id',  'prod/refPortalSecret'),
+            "secret_key": merged_file_config.get('postgres', {}).get('secret_key', 'postgres_password'),
+            "ssh_host":   merged_file_config.get('postgres', {}).get('ssh_host',   ''),
+            "ssh_user":   merged_file_config.get('postgres', {}).get('ssh_user',   'ec2-user'),
+            "ssh_key":    merged_file_config.get('postgres', {}).get('ssh_key',    '~/.ssh/id_rsa'),
+        },
         "LLM": {
             "enabled": ConfigManager.to_bool(
                 _llm_source_raw(merged_file_config, _file_env_values, nested_key='enabled', env_key='LLM_ENABLED', default='False')
@@ -192,6 +206,16 @@ def build_config_di(merged_file_config: dict) -> dict:
             "max_tokens": ConfigManager.to_int(
                 _llm_source_raw(merged_file_config, _file_env_values, nested_key='max_tokens', env_key='LLM_MAX_TOKENS', default='4000'),
                 4000,
+            ),
+            "system_query_agent_max_tokens": ConfigManager.to_int(
+                _llm_source_raw(
+                    merged_file_config,
+                    _file_env_values,
+                    nested_key='system_query_agent_max_tokens',
+                    env_key='SYSTEM_QUERY_AGENT_MAX_TOKENS',
+                    default='1500',
+                ),
+                1500,
             ),
             "max_content_size": ConfigManager.to_int(
                 _llm_source_raw(merged_file_config, _file_env_values, nested_key='max_content_size', env_key='LLM_MAX_CONTENT_SIZE', default='50000'),
@@ -257,7 +281,10 @@ def build_config_di(merged_file_config: dict) -> dict:
             "bedrockTruncateModelTokenLimits": _bedrock_truncate_limits,
         },
         "adminMobile": ConfigManager.get_env_value('adminMobile', _file_env_values),
+        "reviewerPairingSecret": ConfigManager.get_env_value('reviewerPairingSecret', _file_env_values),
+        "reviewerDemoMobile": ConfigManager.get_env_value('reviewerDemoMobile', _file_env_values),
         "botMobileNumbers": ConfigManager.get_env_value('botMobileNumbers', _file_env_values),
+        "botSignature": ConfigManager.get_env_value('botSignature', _file_env_values),
         "rootServiceUrlBase": ConfigManager.get_env_value('rootServiceUrlBase', _file_env_values),
         "docsServiceUrlBase": ConfigManager.get_env_value('docsServiceUrlBase', _file_env_values),
         "apiServiceUrlBase": ConfigManager.get_env_value('apiServiceUrlBase', _file_env_values),
@@ -337,6 +364,9 @@ def build_config_di(merged_file_config: dict) -> dict:
         "scheduleAgentEnabled": ConfigManager.to_bool(
             ConfigManager.get_env_value('scheduleAgentEnabled', _file_env_values, 'True')
         ),
+        "systemQueryAgentEnabled": ConfigManager.to_bool(
+            ConfigManager.get_env_value('systemQueryAgentEnabled', _file_env_values, 'True')
+        ),
         "commuteRouteProvider": ConfigManager.get_env_value('commuteRouteProvider', _file_env_values, 'waze'),
         "browserHeadless": ConfigManager.to_bool(ConfigManager.get_env_value('browserHeadless', _file_env_values, 'True')),
         "tracing": ConfigManager.to_bool(ConfigManager.get_env_value('tracing', _file_env_values, 'False')),
@@ -381,6 +411,7 @@ def build_config_di(merged_file_config: dict) -> dict:
             "meta": {
                 "useClient": ConfigManager.to_bool(ConfigManager.get_env_value('useMeta', _file_env_values, 'False')),
                 "from_mobile": ConfigManager.get_env_value('metaFromMobile', _file_env_values),
+                "base_url": ConfigManager.get_env_value('metaBaseUrl', _file_env_values),
                 "api_version": ConfigManager.get_env_value('metaApiVersion', _file_env_values),
                 "phone_number_id": ConfigManager.get_env_value('metaPhoneNumberId', _file_env_values),
                 "whatsapp_business_account_id": ConfigManager.get_env_value('metaWhatsappBusinessAccountId', _file_env_values),
@@ -393,7 +424,8 @@ def build_config_di(merged_file_config: dict) -> dict:
                     "onBoardingJoinConfirmationMessageTemplate": ConfigManager.get_env_value('metaOnBoardingJoinConfirmationMessageTemplate', _file_env_values),
                     "onBoardingRegistrationMessageTemplate": ConfigManager.get_env_value('metaOnBoardingRegistrationMessageTemplate', _file_env_values),
                     "openWindowMessageTemplate": ConfigManager.get_env_value('metaOpenWindowMessageTemplate', _file_env_values),
-                    "gamePortalCodeMessageTemplate": ConfigManager.get_env_value('metaGamePortalCodeMessageTemplate', _file_env_values)
+                    "gamePortalCodeMessageTemplate": ConfigManager.get_env_value('metaGamePortalCodeMessageTemplate', _file_env_values),
+                    "loginOtpMessageTemplate": ConfigManager.get_env_value('metaLoginOtpMessageTemplate', _file_env_values)
                 }
             },
             "manychat": {

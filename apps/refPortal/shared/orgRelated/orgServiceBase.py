@@ -21,6 +21,7 @@ import shared.jsonHelper as jsonHelper
 from shared.handleUsers import HandleUsers
 from shared.logger import Logger
 from shared.db import CacheService
+from shared.db.repositories import TenantRepository
 from shared.orgRelated.multiTenantSupport import MultiTenantSupport
 from shared.configManager import ConfigManager
 
@@ -36,10 +37,11 @@ class OrgServiceEventType(Enum):
     IHA = "handball"
 
 class OrgServiceBase(ABC):
-    def __init__(self, logger:Logger, multiTenantSupport:MultiTenantSupport, cacheService:CacheService, handleUsers:HandleUsers, messagingService:'MessagingService', countryCode:Enum, eventType:Enum):
+    def __init__(self, logger:Logger, multiTenantSupport:MultiTenantSupport, cacheService:CacheService, handleUsers:HandleUsers, messagingService:'MessagingService', countryCode:Enum, eventType:Enum, tenantRepository:TenantRepository=None):
         self.logger = logger
         self.multiTenantSupport = multiTenantSupport
         self.cacheService = cacheService
+        self.tenantRepository = tenantRepository
         self.handleUsers = handleUsers
         self.messagingService = messagingService
         self.countryCode = countryCode
@@ -54,6 +56,7 @@ class OrgServiceBase(ABC):
         self.refereesByMobile = handleUsers.refereesByMobile
         self.refereesByRefId = handleUsers.refereesByRefId
         self.globalRefereesByMobile = handleUsers.globalRefereesByMobile
+        self.refereesByInternalId = handleUsers.refereesByInternalId
         # id(BrowserContext) -> hostnames already primed via FlareSolverr for this session
         self._flare_warmed_hosts_by_context: dict[int, set[str]] = {}
 
@@ -567,6 +570,16 @@ class OrgServiceBase(ABC):
         name = name.replace("׳","'")
         return name
 
+    def _linkRefereeToTenant(self, tenantKey, refereeId, internalRefereeId, default_status='active'):
+        """Ensure a tenant_referees row exists linking refereeId to this tenant with the given
+        source-system internalRefereeId, preserving any existing status/role/etc. rather than
+        clobbering them back to defaults."""
+        existing = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeId) or {}
+        existingDetail = dict(next(iter(existing.values()), {})) if existing else {}
+        existingDetail['internalRefereeId'] = internalRefereeId
+        existingDetail.setdefault('status', default_status)
+        self.cacheService.dbClient.setTenantRefereeProperties(tenantKey=tenantKey, refereeId=refereeId, value=existingDetail)
+
     @abstractmethod
     def setFetchDates(self, refereeData):
         pass
@@ -605,15 +618,27 @@ class OrgServiceBase(ABC):
         
         now = helpers.localNow()
         currentList = {}
-        if objType == 'games':
+        if objType in ('games', 'reviews'):
+            # fromDate/toDate are None for some tenants (e.g. IFA reviews) - treat as unbounded.
+            fromDate = refereeData[objType].get('fromDate')
+            toDate = refereeData[objType].get('toDate')
             for gamePk, parsedItem in parsedList.items():
-                if (
-                    parsedItem.get('date').date() < refereeData[objType]['fromDate']
-                    or parsedItem.get('date').date() > refereeData[objType]['toDate']
+                itemDate = parsedItem.get('date')
+                if itemDate and (
+                    (fromDate and itemDate.date() < fromDate)
+                    or (toDate and itemDate.date() > toDate)
                 ):
                     continue
                 prevItem = refereeData[objType]['prevList'].get(gamePk)
-                parsedItem['state'] = prevItem and prevItem.get('date') < now and prevItem.get('state', 'active') or 'active'
+                #parsedItem['state'] = prevItem and prevItem.get('date') < now and prevItem.get('state', 'active') or 'active'
+                # itemDate comes from freshly-scraped/parsed data and may be offset-naive while
+                # `now` (helpers.localNow()) is always offset-aware - localize before comparing.
+                itemDateAware = helpers.ensure_aware(itemDate) if itemDate else None
+                parsedItem['state'] = prevItem.get('state', 'active') if prevItem and itemDateAware and itemDateAware + timedelta(days=4/24) < now else 'active'
+                # Freshly-scraped items don't carry tenantKey (unlike prevList, which is read back
+                # from the DB where it's a dedicated column) - notification handling downstream
+                # reads it directly off the item, so it must be set here.
+                parsedItem.setdefault('tenantKey', tenantKey)
                 currentList[gamePk] = parsedItem
 
         refereeData[objType]['currentList'] = currentList
@@ -627,9 +652,9 @@ class OrgServiceBase(ABC):
     async def generatePostGameUpdateTemplate(self, gameDetail):
         pass
 
-    async def getPostGameUpdateTemplate(self, refId, gameId):
+    async def getPostGameUpdateTemplate(self, refereeId, gameId):
         gameDetail = self.cacheService.getGameDetailById(gameId=gameId)
-        if gameDetail is None or refId not in gameDetail.get('mainReferees', []):
+        if gameDetail is None or refereeId not in gameDetail.get('mainReferees', []):
             return None
 
         msg = await self.generatePostGameUpdateTemplate(gameDetail=gameDetail)
@@ -669,10 +694,10 @@ class OrgServiceBase(ABC):
                 if tournamentName and tournamentName != _tournamentName:
                     continue
                 if _tournament.get('section'):
-                    section = self.cacheService.get_section_by_name(tenantKey=tenantKey, sectionName=_tournament['section'])
+                    section = self.tenantRepository.get_section(tenant_key=tenantKey, section_name=_tournament['section'])
                     if section:
                         await self.refreshLeaguesTablesByTournament(page=page, tournament=_tournament, section=section)
-            
+
             await browser.close()
 
     @abstractmethod
@@ -698,12 +723,13 @@ class OrgServiceBase(ABC):
             result = self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=newGamePk, value=gameDetail)
             self.cacheService.deleteTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=oldGamePk)
             
-            for refId in gameDetail.get('refereeIds', []):
-                gameReferee = self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=oldGamePk)
+            for refereeId in gameDetail.get('refereeIds', []):
+                gameReferees = self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=refereeId)
+                gameReferee = next(iter(gameReferees.values()), None) if gameReferees else None
                 if gameReferee:
                     gameReferee['gamePk'] = newGamePk
-                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=newGamePk, value=gameReferee)
-                    self.cacheService.deleteRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=oldGamePk)
+                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refereeId=refereeId, gamePk=newGamePk, value=gameReferee)
+                    self.cacheService.deleteRefereeGame(tenantKey=tenantKey, refereeId=refereeId, gamePk=oldGamePk)
 
             return result[0]
 
@@ -755,7 +781,7 @@ class OrgServiceBase(ABC):
                         continue
                     if instance is not None and int(_tournament.get('leagueId') or _tournament.get('nationalCupId') or '0') % 2 != instance:
                         continue
-                    section = self.cacheService.get_section_by_name(tenantKey=tenantKey, sectionName=_tournament['section'])
+                    section = self.tenantRepository.get_section(tenant_key=tenantKey, section_name=_tournament['section'])
                     scrapResults = 'ילד' not in _tournamentName
                     if fetchGamesUrls:
                         tournamentGamesUrl = await self.getTournamentGamesUrl(page=page, tournament=_tournament, round=round, fixture=fixture, fromFixture=fromFixture)
@@ -833,7 +859,7 @@ class OrgServiceBase(ABC):
                                 continue
                             if not gameDetail.get('date'):
                                 continue
-                            if gameDetail.get('date') > now:
+                            if helpers.ensure_aware(gameDetail.get('date')) > now:
                                 continue
                             if False and not gameDetail.get('url'):
                                 tmpTournamentGames = await self.getTournamentGamesUrl(page=page, tournament=_tournament, round=int(gameDetail.get('round', '0')), fixture=int(gameDetail.get('fixture', '0')))
@@ -844,7 +870,7 @@ class OrgServiceBase(ABC):
                                 for referee in gameDetail.get('referees'):
                                     if referee.get('* phone'):
                                         refereeGame = {'date': gameDetail.get('date'), 'role': referee.get('role'), 'state': 'active', 'status': 'מאושר', 'tournamentName': _tournamentName }
-                                        self.cacheService.setRefereeGameNew(tenantKey=tenantKey, mobileNo=referee.get('* phone'), gamePk=gameDetail.get('gamePk'), value=refereeGame)
+                                        self.cacheService.setRefereeGame(tenantKey=tenantKey, mobileNo=referee.get('* phone'), gamePk=gameDetail.get('gamePk'), value=refereeGame)
                                 gameDetail['refereesUpdatedAt'] = now
                                 self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=_tournamentName, gamePk=gameDetail.get('gamePk'), value=gameDetail)
                         _tournament['lastFetchGamesDetails'] = now
@@ -962,7 +988,7 @@ class OrgServiceBase(ABC):
             await stealth.apply_stealth_async(context)
             page = await context.new_page()
             refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-            tenant = self.cacheService.getTenants().get(tenantKey)
+            tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
             now = helpers.localNow()
             refereeData = {
                 'refereeDetail': refereeDetail,

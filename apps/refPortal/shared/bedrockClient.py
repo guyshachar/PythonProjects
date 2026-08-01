@@ -441,6 +441,13 @@ class BedrockClient():
                             f"Validation/input issue for model {current_model_id} ({error_msg[:200]}), trying next..."
                         )
                         continue
+                    elif "ModelErrorException" in error_msg or "ThrottlingException" in error_msg or "ServiceUnavailableException" in error_msg or "InternalServerException" in error_msg:
+                        # Transient/model-specific hiccups - AWS's own guidance is to just retry, so
+                        # fail over to the next candidate instead of erroring out.
+                        self.logger.warning(
+                            f"Transient error for model {current_model_id} ({error_msg[:200]}), trying next..."
+                        )
+                        continue
                     else:
                         self.logger.error(f"Bedrock model invocation error for {current_model_id}:", ex)
                         return {"error": f"Bedrock error: {ex}"}
@@ -454,6 +461,85 @@ class BedrockClient():
         except Exception as ex:
             self.logger.error(f"Unexpected error during model invocation:", ex)
             return {"error": f"Unexpected error: {ex}"}
+
+    def converse_with_tools(self, messages: list, system: str, tools: list,
+                             model_id: str, fallback_model_ids: list = None,
+                             max_tokens: int = 1500, temperature: float = 0.2) -> dict:
+        """Bedrock Converse API call with tool-calling (toolConfig) support - distinct from
+        invoke_model_async's raw InvokeModel path, since tool use needs the Converse API's
+        structured message/toolUse/toolResult content blocks. Returns the assistant's message
+        content blocks + stopReason so the caller can drive a tool-use loop (inspect stopReason
+        == 'tool_use' vs 'end_turn')."""
+        if not self.bedrockRuntime:
+            self.logger.error("Bedrock runtime client not initialized")
+            return {"error": "Bedrock runtime client not available - check AWS configuration"}
+
+        models_to_try = []
+        seen = set()
+        for mid in [model_id] + list(fallback_model_ids or []):
+            for variant in self._inference_profile_variants(mid):
+                if variant not in seen:
+                    seen.add(variant)
+                    models_to_try.append(variant)
+
+        tool_config = {"tools": tools} if tools else None
+
+        for current_model_id in models_to_try:
+            try:
+                kwargs = dict(
+                    modelId=current_model_id,
+                    messages=messages,
+                    inferenceConfig={"maxTokens": max_tokens, "temperature": temperature},
+                )
+                if system:
+                    kwargs["system"] = [{"text": system}]
+                if tool_config:
+                    kwargs["toolConfig"] = tool_config
+
+                response = self.bedrockRuntime.converse(**kwargs)
+
+                usage = response.get('usage') or {}
+                token_usage = {}
+                if usage:
+                    token_usage = {
+                        'input_tokens': usage.get('inputTokens'),
+                        'output_tokens': usage.get('outputTokens'),
+                        'total_tokens': usage.get('totalTokens'),
+                    }
+                    self.logger.info(f"Token usage for model {current_model_id}: {token_usage}")
+
+                output_message = response.get('output', {}).get('message', {})
+                return {
+                    "stopReason": response.get('stopReason'),
+                    "message": output_message,
+                    "model_id": current_model_id,
+                    "token_usage": token_usage,
+                }
+
+            except (BotoCoreError, ClientError) as ex:
+                error_msg = str(ex)
+                if "AccessDeniedException" in error_msg:
+                    self.logger.warning(f"Access denied for model {current_model_id}, trying next model...")
+                    continue
+                elif "ResourceNotFoundException" in error_msg:
+                    self.logger.warning(f"Model unavailable for {current_model_id}, trying next model...")
+                    continue
+                elif "ValidationException" in error_msg:
+                    self.logger.warning(f"Validation issue for model {current_model_id} ({error_msg[:200]}), trying next...")
+                    continue
+                elif "ModelErrorException" in error_msg or "ThrottlingException" in error_msg or "ServiceUnavailableException" in error_msg or "InternalServerException" in error_msg:
+                    # Transient/model-specific hiccups (e.g. "Model produced invalid sequence as part of
+                    # ToolUse") - AWS's own guidance is to just retry, so fail over instead of erroring out.
+                    self.logger.warning(f"Transient error for model {current_model_id} ({error_msg[:200]}), trying next...")
+                    continue
+                else:
+                    self.logger.error(f"Bedrock converse error for {current_model_id}:", ex)
+                    return {"error": f"Bedrock error: {ex}"}
+            except Exception as ex:
+                self.logger.error(f"Unexpected error during converse for {current_model_id}:", ex)
+                continue
+
+        return {"error": "All available models failed - please check AWS Bedrock model access"}
 
 if __name__ == '__main__':
     # Example usage of the new log_token_usage method

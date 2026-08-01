@@ -1,6 +1,8 @@
 import logging
 import sys
+import time
 import boto3
+from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime, timezone, timedelta
 import os
@@ -15,7 +17,7 @@ import shared.jsonHelper as jsonHelper
 from shared.db.dbClientBase import DbClientBase
 from shared.db.cacheDecorator import CacheDecorator
 from shared.logger import Logger
-from shared.enumTypes import EntityType
+from shared.db.enumTypes import EntityType
 
 class DynamodbClient(DbClientBase):
     def __init__(self, env, logger:Logger, dynamodbResource, dynamodbClient):
@@ -70,7 +72,7 @@ class DynamodbClient(DbClientBase):
         dumps = jsonHelper.save_to_json(value)
         return hashlib.sha256(dumps.encode()).hexdigest()
 
-    def valueChanged(self, value:dict):
+    def valueChanged(self, value:dict=None):
         prevContentHash = value.get("content_hash")
         newValue = jsonHelper.preJsonSetToDynamoDb(obj=value, excludeProps=[ 'updated', 'content_hash' ])
         currentContentHash = self.get_hash(newValue)
@@ -87,7 +89,7 @@ class DynamodbClient(DbClientBase):
             self.logger.error(f'Error in DynamoDb put_item', ex)
             return None
 
-    def set(self, tableName, value, tenantKey='GLOBAL', batchWriter=None, expiry=None, jsonDumps=False, **entityKeys):
+    def set(self, tableName=None, value=None, tenantKey='GLOBAL', batchWriter=None, expiry=None, jsonDumps=False, **entityKeys):
         try:
             if jsonDumps:
                 value = jsonHelper.save_to_json(value)
@@ -149,7 +151,7 @@ class DynamodbClient(DbClientBase):
 
         return value, False
 
-    def get(self, tableName, tenantKey='GLOBAL', jsonDumps=False, **entityKeys):
+    def get(self, tableName=None, tenantKey='GLOBAL', jsonDumps=False, **entityKeys):
         try:
             key = self.getKey(tableName=tableName, tenantKey=tenantKey, **entityKeys)
             table = self.getTable(tableName=tableName)['table']
@@ -191,17 +193,7 @@ class DynamodbClient(DbClientBase):
         'jsonDumps', 'skipConversion', 'recentDays', 'asIsEntityKey', 'filters1',
     })
 
-    def getDict(
-        self,
-        entityType: EntityType,
-        tenantKey: str = 'GLOBAL',
-        entityKeys: Optional[List[Tuple[str, str]]] = None,
-        queryIterations: list = None,
-        jsonDumps: bool = False,
-        skipConversion: bool = False,
-        recentDays: Any = None,
-        asIsEntityKey: bool = False,
-    ):
+    def getDict(self, entityType:EntityType=None, tenantKey:str='GLOBAL', entityKeys:Optional[List[Tuple[str, str]]]=None, queryIterations:list=None, jsonDumps:bool=False, skipConversion:bool=False, recentDays:Any=None, asIsEntityKey:bool=False):
         try:
             table = self.getTable(tableName=str(entityType))
             meta = DbClientBase.CacheTypes.get(entityType) or {}
@@ -313,7 +305,7 @@ class DynamodbClient(DbClientBase):
                     entityColValue = entityColValue[1:]
                     self.set(tableName=tableName, tenantKey=tenantKey, value=value, **{entityKeyCol: entityColValue})
 
-    def setDict(self, tableName, data, entityKeyColumns:list[str]):
+    def setDict(self, tableName=None, data=None, entityKeyColumns:list[str]=None):
         try:
             if not isinstance(data, dict):
                 return
@@ -477,15 +469,15 @@ class DynamodbClient(DbClientBase):
             self.logger.error(f'Error processing table {tableName} in batches: {id}', ex)
             return total_processed
 
-    def exists(self, tableName, tenantKey, **entityKeys):
+    def exists(self, tableName=None, tenantKey=None, **entityKeys):
         # Use tenant-aware key generation
         result = self.get(tableName=tableName, tenantKey=tenantKey, **entityKeys)
         return result != None
 
-    def rename(self, oldKey, newKey):
+    def rename(self, oldKey=None, newKey=None):
         pass
 
-    def delete(self, tableName, tenantKey, **entityKeys):
+    def delete(self, tableName=None, tenantKey=None, **entityKeys):
         table = self.getTable(tableName=tableName)
         # Use tenant-aware key generation
         key = self.getKey(tableName=tableName, tenantKey=tenantKey, **entityKeys)
@@ -495,12 +487,12 @@ class DynamodbClient(DbClientBase):
         )
         pass
 
-    def deleteByFilter(self, tableName, tenantKey, filters, **entityKeys):
+    def deleteByFilter(self, tableName=None, tenantKey=None, filters=None, **entityKeys):
         items = self.getDict(tableName=tableName, tenantKey=tenantKey, filters=filters, **entityKeys)
         for entityKey in items:
             self.delete(tableName=tableName, tenantKey=tenantKey, **entityKeys)
 
-    def truncate(self, tableName):
+    def truncate(self, tableName=None):
         table = self.getTable(tableName=tableName)
         tenantKeyCol = table['tenantKey']
         entityKeyCol = table.get('entityKey')
@@ -519,7 +511,7 @@ class DynamodbClient(DbClientBase):
                         key[entityKeyCol] = item[entityKeyCol]
                     batch.delete_item(Key=key)  # Adjust if SortKey exists
 
-    def getFields(self, tenantKey, fieldName=None, contains_filterText=None):
+    def getFields(self, tenantKey=None, fieldName=None, contains_filterText=None):
         try:
             _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.FIELDS, tenantKey=tenantKey, fieldName=fieldName, contains_filterText=contains_filterText)
             value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
@@ -528,23 +520,23 @@ class DynamodbClient(DbClientBase):
             self.logger.error(f'Error getting fields for {tenantKey}:', ex)
             return {}
 
-    def setField(self, tenantKey, fieldName, value):
+    def setField(self, tenantKey=None, fieldName=None, value=None):
         return self.set(tableName='fields', tenantKey=tenantKey, value=value, fieldName=fieldName)
 
-    def getRoles(self, tenantKey, roleName=None, contains_roleName=None,**entityKeys):
+    def getRoles(self, tenantKey=None, roleName=None, contains_roleName=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.ROLES, tenantKey=tenantKey, roleName=roleName, contains_roleName=contains_roleName)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setRole(self, tenantKey, roleName, value):
+    def setRole(self, tenantKey=None, roleName=None, value=None):
         return self.set(tableName='roles', tenantKey=tenantKey, value=value, roleName=roleName)
 
-    def getRules(self, tenantKey, ruleName=None, **entityKeys):
+    def getRules(self, tenantKey=None, ruleName=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.RULES, tenantKey=tenantKey, ruleName=ruleName)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setRule(self, tenantKey, ruleName, value):
+    def setRule(self, tenantKey=None, ruleName=None, value=None):
         return self.set(tableName='rules', tenantKey=tenantKey, value=value, ruleName=ruleName)
 
     def getSeasons(self, season=None, **entityKeys):
@@ -552,34 +544,34 @@ class DynamodbClient(DbClientBase):
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setSeason(self, season, value):
+    def setSeason(self, season=None, value=None):
         return self.set(tableName='seasons', value=value, season=season)
 
-    def getSections(self, tenantKey, sectionName=None, **entityKeys):
+    def getSections(self, tenantKey=None, sectionName=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.SECTIONS, tenantKey=tenantKey, sectionName=sectionName)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setSection(self, tenantKey, sectionName, value):
+    def setSection(self, tenantKey=None, sectionName=None, value=None):
         return self.set(tableName='sections', tenantKey=tenantKey, value=value, sectionName=sectionName)
 
-    def getTournaments(self, tenantKey, tournamentName=None, **entityKeys):
+    def getTournaments(self, tenantKey=None, tournamentName=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.TOURNAMENTS, tenantKey=tenantKey, tournamentName=tournamentName)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setTournament(self, tenantKey, tournamentName, value):
+    def setTournament(self, tenantKey=None, tournamentName=None, value=None):
         return self.set(tableName='tournaments', tenantKey=tenantKey, value=value, tournamentName=tournamentName)
 
-    def getLeagueTables(self, tenantKey, tournamentName,  **entityKeys):
+    def getLeagueTables(self, tenantKey=None, tournamentName=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.LEAGUETABLES, tenantKey=tenantKey, tournamentName=tournamentName)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations, jsonDumps=True)
         return value
 
-    def setLeagueTable(self, tenantKey, tournamentName, value):
+    def setLeagueTable(self, tenantKey=None, tournamentName=None, value=None):
         return self.set(tableName='leagueTables', tenantKey=tenantKey, value=value, jsonDumps=True, tournamentName=tournamentName)
 
-    def getTournamentGames(self, tenantKey, tournamentName, gamePk=None, nonArchivedOnly=False, filters=[], **entityKeys):
+    def getTournamentGames(self, tenantKey=None, tournamentName=None, gamePk=None, nonArchivedOnly=False, filters=[], **entityKeys):
         filters = []
         if nonArchivedOnly:
             from_date = helpers.localNow().date().isoformat()
@@ -592,11 +584,11 @@ class DynamodbClient(DbClientBase):
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
     
-    def setTournamentGame(self, tenantKey, tournamentName, gamePk, value):
+    def setTournamentGame(self, tenantKey=None, tournamentName=None, gamePk=None, value=None):
         currentValue = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
         if value and 'id' in value:
             referenceValue = {'tenantKey': tenantKey, 'gameId': value['id'], 'tournamentName': tournamentName, 'gamePk': gamePk}
-            self.setReferenceId(target='tournamentGames', id=value['id'], value=referenceValue)
+            self.setReferenceId(target='tournamentGames', target_id=value['id'], value=referenceValue)
 
         try:
             if currentValue:
@@ -616,16 +608,16 @@ class DynamodbClient(DbClientBase):
         
         return self.set(tableName='tournamentGames', tenantKey=tenantKey, value=value, tournamentName=tournamentName, gamePk=gamePk)
 
-    def archiveTournamentGame(self, tenantKey, tournamentName, gamePk):
+    def archiveTournamentGame(self, tenantKey=None, tournamentName=None, gamePk=None):
         value = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
         if value:
             changed = self.set(tableName='tournamentGamesArchived', tenantKey=tenantKey, value=value, tournamentName=tournamentName, gamePk=gamePk)
             self.delete(tableName='tournamentGames', tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
 
-    def deleteTournamentGame(self, tenantKey, tournamentName, gamePk):
+    def deleteTournamentGame(self, tenantKey=None, tournamentName=None, gamePk=None):
         self.delete(tableName='tournamentGames', tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
 
-    def getTournamentGamesArchived(self, tenantKey, tournamentName, gamePk=None, **entityKeys):
+    def getTournamentGamesArchived(self, tenantKey=None, tournamentName=None, gamePk=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.TOURNAMENTGAMESARCHIVED, tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
@@ -635,14 +627,33 @@ class DynamodbClient(DbClientBase):
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def getRefereeProperties(self, tenantKey='GLOBAL', mobileNo=None, propertyName=None, **entityKeys):
+    def getRefereeProperties(self, mobileNo=None, refereeId=None, propertyName=None, **entityKeys):
+        # refereeId (postgres-only global surrogate key) has no Dynamo equivalent; accepted
+        # for cross-backend signature parity but only mobileNo is usable here.
+        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREES, tenantKey='GLOBAL', mobileNo=mobileNo)
+        value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
+        if mobileNo and propertyName and value:
+            value = list(value.values())[0].get(propertyName)
+        return value
+
+    def setRefereeProperties(self, mobileNo=None, refereeId=None, value=None, propertyName=None, **entityKeys):
+        item = value
+        if propertyName:
+            item = self.getReferee(tenantKey='GLOBAL', mobileNo=mobileNo)
+            if not item:
+                return
+            item = item[mobileNo]
+            item[propertyName] = value
+        return self.set(tableName='referees', tenantKey='GLOBAL', value=item, mobileNo=mobileNo)
+
+    def getTenantRefereeProperties(self, tenantKey:str=None, mobileNo=None, refereeId=None, propertyName=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREES, tenantKey=tenantKey, mobileNo=mobileNo)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         if mobileNo and propertyName and value:
             value = list(value.values())[0].get(propertyName)
         return value
 
-    def setRefereeProperties(self, tenantKey, mobileNo, value, propertyName=None):
+    def setTenantRefereeProperties(self, tenantKey:str=None, mobileNo:str=None, refereeId=None, value=None, propertyName=None, **entityKeys):
         item = value
         if propertyName:
             item = self.getReferee(tenantKey=tenantKey, mobileNo=mobileNo)
@@ -652,12 +663,14 @@ class DynamodbClient(DbClientBase):
             item[propertyName] = value
         return self.set(tableName='referees', tenantKey=tenantKey, value=item, mobileNo=mobileNo)
 
-    def getRefereeAvailaiblity(self, mobileNo:str, from_date:datetime=None, to_date:datetime=None):
+    def getRefereeAvailaiblity(self, mobileNo:str=None, refereeId=None, from_date:datetime=None, to_date:datetime=None, **entityKeys):
+        # refereeId (Postgres surrogate key) has no equivalent here — DynamoDB keys
+        # referee availability by mobileNo only.
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEAVAILABILITY, mobileNo=mobileNo, from_date=from_date, to_date=to_date)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations, skipConversion=True)
         return value
 
-    def setRefereeAvailaiblity(self, mobileNo:str, value):
+    def setRefereeAvailaiblity(self, mobileNo:str=None, refereeId=None, value=None, **entityKeys):
         updated = False
         for date, availability in value.items():
             availability['mobileNo'] = mobileNo
@@ -668,13 +681,13 @@ class DynamodbClient(DbClientBase):
         return updated
         #return self.setDict(tableName='refereeAvailability', data=value, entityKeyColumns=entityKeyColumns)
 
-    def getClientIdentifier(self, clientIdentifier, from_created: datetime = None, **entityKeys):
+    def getClientIdentifier(self, clientIdentifier=None, from_created:datetime=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.CLIENTIDENTIFIERS, tenantKey='GLOBAL', clientIdentifier=clientIdentifier, from_created=from_created)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         #self.logger.info(f"getClientIdentifier clientIdentifier: {clientIdentifier} value: {value}")
         return value
 
-    def setClientIdentifier(self, clientIdentifier, sessionIdentifier, pushSubscription=None, mobileNo=None, userAgent=None, platform=None, status=None):
+    def setClientIdentifier(self, clientIdentifier=None, sessionIdentifier=None, pushSubscription=None, mobileNo=None, refereeId=None, userAgent=None, platform=None, status=None):
         value = self.getClientIdentifier(clientIdentifier)
         if isinstance(value, dict) and value.get(clientIdentifier):
             value = value[clientIdentifier]
@@ -696,7 +709,7 @@ class DynamodbClient(DbClientBase):
         #self.logger.info(f"setClientIdentifier clientIdentifier: {clientIdentifier} mobileNo: {mobileNo} value :{value}")
         return self.set(tableName='clientIdentifiers', value=value, clientIdentifier=clientIdentifier)
 
-    def getRefereeGames(self, tenantKey, refId, gamePk=None, includeArchived=False, includeRemoved=False, includeCanceled=False, from_date:datetime = None, to_date:datetime = None, from_created:datetime = None, to_created:datetime = None, **entityKeys):
+    def getRefereeGames(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None, includeArchived=False, includeRemoved=False, includeCanceled=False, from_date:datetime=None, to_date:datetime=None, from_created:datetime=None, to_created:datetime=None, **entityKeys):
         filters = []
         if includeArchived == False:
             filters.append(('state', {'condition': 'neq', 'value': 'archived' }))
@@ -704,114 +717,72 @@ class DynamodbClient(DbClientBase):
             filters.append(('state', {'condition': 'neq', 'value': 'removed' }))
         if includeCanceled == False:
             filters.append(('state', {'condition': 'neq', 'value': 'canceled' }))
-        entityType, tenantKey, entityKeys, queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEGAMES, tenantKey=tenantKey, refId=refId, gamePk=gamePk, filters=filters, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
+        entityType, tenantKey, entityKeys, queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEGAMES, tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, gamePk=gamePk, filters=filters, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
         value = self.getDict(entityType=entityType, tenantKey=tenantKey, entityKeys=entityKeys, queryIterations=queryIterations)
         return value
 
-    def getRefereeGamesNew(self, tenantKey, mobileNo, gamePk=None, includeArchived=False, includeRemoved=False, includeCanceled=False, from_date:datetime = None, to_date:datetime = None, from_created:datetime = None, to_created:datetime = None, **entityKeys):
-        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEGAMES, tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, includeArchived=includeArchived, includeRemoved=includeRemoved, includeCanceled=includeCanceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
-        value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
-        return value
-
-    def setRefereeGame(self, tenantKey, refId, gamePk, value):
+    def setRefereeGame(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None, value=None):
         gameDetail = None
         if value.get('gameDetail'):
             gameDetail = value['gameDetail']
             del value['gameDetail']
-            
-        result = self.set(tableName='refereeGames', tenantKey=tenantKey, value=value, refId=refId, gamePk=gamePk)
+
+        refKey = {'mobileNo': mobileNo} if mobileNo else {'refId': refId}
+        result = self.set(tableName='refereeGames', tenantKey=tenantKey, value=value, gamePk=gamePk, **refKey)
         if gameDetail:
             value['gameDetail'] = gameDetail
 
         return result
 
-    def setRefereeGameNew(self, tenantKey, mobileNo, gamePk, value):
-        gameDetail = None
-        if value.get('gameDetail'):
-            gameDetail = value['gameDetail']
-            del value['gameDetail']
-            
-        result = self.set(tableName='refereeGames', tenantKey=tenantKey, value=value, mobileNo=mobileNo, gamePk=gamePk)
-        if gameDetail:
-            value['gameDetail'] = gameDetail
-
-        return result
-
-    def removeRefereeGame(self, tenantKey, refId, gamePk):
-        value = self.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
+    def removeRefereeGame(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None):
+        refKey = {'mobileNo': mobileNo} if mobileNo else {'refId': refId}
+        value = self.getRefereeGames(tenantKey=tenantKey, gamePk=gamePk, **refKey)
         if value:
-            self.set(tableName='refereeGamesRemoved', value=value, refId=refId, gamePk=gamePk)
-            self.delete(tableName='refereeGames', tenantKey=tenantKey, refId=refId, gamePk=gamePk)
+            self.set(tableName='refereeGamesRemoved', value=value, gamePk=gamePk, **refKey)
+            self.delete(tableName='refereeGames', tenantKey=tenantKey, gamePk=gamePk, **refKey)
 
-    def removeRefereeGameNew(self, tenantKey, mobileNo, gamePk):
-        value = self.getRefereeGamesNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
+    def archiveRefereeGame(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None):
+        refKey = {'mobileNo': mobileNo} if mobileNo else {'refId': refId}
+        value = self.getRefereeGames(tenantKey=tenantKey, gamePk=gamePk, **refKey)
         if value:
-            self.set(tableName='refereeGamesRemoved', value=value, mobileNo=mobileNo, gamePk=gamePk)
-            self.delete(tableName='refereeGames', tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
+            self.set(tableName='refereeGamesArchived', tenantKey=tenantKey, value=value, gamePk=gamePk, **refKey)
+            self.delete(tableName='refereeGames', tenantKey=tenantKey, gamePk=gamePk, **refKey)
 
-    def archiveRefereeGame(self, tenantKey, refId, gamePk):
-        value = self.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
-        if value:
-            self.set(tableName='refereeGamesArchived', tenantKey=tenantKey, value=value, refId=refId, gamePk=gamePk)
-            self.delete(tableName='refereeGames', tenantKey=tenantKey, refId=refId, gamePk=gamePk)
-
-    def archiveRefereeGameNew(self, tenantKey, mobileNo, gamePk):
-        value = self.getRefereeGames(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-        if value:
-            self.set(tableName='refereeGamesArchived', tenantKey=tenantKey, value=value, mobileNo=mobileNo, gamePk=gamePk)
-            self.delete(tableName='refereeGames', tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-
-    def getRefereeReviews(self, tenantKey, refId=None, gamePk=None, removed=False, from_date=None, to_date=None, **entityKeys):
+    def getRefereeReviews(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None, removed=False, from_date=None, to_date=None, **entityKeys):
         filters = []
         if removed:
             filters.append(('state', {'condition': 'neq', 'value': 'removed' }))
-        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEREVIEWS, tenantKey=tenantKey, refId=refId, gamePk=gamePk, filters=filters, from_date=from_date, to_date=to_date)
+        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEREVIEWS, tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, gamePk=gamePk, filters=filters, from_date=from_date, to_date=to_date)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def getRefereeReviewsNew(self, tenantKey, mobileNo, gamePk=None, removed=False, from_date=None, to_date=None, **entityKeys):
-        filters = []
-        if removed:
-            filters.append(('state', {'condition': 'neq', 'value': 'removed' }))
-        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEREVIEWS, tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, filters=filters, from_date=from_date, to_date=to_date)
-        value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
-        return value
+    def setRefereeReview(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None, value=None):
+        refKey = {'mobileNo': mobileNo} if mobileNo else {'refId': refId}
+        return self.set(tableName='refereeReviews', tenantKey=tenantKey, value=value, gamePk=gamePk, **refKey)
 
-    def setRefereeReview(self, tenantKey, refId, gamePk, value):
-        return self.set(tableName='refereeReviews', tenantKey=tenantKey, value=value, refId=refId, gamePk=gamePk)
-
-    def setRefereeReviewNew(self, tenantKey, mobileNo, gamePk, value):
-        return self.set(tableName='refereeReviews', tenantKey=tenantKey, value=value, mobileNo=mobileNo, gamePk=gamePk)
-
-    def removeRefereeReview(self, tenantKey, refId, gamePk):
-        value = self.getRefereeReviews(refId, gamePk)
+    def removeRefereeReview(self, tenantKey=None, refId=None, mobileNo=None, gamePk=None):
+        refKey = {'mobileNo': mobileNo} if mobileNo else {'refId': refId}
+        value = self.getRefereeReviews(tenantKey=tenantKey, gamePk=gamePk, **refKey)
         if value:
-            #self.set('refereeGamesRemoved', value, refId, gamePk)
-            self.delete(tableName='refereeReviews', tenantKey=tenantKey, refId=refId, gamePk=gamePk)
+            self.delete(tableName='refereeReviews', tenantKey=tenantKey, gamePk=gamePk, **refKey)
 
-    def removeRefereeReviewNew(self, tenantKey, mobileNo, gamePk):
-        value = self.getRefereeReviewsNew(mobileNo, gamePk)
-        if value:
-            #self.set('refereeGamesRemoved', value, refId, gamePk)
-            self.delete(tableName='refereeReviews', tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-
-    def getRefereeTemplates(self, tenantKey, mobileNo, action:str = None, msgSid:str = None, status:str = None, from_created: datetime = None, to_created: datetime = None, from_updated: datetime = None, to_updated: datetime = None, **entityKeys):
+    def getRefereeTemplates(self, tenantKey=None, mobileNo=None, action:str=None, msgSid:str=None, status:str=None, from_created:datetime=None, to_created:datetime=None, from_updated:datetime=None, to_updated:datetime=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREETEMPLATES, tenantKey=tenantKey, mobileNo=mobileNo, action=action, msgSid=msgSid, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setRefereeTemplate(self, tenantKey, mobileNo, msgSid, value):
+    def setRefereeTemplate(self, tenantKey=None, mobileNo=None, msgSid=None, value=None, **entityKeys):
         return self.set(tableName='refereeTemplates', tenantKey=tenantKey, value=value, mobileNo=mobileNo, msgSid=msgSid)
 
-    def getRefereeMessages(self, mobileNo, direction, msgSid=None, recentDays=None, from_created=None, to_created=None, **entityKeys):
+    def getRefereeMessages(self, mobileNo=None, direction=None, msgSid=None, recentDays=None, from_created=None, to_created=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREEMESSAGES, mobileNo=mobileNo, direction=direction, msgSid=msgSid, recentDays=recentDays, from_created=from_created, to_created=to_created)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations, recentDays=recentDays)
         return value
 
-    def setRefereeMessage(self, mobileNo, direction, msgSid, value):
+    def setRefereeMessage(self, mobileNo=None, direction=None, msgSid=None, value=None, **entityKeys):
         return self.set(tableName='refereeMessages', value=value, mobileNo=mobileNo, direction=direction, msgSid=msgSid)
 
-    def getGameDetail(self, game:dict, **entityKeys):
+    def getGameDetail(self, game:dict=None, **entityKeys):
         tenantKey = game.get('tenantKey')
         tournamentName = game.get('tournamentName')
         gamePk = game.get('gamePk')
@@ -820,8 +791,8 @@ class DynamodbClient(DbClientBase):
         gameDetail = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, **entityKeys)        
         return gameDetail
 
-    def getGameDetailById(self, gameId:str, **entityKeys):
-        reference = self.getReferenceId(target='tournamentGames', id=gameId)
+    def getGameDetailById(self, gameId:str=None, **entityKeys):
+        reference = self.getReferenceId(target='tournamentGames', target_id=gameId)
         if reference is None:
             return None
         tenantKey = reference.get('tenantKey')
@@ -832,60 +803,60 @@ class DynamodbClient(DbClientBase):
         gameDetail = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, **entityKeys)        
         return gameDetail
 
-    def getMessage(self, msgSid, **entityKeys):
+    def getMessage(self, msgSid=None, **entityKeys):
         value = self.get(tableName='messages', msgSid=msgSid, **entityKeys)
         return value
 
-    def setMessage(self, msgSid, value, **entityKeys):
+    def setMessage(self, msgSid=None, value=None, **entityKeys):
         return self.set(tableName='messages', value=value, msgSid=msgSid, **entityKeys)
 
-    def getKeyVal(self, key, **entityKeys):
+    def getKeyVal(self, key=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.KEYVAL, key=key)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations, jsonDumps=True)
         return value
 
-    def setKeyVal(self, key, value):
+    def setKeyVal(self, key=None, value=None):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.KEYVAL, key=key)
         return self.set(tableName=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations, value=value, jsonDumps=True)
 
-    def getPositionUpdates(self, mobileNo, **entityKeys):
+    def getPositionUpdates(self, mobileNo=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.POSITIONUPDATES, mobileNo=mobileNo)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setPositionUpdate(self, mobileNo, timestamp, value):
+    def setPositionUpdate(self, mobileNo=None, timestamp=None, value=None):
         result = self.set(tableName='positionUpdates', value=value, mobileNo=mobileNo, timestamp=timestamp)
         return result
 
-    def getRefereeLocations(self, mobileNo, timestamp=None, **entityKeys):
+    def getRefereeLocations(self, mobileNo=None, timestamp=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFEREELOCATIONS, mobileNo=mobileNo, timestamp=timestamp)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setRefereeLocation(self, mobileNo, timestamp, value):
+    def setRefereeLocation(self, mobileNo=None, timestamp=None, value=None):
         result = self.set(tableName='refereeLocations', mobileNo=mobileNo, timestamp=timestamp, value=value)
         return result
 
-    def setInvocation(self, tenantKey, invocationId, value, **entityKeys):
+    def setInvocation(self, tenantKey=None, invocationId=None, value=None, **entityKeys):
         return self.set(tableName='lambdaInvocationsTracking', tenantKey=tenantKey, value=value, invocationId=invocationId, **entityKeys)
 
-    def getReferenceId(self, target:str, id:str=None, **entityKeys):       
-        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFERENCEIDS, tenantKey='GLOBAL', target=target, id=id)
+    def getReferenceId(self, target:str=None, target_id:str=None, **entityKeys):
+        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.REFERENCEIDS, tenantKey='GLOBAL', target=target, target_id=target_id)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations, jsonDumps=True)
         return value
 
-    def setReferenceId(self, target:str, id:str, value, **entityKeys):
-        return self.set(tableName='referenceIds', tenantKey='GLOBAL', value=value, jsonDumps=True, target=target, id=id, **entityKeys)
+    def setReferenceId(self, target:str=None, target_id:str=None, value=None, **entityKeys):
+        return self.set(tableName='referenceIds', tenantKey='GLOBAL', value=value, jsonDumps=True, target=target, target_id=target_id, **entityKeys)
 
-    def getNotifications(self, tenantKey:str, target:str, id:str=None, notificationType:str=None, to:str=None, timestamp:int=None, status:str=None, from_created:datetime=None, to_created:datetime=None, from_updated:datetime=None, to_updated:datetime=None, **entityKeys):
-        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.NOTIFICATIONS, tenantKey=tenantKey, target=target, id=id, notificationType=notificationType, to=to, timestamp=timestamp, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
+    def getNotifications(self, tenantKey:str=None, target:str=None, target_id:str=None, notificationType:str=None, to:str=None, timestamp:int=None, status:str=None, from_created:datetime=None, to_created:datetime=None, from_updated:datetime=None, to_updated:datetime=None, **entityKeys):
+        _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.NOTIFICATIONS, tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType, to=to, timestamp=timestamp, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
 
-    def setNotifications(self, tenantKey:str, target:str, id:str, notificationType:str, to:str, timestamp:int, value, **entityKeys):
-        return self.set(tableName='notifications', tenantKey=tenantKey, value=value, target=target, id=id, notificationType=notificationType, to=to, timestamp=timestamp, **entityKeys)
+    def setNotifications(self, tenantKey:str=None, target:str=None, target_id:str=None, notificationType:str=None, to:str=None, timestamp:int=None, value=None, **entityKeys):
+        return self.set(tableName='notifications', tenantKey=tenantKey, value=value, target=target, target_id=target_id, notificationType=notificationType, to=to, timestamp=timestamp, **entityKeys)
 
-    def getDocuments(self, tenantKey:str):
+    def getDocuments(self, tenantKey:str=None):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.DOCUMENTS, tenantKey=tenantKey)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value
@@ -900,16 +871,33 @@ class DynamodbClient(DbClientBase):
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value or {}
 
-    def setPoll(self, pollId, value=None):
+    def setPoll(self, pollId=None, value=None):
         return self.set(tableName='polls', pollId=pollId, value=value)
     
-    def getPollVotes(self, pollId, mobileNo=None, questionId=None, **entityKeys):
+    def getPollVotes(self, pollId=None, mobileNo=None, questionId=None, **entityKeys):
         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=EntityType.POLLVOTES, tenantKey='GLOBAL', pollId=pollId, mobileNo=mobileNo, questionId=questionId)
         value = self.getDict(entityType=_entityType, tenantKey=_tenantKey, entityKeys=_entityKeys, queryIterations=_queryIterations)
         return value or {}
     
     def setPollVote(self, pollId=None, mobileNo=None, questionId=None, value=None):
         return self.set(tableName='pollVotes', pollId=pollId, mobileNo=mobileNo, questionId=questionId, value=value)
+
+    def incrementRateLimit(self, action:str=None, window:str=None, limit:int=None, ttl_seconds:int=None) -> bool:
+        try:
+            table = self.dynamodbResource.Table(f'rateLimiter_{self.env}')
+            expire_at = int(time.time()) + ttl_seconds
+            table.update_item(
+                Key={'action': action, 'window': window},
+                UpdateExpression='SET #u = if_not_exists(#u, :zero) + :one, expireAt = :ttl',
+                ConditionExpression='attribute_not_exists(#u) OR #u < :limit',
+                ExpressionAttributeNames={'#u': 'used'},
+                ExpressionAttributeValues={':zero': 0, ':one': 1, ':limit': limit, ':ttl': expire_at},
+            )
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                return False
+            raise
 
     def recreateTablesLocally(db, fromSuffix, toSuffix):
         # Fetch all table names from AWS
@@ -995,7 +983,7 @@ class DynamodbClient(DbClientBase):
                 target = 'tournamentGames'
                 gameId = tournamentGame['id']
                 value = {'tenantKey': tenantKey, 'gameId': gameId, 'tournamentName': tournamentGame['tournamentName'], 'gamePk': gamePk}
-                self.setReferenceId(target=target, id=gameId, value=value)
+                self.setReferenceId(target=target, target_id=gameId, value=value)
 
     def updateRefereeGamesArchivedRemoved(self):
         now = helpers.localNow()

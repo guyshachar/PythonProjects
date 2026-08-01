@@ -28,6 +28,7 @@ from shared.db import CacheService
 from shared.orgRelated.orgServiceBase import OrgServiceBase, OrgServiceCountryCode, OrgServiceEventType
 from shared.orgRelated.multiTenantSupport import MultiTenantSupport
 from shared.orgRelated.IHAParser import IHAParser
+from shared.db.models.enums import NotificationTypeKey
 
 class IHAService(OrgServiceBase):
     """IFA mgmt lists use ``table.devices``. Wait for the table, not ``tbody tr`` — slow pages
@@ -35,8 +36,8 @@ class IHAService(OrgServiceBase):
     _IHA_DEVICES_TABLE_SEL = 'table.devices tbody tr'
     _IHA_DEVICES_TABLE_TIMEOUT_MS = int(os.getenv('IHA_DEVICES_TABLE_WAIT_MS', '45000'))
 
-    def __init__(self, logger:Logger, multiTenantSupport:MultiTenantSupport, cacheService:CacheService, handleUsers:HandleUsers, messagingService:'MessagingService'):
-        super().__init__(logger=logger, multiTenantSupport=multiTenantSupport, cacheService=cacheService, handleUsers=handleUsers, messagingService=messagingService, countryCode=OrgServiceCountryCode.ISRAEL, eventType=OrgServiceEventType.IHA)
+    def __init__(self, logger:Logger, multiTenantSupport:MultiTenantSupport, cacheService:CacheService, handleUsers:HandleUsers, messagingService:'MessagingService', tenantRepository=None):
+        super().__init__(logger=logger, multiTenantSupport=multiTenantSupport, cacheService=cacheService, handleUsers=handleUsers, messagingService=messagingService, countryCode=OrgServiceCountryCode.ISRAEL, eventType=OrgServiceEventType.IHA, tenantRepository=tenantRepository)
 
         self.translation_table = str.maketrans('', '', "!@#'? \"")
 
@@ -119,11 +120,10 @@ class IHAService(OrgServiceBase):
         5. Click OK button
         """
         try:
-            tenants = self.cacheService.getTenants()
-            tenant = tenants.get(refereeDetail.get('tenantKey'))
-            resetPasswordUrl = tenant.get('urls', {}).get('resetPassword')
-            homeUrl = tenant.get('urls', {}).get('home')
-            logoutUrl = tenant.get('urls', {}).get('logout')
+            tenant = self.tenantRepository.get_tenant(tenant_key=refereeDetail.get('tenantKey'))
+            resetPasswordUrl = tenant.urls.get('resetPassword') if tenant else None
+            homeUrl = tenant.urls.get('home') if tenant else None
+            logoutUrl = tenant.urls.get('logout') if tenant else None
 
             # login as Assigner
             result, message = await self.login(refereeDetail=refereeDetail, page=page)
@@ -138,7 +138,7 @@ class IHAService(OrgServiceBase):
                         
             # login as referee with temporary password
             userPassword = targetRefereeDetail['password']
-            targetRefereeDetail['password'] = self.handleUsers.encryptPassword(tenant.get('temporaryPassword'))
+            targetRefereeDetail['password'] = self.handleUsers.encryptPassword(tenant.temporary_password if tenant else None)
             result, message = await self.login(refereeDetail=targetRefereeDetail, page=page)
             await asyncio.sleep(200 / 1000)  # Wait for page to load
             if result == False:
@@ -157,7 +157,7 @@ class IHAService(OrgServiceBase):
             if not curPasswordInput:
                 self.logger.error(f'Current password input not found', None, refereeDetail=refereeDetail)
                 raise Exception(f'Current password input not found')
-            await curPasswordInput.fill(tenant.get('temporaryPassword'))
+            await curPasswordInput.fill(tenant.temporary_password if tenant else '')
             
             decryptedPassword = self.handleUsers.decryptPassword(targetRefereeDetail.get('password', ''))
             
@@ -221,7 +221,7 @@ class IHAService(OrgServiceBase):
 
     async def collectItemsForAssigner(self, tenantKey, objType, refereeData, page):
         try:
-            tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
+            tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
             '''
             async with async_playwright() as p:
                 browser = await OrgServiceBase.launchBrowser(p=p, headless=eval(os.getenv('browserHeadless') or 'True'))
@@ -232,7 +232,7 @@ class IHAService(OrgServiceBase):
             '''
             if True:
                 page1 = page
-                collectType = 'byAssigner' if tenant.get('collectType', 'byAssigner') == 'byAssigner' else 'byReferee'
+                collectType = 'byAssigner' if (tenant.collect_type if tenant else 'byAssigner') == 'byAssigner' else 'byReferee'
                 if collectType == 'byAssigner':
                     await self.collectItemsByAssigner(tenantKey=tenantKey, objType=objType, refereeData=refereeData, page=page1)
                 elif collectType == 'byReferee':
@@ -398,8 +398,8 @@ class IHAService(OrgServiceBase):
             #refereeItems = refereeItems[:20]
             if True:
                 refereeItems = self.handleUsers.refereesByMobile.get(tenantKey, {})
-                tenant = self.cacheService.getTenants().get(tenantKey)
-                activeStatus = tenant.get('activeStatus')
+                tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
+                activeStatus = tenant.active_status if tenant else None
                 activeRefereeItems = { mobileNo: refereeItems[mobileNo] for mobileNo in refereeItems.keys() if refereeItems[mobileNo].get('status') == activeStatus }
                 #refereeItems = {'+972545876156': refereeItems['+972545876156']}
                 await self.collectItemsByReferee(tenantKey=tenantKey, objType=objType, referees=activeRefereeItems, refereeData=refereeData, page=page)
@@ -443,7 +443,7 @@ class IHAService(OrgServiceBase):
                 if filteredMobileNos and mobileNo not in filteredMobileNos:
                     continue
                 idx += 1
-                lastScrape = self.cacheService.getCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'{objType}_lastScrape')
+                lastScrape = self.cacheService.getCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'{objType}_lastScrape')
                 if False and lastScrape is None:
                     refereeData[objType]['fromDate'] = datetime.now() - timedelta(days=365)
                 parsedGames = await self.scrapeListByReferee(tenantKey=tenantKey, objType=objType, refereeData=refereeData, refereeDetail=refereeDetail, page=page)
@@ -451,7 +451,7 @@ class IHAService(OrgServiceBase):
                     self.logger.warning(f"collectItemsByReferee, games scraping failed for referee {mobileNo} {idx}/{len(referees)}")
                     continue
 
-                self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, value=helpers.localNow(), propertyName=f'{objType}_lastScrape')
+                self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, value=helpers.localNow(), propertyName=f'{objType}_lastScrape')
                 prevCollectedItems = self.cacheService.getCollectedItems(tenantKey=tenantKey, objType=objType, mobileNo=mobileNo)
                 if len(prevCollectedItems) != len(parsedGames):
                     self.logger.info(f"Changed games found for referee {mobileNo}, updating cache")
@@ -493,8 +493,8 @@ class IHAService(OrgServiceBase):
                 obj = self.multiTenantSupport.mapItem(tenantKey=tenantKey, objType=objType, obj=obj)
                 obj['mobileNo'] = mobileNo
                 obj['refId'] = refId
-                obj['internalGameId'] = item['game_id']
-                await self.scrapGameDetails(refereeDetail=refereeDetail, internalGameId=item['game_id'], obj=obj, page=page)
+                obj['internalGameId'] = item['internal_game_id']
+                await self.scrapGameDetails(refereeDetail=refereeDetail, internalGameId=item['internal_game_id'], obj=obj, page=page)
                 obj['dateText'] = obj['gameDate'] + ' ' + obj['gameTime'][:5]
                 obj['date'] = helpers.convert_to_datetime(obj['dateText'])
                 obj['gameTitle'] = obj['homeTeamName'] + ' - ' + obj['guestTeamName']
@@ -596,7 +596,7 @@ class IHAService(OrgServiceBase):
         try:
             gameDetail = self.cacheService.getGameDetailById(gameId=gameId)
             tenantKey = gameDetail['tenantKey']
-            tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
+            tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
             internalGameId = gameDetail.get('internalGameId')
             if not internalGameId:
                 return False, 'internalGameId not found'
@@ -650,12 +650,14 @@ class IHAService(OrgServiceBase):
                     if assignedConfirmedLocator:
                         result = True
             if result:
-                reportTo = tenant.get('assignmentsReplyReportTo')
+                reportTo = tenant.assignments_reply_report_to if tenant else None
                 if reportTo:
                     title = f'שיבוץ {"אושר" if declineReasonId == 0 else "נדחה"} עבור משחק {gameDetail["gameTitle"]}'
                     message = f'בתאריך {gameDetail["date"]} על ידי {globalRefereeDetail["name"]}'
                     #sentMsgSid = await self.messagingService.sendMessage(to=reportTo, message=message, gameId=gameDetail['id'])
-                    self.cacheService.setNotification(tenantKey=tenantKey, target='refereeGames', id='NONGAME', notificationType='assignmentsReplyReport', to=reportTo, contextDate='created', title=title, message=message)
+                    # reportTo is a tenant admin config value (may not be a registered referee) - fall back to the raw value if it doesn't resolve.
+                    reportToRefereeId = self.cacheService.resolveRefereeIdByMobile(reportTo) or reportTo
+                    self.cacheService.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=None, notificationType=NotificationTypeKey.assignmentsReplyReport, target_to=reportToRefereeId, contextDate='created', title=title, message=message)
                     
             return result, 'success'
 
@@ -1118,8 +1120,8 @@ class IHAService(OrgServiceBase):
             if 'game_details' in game_data['links']:
                 href = game_data['links']['game_details']
                 if 'GameId=' in href:
-                    game_id = href.split('GameId=')[1].split('&')[0]
-                    game_data['game_id'] = game_id
+                    internal_game_id = href.split('GameId=')[1].split('&')[0]
+                    game_data['internal_game_id'] = internal_game_id
             
             if game_data['game_details']:
                 games.append(game_data)
@@ -1225,8 +1227,8 @@ class IHAService(OrgServiceBase):
                     if 'referee_details' in referee_data['links']:
                         href = referee_data['links']['referee_details']
                         if 'GameId=' in href:
-                            game_id = href.split('GameId=')[1].split('&')[0]
-                            referee_data['game_id'] = game_id
+                            internal_game_id = href.split('GameId=')[1].split('&')[0]
+                            referee_data['internal_game_id'] = internal_game_id
                     
                     if referee_data['referee_details']:
                         referees.append(referee_data)
@@ -1392,7 +1394,7 @@ class IHAService(OrgServiceBase):
             else:
                 obj['homeTeamScore'] = winnerScore
                 obj['guestTeamScore'] = loserScore
-            obj['gameResult'] = { 'full_time_score': [obj["homeTeamScore"], obj["guestTeamScore"]] }
+            obj['gameResult'] = { 'full_time': [obj["homeTeamScore"], obj["guestTeamScore"]] }
 
         gameCommentLocator = await page.query_selector('textarea[name="game_notes"]')
         if gameCommentLocator:
@@ -1487,7 +1489,7 @@ class IHAService(OrgServiceBase):
                     # Extract game ID from title like "[746] מ.כ. חולון 2 נגד [720] א.כ. נס ציונה [03/05/2025]"
                     game_id_match = re.search(r'\[(\d+)\]', title_text)
                     if game_id_match:
-                        basic_info['game_id'] = game_id_match.group(1)
+                        basic_info['internal_game_id'] = game_id_match.group(1)
                     
                     # Extract date from title
                     date_match = re.search(r'\[(\d{2}/\d{2}/\d{4})\]', title_text)
@@ -1976,7 +1978,7 @@ class IHAService(OrgServiceBase):
         referees = self.handleUsers.refereesByMobile.get(tenantKey, {})
         objType='games'
         for mobileNo, referee in referees.items():
-            self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, value=helpers.localNow(), propertyName=f'{objType}_lastScrape')
+            self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, value=helpers.localNow(), propertyName=f'{objType}_lastScrape')
 
 if __name__ == "__main__":
     from shared.appContainer import AppContainer

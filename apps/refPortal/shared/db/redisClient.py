@@ -17,6 +17,10 @@ class RedisClient(DbClientBase):
         try:
             super().__init__(env, logger, None, countryCode, eventType, season)
             self.client = client
+            # appName namespaces every key this client builds, ahead of env - see
+            # CacheService.__init__ for the matching prefix on the cache layer.
+            appName = os.getenv('appName', 'refPortal')
+            self.keyPrefix = f"{appName}:{self.env}"
             #self.setDb(db)
 
             self.logger.info(f'Redis Client starts... Country: {countryCode}, Event: {eventType}')
@@ -42,7 +46,7 @@ class RedisClient(DbClientBase):
             
             # Create tenant-aware key
             tenant_key = f"{self.countryCode}#{self.eventType}"
-            self.client.set(f'{self.env}:{tenant_key}:{key}', value)
+            self.client.set(f'{self.keyPrefix}:{tenant_key}:{key}', value)
         except Exception as ex:
             pass
 
@@ -54,7 +58,7 @@ class RedisClient(DbClientBase):
             
             # Create tenant-aware key
             tenant_key = f"{self.countryCode}#{self.eventType}"
-            value = self.client.get(f'{self.env}:{tenant_key}:{key}')
+            value = self.client.get(f'{self.keyPrefix}:{tenant_key}:{key}')
             if value and jsonDumps:
                 value = jsonHelper.load_from_json(value)
             return value
@@ -86,7 +90,7 @@ class RedisClient(DbClientBase):
 
             # Create tenant-aware pattern
             tenant_key = f"{self.countryCode}#{self.eventType}"
-            pattern = f'{self.env}:{tenant_key}:{key}:*'
+            pattern = f'{self.keyPrefix}:{tenant_key}:{key}:*'
 
             while True:
                 cursor, partial_keys = self.client.scan(cursor, match=pattern, count=500)  # Adjust count as needed
@@ -98,7 +102,7 @@ class RedisClient(DbClientBase):
             for iterKey in keys:
                 if keyPrefix.find('*') > -1:
                     # Remove tenant prefix to get the actual key
-                    tenant_prefix = f'{self.env}:{tenant_key}:'
+                    tenant_prefix = f'{self.keyPrefix}:{tenant_key}:'
                     pk = iterKey[len(tenant_prefix):]
                     dict[pk] = self.get(pk)
                 else:
@@ -122,18 +126,18 @@ class RedisClient(DbClientBase):
     def exists(self, key):
         # Create tenant-aware key
         tenant_key = f"{self.countryCode}#{self.eventType}"
-        result = self.client.exists(f'{self.env}:{tenant_key}:{key}')
+        result = self.client.exists(f'{self.keyPrefix}:{tenant_key}:{key}')
         return result
 
     def rename(self, oldKey, newKey):
         # Create tenant-aware keys
         tenant_key = f"{self.countryCode}#{self.eventType}"
-        self.client.rename(f'{self.env}:{tenant_key}:{oldKey}', f'{self.env}:{tenant_key}:{newKey}')
+        self.client.rename(f'{self.keyPrefix}:{tenant_key}:{oldKey}', f'{self.keyPrefix}:{tenant_key}:{newKey}')
 
     def delete(self, key):
         # Create tenant-aware key
         tenant_key = f"{self.countryCode}#{self.eventType}"
-        self.client.delete(f'{self.env}:{tenant_key}:{key}')
+        self.client.delete(f'{self.keyPrefix}:{tenant_key}:{key}')
 
     def deleteByFilter(self, filter):
         iterKeys = self.client.scan_iter(filter)
@@ -187,7 +191,7 @@ class RedisClient(DbClientBase):
         key = f'tournaments:{tournamentName}'
         self.set(key, value)
 
-    def getLeagueTables(self, tournamentName, teamName=None):
+    def getLeagueTable(self, tournamentName, teamName=None):
         if teamName:
             value = self.get(f'tables:{tournamentName}:{teamName}')
         else:

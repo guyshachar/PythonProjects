@@ -12,6 +12,8 @@ from pathlib import Path
 from playwright.async_api import BrowserContext, Browser, Page
 from playwright_stealth import Stealth
 import asyncio
+
+from pydantic import AwareDatetime
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import shared.helpers as helpers
 import shared.jsonHelper as jsonHelper
@@ -20,6 +22,7 @@ from shared.handleTournaments import HandleTournaments
 from shared.handleRefereeData import HandleRefereeData
 from shared.orgRelated import OrgServiceBase
 from shared.db import CacheService
+from shared.db.repositories import TenantRepository
 from shared.messaging import MessagingService
 from shared.commonHelper import CommonHelper
 from shared.logger import Logger
@@ -27,18 +30,20 @@ from shared.orgRelated import OrgServiceFactory, MultiTenantSupport
 from shared.configManager import ConfigManager
 from shared import playwright_shared_browser
 from shared.commute_service import CommuteService
+from shared.db.models.enums import NotificationTypeKey
 
 class RefereeProcessService():
-    def __init__(self, logger:Logger, commonHelper:CommonHelper, cacheService:CacheService, multiTenantSupport:MultiTenantSupport, messagingService:MessagingService, handleTournaments:HandleTournaments, handleRefereeData:HandleRefereeData, handleUsers:HandleUsers, referees_data:tuple, orgServiceFactory:OrgServiceFactory, commuteService:Optional[CommuteService]=None, config:dict=None):
+    def __init__(self, logger:Logger, commonHelper:CommonHelper, cacheService:CacheService, multiTenantSupport:MultiTenantSupport, messagingService:MessagingService, handleTournaments:HandleTournaments, handleRefereeData:HandleRefereeData, handleUsers:HandleUsers, referees_data:tuple, orgServiceFactory:OrgServiceFactory, commuteService:Optional[CommuteService]=None, config:dict=None, tenantRepository:TenantRepository=None):
         self.logger = logger
         self.commonHelper = commonHelper
         self.cacheService = cacheService
+        self.tenantRepository = tenantRepository
         self.multiTenantSupport = multiTenantSupport
         self.messagingService = messagingService
         self.handleTournaments = handleTournaments
         self.handleRefereeData = handleRefereeData
         self.handleUsers = handleUsers
-        (self.globalRefereesByMobile, self.refereesByRefId, self.refereesByMobile, self.refereesByGuid, self.globalRefereesByName) = referees_data
+        (self.globalRefereesByMobile, self.refereesByRefId, self.refereesByMobile, self.refereesByGuid, self.globalRefereesByName, self.globalRefereesById, self.refereesById, self.refereesByInternalId) = referees_data
         self.orgServiceFactory = orgServiceFactory
         if config is None:
             import shared.configurationDI as configurationDI
@@ -55,7 +60,7 @@ class RefereeProcessService():
         self.app = ConfigManager.get_config_value(self.config, 'app', 'APP')
 
         self.tenantsOrgServices:dict[str, OrgServiceBase] = {}
-        for tenantKey, tenant in self.cacheService.getTenants().items():
+        for tenantKey in self.tenantRepository.get_tenants().keys():
             orgService = self.orgServiceFactory.get_org_service_by_tenant(tenantKey=tenantKey)
             self.tenantsOrgServices[tenantKey] = orgService
         self.generateReports = ConfigManager.get_config_bool(self.config, 'generateReports', False)
@@ -74,7 +79,7 @@ class RefereeProcessService():
         self.chatGroups4Singles = ConfigManager.get_config_bool(self.config, 'chatGroups4Singles', False)
 
         self.swLevel = ConfigManager.get_config_value(self.config, 'swLevel', 'debug') or 'debug'
-        self.season = ConfigManager.get_config_value(self.config, 'season') or (self.config.get('tenant') or {}).get('season')
+        #self.season = ConfigManager.get_config_value(self.config, 'season') or (self.config.get('tenant') or {}).get('season')
 
         _route = str(ConfigManager.get_config_value(self.config, 'commuteRouteProvider', 'waze') or 'waze').strip().lower()
         self._commute_route_provider = 'google' if _route == 'google' else 'waze'
@@ -122,7 +127,7 @@ class RefereeProcessService():
         self.logger.info(f'refereeProcessService starts... process time per referee={ConfigManager.get_config_int(self.config, "processTimeout", 30)}')
 
     async def startProcessByMobileNos(self, mobileNos:list):
-        activeTenantKeys = [ tenantKey for tenantKey, tenant in self.cacheService.getTenants().items() if tenant.get('active') == True ]
+        activeTenantKeys = [ tenantKey for tenantKey, tenant in self.tenantRepository.get_tenants().items() if tenant.active ]
         anyChangeResult = False
         for tenantKey in activeTenantKeys:
             referees = { mobileNo: self.handleRefereeData.activeRefereesByMobile[mobileNo] for mobileNo in mobileNos if tenantKey in self.handleRefereeData.activeRefereesByMobile[mobileNo].get('activeTenantKeys', [])}
@@ -313,7 +318,7 @@ class RefereeProcessService():
         helpers.stopwatchStart(swName)
         page:Page = None
         try:
-            tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
+            tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
             tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
             globalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=mobileNo)
             mixedRefereeDetail = globalRefereeDetail | tenantRefereeDetail
@@ -327,26 +332,27 @@ class RefereeProcessService():
                 self.logger.warning(f'TestConnection: {testResult}')
 
             windowIsOpen = self.messagingService.checkIf24HoursWindowIsOpen(mobileNo=mobileNo)
-            refereeData = { 'mobileNo': mobileNo, 'divertMobileNo': tenantRefereeDetail.get('divertMobileNo'), 'refId': tenantRefereeDetail['refId'], 'name': globalRefereeDetail['name'], 'windowIsOpen': windowIsOpen, 'loggedIn': False}
+            refereeData = { 'mobileNo': mobileNo, 'divertMobileNo': tenantRefereeDetail.get('divertMobileNo'), 'refId': tenantRefereeDetail['refId'], 'refereeId': tenantRefereeDetail.get('refereeId'), 'name': globalRefereeDetail['name'], 'windowIsOpen': windowIsOpen, 'loggedIn': False, 'checkData': False}
             self.tenantsOrgServices[tenantKey].setFetchDates(refereeData=refereeData)
             
             page = await context.new_page()
-            if not tenant.get('assignerCollection') or 'assigner' in tenantRefereeDetail.get('roles', []):
+            loginResult = True
+            if not (tenant.assigner_collection if tenant else False) or 'assigner' in tenantRefereeDetail.get('roles', []):
                 self.logger.info('before login')
                 loginResult, loginMessage = await self.tenantsOrgServices[tenantKey].login(refereeDetail=mixedRefereeDetail, page=page)
                 self.logger.debug(f'after login = {loginResult}', refereeDetail=globalRefereeDetail)
                 if loginResult == False:
                     message = f'שלום {mobileNo} {globalRefereeDetail["name"]}, {loginMessage}'
-                    loginFails = int(self.cacheService.getCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginFails') or '0')
-                    self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginFails', value=loginFails + 1)
+                    loginFails = int(self.cacheService.getCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginFails') or '0')
+                    self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginFails', value=loginFails + 1)
                     if loginFails >= 5:
-                        self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginOnHold', value=helpers.localNow(), ttlSeconds=15*60)
+                        self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginOnHold', value=helpers.localNow(), ttlSeconds=15*60)
                         self.logger.error(f'Login failed, RefId={tenantRefereeDetail["refId"]}, loginFails={loginFails + 1}', None, refereeDetail=tenantRefereeDetail)
 
                         if loginMessage == 'Login failed':
-                            statusAfterFailedLogin = tenant.get('statusAfterFailedLogin', 'suspended')
-                            self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='status', value=statusAfterFailedLogin)
-                            self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='statusChangedDate', value=helpers.localNow())
+                            statusAfterFailedLogin = (tenant.status_after_failed_login if tenant else None) or 'suspended'
+                            self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), propertyName='status', value=statusAfterFailedLogin)
+                            self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), propertyName='statusChangedDate', value=helpers.localNow())
                             if statusAfterFailedLogin != 'active':
                                 message += f', יש לעדכן את הסיסמא (לאחר בדיקה בפורטל) ולעדכן באמצעות הקישור הבא:\nhttps://refereex.com/changePassword'
                             toMobileNo = tenantRefereeDetail.get('divertMobileNo') or mobileNo
@@ -354,15 +360,22 @@ class RefereeProcessService():
                             if allowMessageSending:
                                 msgSid = await self.messagingService.sendMessage(to=list(set([toMobileNo, self.messagingService.adminMobile])), message=message, title='התחברות נכשלה')
 
+                    # Login failed, so there's no session to scrape a fresh list with - but the
+                    # referee should still get their pending games/reviews notifications based on
+                    # whatever was already cached from the last successful run, rather than missing
+                    # a cycle entirely just because this login attempt failed.
+                    await self.sendNotificationsWithoutLogin(tenantKey=tenantKey, refereeData=refereeData, tenant=tenant, page=page)
                     return
                 else:
-                    self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginFails', value=0)
-                
-                refereeData['loggedIn'] = True
+                    self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginFails', value=0)                
+                    refereeData['loggedIn'] = True
+                    refereeData['checkData'] = True
+            else:
+                refereeData['checkData'] = True
 
             if False:
                 await self.tenantsOrgServices[tenantKey].getPayments(refereeDetail=tenantRefereeDetail, page=page)
-            for objType in tenant.get('objTypes', []):
+            for objType in (tenant.obj_types if tenant else []):
                 if objType == 'games' and self.checkGames or objType == 'reviews' and self.checkReviews:
                     changed = await self.checkRefereeData(tenantKey=tenantKey, objType=objType, refereeData=refereeData, page=page)
                     if changed:
@@ -388,18 +401,39 @@ class RefereeProcessService():
         helpers.stopwatchStop(swName, level=self.swLevel)
         return anyChange
 
+    # Called instead of the normal checkRefereeData path when login fails - there's no session to
+    # scrape a fresh currentList with, so getListForReferee/compare/postCompare (and its
+    # added/removed abort-run protections) are skipped entirely rather than fed a fake empty
+    # currentList. handleNotifications is still driven off whatever prevList is already cached, so
+    # a referee doesn't miss a full notification cycle just because this login attempt failed.
+    async def sendNotificationsWithoutLogin(self, tenantKey, refereeData, tenant, page):
+        for objType in (tenant.obj_types if tenant else []):
+            if objType == 'games' and self.checkGames or objType == 'reviews' and self.checkReviews:
+                try:
+                    await self.handleRefereeData.getRefereeData(tenantKey=tenantKey, objType=objType, refereeData=refereeData)
+                    if refereeData[objType].get('prevList') and self.dataDic[objType].get('handleNotifications'):
+                        await self.dataDic[objType]['handleNotifications'](tenantKey=tenantKey, objType=objType, refereeData=refereeData, browser=page.context.browser if page else None)
+                except Exception as ex:
+                    self.logger.error('sendNotificationsWithoutLogin', ex, refereeData=refereeData)
+
     async def checkRefereeData(self, tenantKey, objType, refereeData, page):
         mobileNo = refereeData['mobileNo']
-        tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
-        tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-        refId = refereeData['refId']
-        
+        tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
+        tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'))
+        refereeId = refereeData.get('refereeId')
+
         changed = False
         try:
             self.logger.info(f'Checking {objType}...', refereeDetail=tenantRefereeDetail)
             
             swName = f'checkRefereeData={refereeData["name"]}{objType}'
             helpers.stopwatchStart(swName)
+            swLast = 0
+            def logSwPhase(phase):
+                nonlocal swLast
+                elapsed = helpers.stopwatchStop(swName)
+                self.logger.info(f'sw {swName} {phase}={elapsed - swLast}ms (total={elapsed}ms)')
+                swLast = elapsed
 
             # get prevList
             await self.handleRefereeData.getRefereeData(tenantKey=tenantKey, objType=objType, refereeData=refereeData)
@@ -413,8 +447,8 @@ class RefereeProcessService():
             getListSuccessful = await self.tenantsOrgServices[tenantKey].getListForReferee(tenantKey=tenantKey, objType=objType, refereeData=refereeData, page=page)
             if getListSuccessful == False:
                 return False
-            sw1 = helpers.stopwatchStop(swName)
-            
+            logSwPhase('getList')
+
             updatedList = refereeData[objType]['currentList']
 
             if updatedList and len(updatedList) > 0:
@@ -435,36 +469,36 @@ class RefereeProcessService():
                                 item[key] = jsonHelper.load_from_json(prevItemJson)
                 if objType == 'games':
                     for pk, prevItem in refereeData[objType]['prevList'].items():
-                        prevItem['gameDetail'] = self.cacheService.getGameDetail(tenantKey=tenantKey, game=prevItem)
+                        prevItem['gameDetail'] = self.cacheService.getGameDetail(game=prevItem)
                         pass
-            sw2 = helpers.stopwatchStop(swName)
+            logSwPhase('mergePrevList')
             if updatedList != None:
                 if self.dataDic[objType].get('postParse'):
                     await self.dataDic[objType]['postParse'](tenantKey=tenantKey, objType=objType, refereeData=refereeData, page=page)
-                
-                sw3 = helpers.stopwatchStop(swName)
+
+                logSwPhase('postParse')
                 if self.dataDic[objType].get('compare'):
                     await self.dataDic[objType]['compare'](tenantKey=tenantKey, objType=objType, refereeData=refereeData, page=page)
-                    sw4 = helpers.stopwatchStop(swName)
+                    logSwPhase('compare')
 
                     now = helpers.localNow()
                     abortRun = False
                     anyRemovals = (
                         len(refereeData[objType]['removed']) > 0 and 
-                        (len(refereeData[objType]['removed']) >= int(tenant.get('minimumRemovalsToIgnore', '1')) or objType == 'reviews' and cnt == len(refereeData[objType]['removed'])
+                        (len(refereeData[objType]['removed']) >= (tenant.minimum_removals_to_ignore if tenant else 1) or objType == 'reviews' and cnt == len(refereeData[objType]['removed'])
                     ))
                     if anyRemovals:
-                        blockRemovalsStarted = self.cacheService.getCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovalsStarted_{objType}')
-                        skipAbortRun = self.cacheService.getCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'skipAbortRun_{objType}')
+                        blockRemovalsStarted = self.cacheService.getCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovalsStarted_{objType}')
+                        skipAbortRun = self.cacheService.getCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'skipAbortRun_{objType}')
                         if blockRemovalsStarted and now - blockRemovalsStarted > timedelta(seconds=30*60) or skipAbortRun and skipAbortRun == 'yes':
-                            self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovalsStarted_{objType}', value=None, ttlSeconds=1)
+                            self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovalsStarted_{objType}', value=None, ttlSeconds=1)
 
                         elif blockRemovalsStarted:
                             abortRun = True
                         
                         else:
                             abortRun = True
-                            self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovalsStarted_{objType}', value=now)
+                            self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovalsStarted_{objType}', value=now)
 
                             customData = {
                                 'action': 'skipAbortRun',
@@ -488,12 +522,12 @@ class RefereeProcessService():
                             for prevItemPk in refereeData[objType]['removed']:
                                 prevItem = refereeData[objType]['prevList'][prevItemPk]
                                 removedText += f'\n{prevItem.get('gameDate')} {prevItem.get('gameTime')}'
-                            self.messagingService.sendInteractiveMessage(to=self.messagingService.adminMobile, question=f'לשופט {refereeData["name"]} {mobileNo} קוד {refId} יש {len(refereeData[objType]['removed'])} מחיקות {removedText},\nהאם להמשיך במחיקה ?', promptButtons=promptButtons, customData=customData)
-                            self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'skipAbortRun_{objType}', value='no', ttlSeconds=30*60)
-                            self.logger.warning(f'something happened with {refId} {objType} total removals={len(refereeData[objType]['removed'])}')
+                            self.messagingService.sendInteractiveMessage(to=self.messagingService.adminMobile, question=f'לשופט {refereeData["name"]} {mobileNo} מזהה {refereeId} יש {len(refereeData[objType]['removed'])} מחיקות {removedText},\nהאם להמשיך במחיקה ?', promptButtons=promptButtons, customData=customData)
+                            self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'skipAbortRun_{objType}', value='no', ttlSeconds=30*60)
+                            self.logger.warning(f'something happened with {refereeId} {objType} total removals={len(refereeData[objType]['removed'])}')
 
                     else:
-                        self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovals_{objType}', value=now, ttlSeconds=1)
+                        self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName=f'blockRemovals_{objType}', value=now, ttlSeconds=1)
                                                 
                     if abortRun:
                         return False
@@ -502,14 +536,14 @@ class RefereeProcessService():
                     if True or changed:
                         self.logger.info(f"{objType} A:{len(refereeData[objType]['added'])} R:{len(refereeData[objType]['removed'])} C:{len(refereeData[objType]['changed'])} H:{len(refereeData[objType]['archived'])} I:{cnt}", refereeDetail=tenantRefereeDetail)
                         await self.dataDic[objType]['postCompare'](tenantKey=tenantKey, objType=objType, refereeData=refereeData, page=page)
-                    sw5 = helpers.stopwatchStop(swName)
+                    logSwPhase('postCompare')
                     if not changed:
                         lastUpdate = self.cacheService.getRefereeProperty(tenantKey=tenantKey, mobileNo=refereeData['mobileNo'], propertyName=f'{objType}_lastUpdate')
                         self.logger.info(f'No {objType} update since {lastUpdate} I:{cnt}', refereeDetail=tenantRefereeDetail)
             
                 if (refereeData[objType].get('currentList') or refereeData[objType].get('prevList')) and self.dataDic[objType].get('handleNotifications'):
                     await self.dataDic[objType]['handleNotifications'](tenantKey=tenantKey, objType=objType, refereeData=refereeData, browser=page.context.browser if page else None)
-                sw6 = helpers.stopwatchStop(swName)
+                logSwPhase('handleNotifications')
 
                 helpers.stopwatchStop(f'{swName}', level=self.swLevel)
         except Exception as ex:
@@ -519,12 +553,13 @@ class RefereeProcessService():
             
         return changed
 
-    async def postProcessTemplate(self, template, tenantRefereeDetail, gamePk, title, message, failureMessage, page=None):
+    async def postProcessTemplate(self, template, tenantRefereeDetail, tournamentGameId, title, message, failureMessage, page=None):
         tenantKey = template['tenantKey']
         templateAction = template['action'].lower()
         msgSid = template['msgSid']
         mobileNo = tenantRefereeDetail['mobileNo']
         targetMobileNo = template['data']['targetMobileNo'] if template.get('data', {}).get('targetMobileNo') else mobileNo
+        targetRefereeId = self.globalRefereesByMobile.get(targetMobileNo, {}).get('refereeId') or tenantRefereeDetail.get('refereeId')
 
         if template['status'] == 'created' and failureMessage:
             template['retries'] = int(template.get('retries', '0')) + 1
@@ -535,10 +570,10 @@ class RefereeProcessService():
                 template['updated'] = helpers.localNow()
                 message = failureMessage
                 self.logger.warning(f"{msgSid} ניסיון {template['retries']} של ביצוע הפעולה נכשל", refereeDetail=tenantRefereeDetail)
-        
-        self.cacheService.setRefereeTemplate(tenantKey=tenantKey, mobileNo=mobileNo, msgSid=msgSid, value=template)
+
+        self.cacheService.setRefereeTemplate(tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), msgSid=msgSid, value=template)
         if title and message:
-            self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType=templateAction, to=targetMobileNo, contextDate='created', title=title, message=message)
+            self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=templateAction, target_to=targetRefereeId, contextDate='created', title=title, message=message)
 
     async def processTemplates(self, tenantKey, objType, refereeData, page):
         def getGameDetail(template:dict):
@@ -556,10 +591,11 @@ class RefereeProcessService():
             localNow = helpers.localNow()
             mobileNo = refereeData['mobileNo']
             refId = refereeData['refId']
-            tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
+            refereeId = refereeData.get('refereeId')
+            tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeId)
 
             # filter by status = created
-            sortedTemplates = helpers.sortDictByProperty(obj=self.cacheService.getRefereeTemplates(tenantKey=tenantKey, mobileNo=mobileNo, status='created', forceReload=True), property='created', reverse=True)
+            sortedTemplates = helpers.sortDictByProperty(obj=self.cacheService.getRefereeTemplates(tenantKey=tenantKey, refereeId=refereeId, status='created', forceReload=True), property='created', reverse=True)
             self.logger.debug(f"{len(sortedTemplates)}", refereeDetail=tenantRefereeDetail)
             if sortedTemplates:
                 for template in sortedTemplates.values():
@@ -575,13 +611,15 @@ class RefereeProcessService():
                     title = None
                     message = None
                     failureMessage = None
-                    gamePk = 'NONGAME'
+                    gamePk = None
+                    tournamentGameId = None
                     targetMobileNo = mobileNo
                     templateAction = template['action'].lower()
 
                     if objType == 'games':
                         if templateAction == 'approvegame':
                             gameId, refereeGame, gameDetail, gamePk = getGameDetail(template)
+                            tournamentGameId = gameDetail.get('id') if gameDetail else None
                             if not gameDetail or not refereeGame:
                                 template['status'] = 'cancelled'
                                 template['updated'] = localNow
@@ -603,13 +641,14 @@ class RefereeProcessService():
                                     template['updated'] = localNow
                                     refereeGame['approvedDate'] = localNow
                                     helpers.delProperties(refereeGame, 'cells')
-                                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=gamePk, value=refereeGame)
+                                    self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=gamePk, value=refereeGame)
                                     message = f'השיבוץ אושר בפורטל'
                                 else:
                                     failureMessage = f'אישור השיבוץ נכשל'
 
                         elif templateAction == 'declinegame':
                             gameId, refereeGame, gameDetail, gamePk = getGameDetail(template)
+                            tournamentGameId = gameDetail.get('id') if gameDetail else None
                             if not gameDetail or not refereeGame:
                                 template['status'] = 'cancelled'
                                 template['updated'] = localNow
@@ -630,13 +669,14 @@ class RefereeProcessService():
                                     template['status'] = 'completed'
                                     template['updated'] = localNow
                                     refereeGame['declinedDate'] = localNow
-                                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=gamePk, value=refereeGame)
+                                    self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=gamePk, value=refereeGame)
                                     message = f'השיבוץ נדחה בפורטל'
                                 else:
                                     failureMessage = f'דחיית השיבוץ נכשלה'
 
                         elif templateAction in ['postgameupdate', 'gamereport']:
                             gameId, refereeGame, gameDetail, gamePk = getGameDetail(template)
+                            tournamentGameId = gameDetail.get('id') if gameDetail else None
                             if not gameDetail:
                                 template['status'] = 'cancelled'
                                 template['updated'] = localNow
@@ -644,12 +684,28 @@ class RefereeProcessService():
                                 data = template.get('data')
                                 if data == None:
                                     continue
-                                result, message = self._org_service_result(
-                                    await self.tenantsOrgServices[tenantKey].postGameUpdate(
-                                        refereeDetail=tenantRefereeDetail, gameId=gameId, data=data, page=page
-                                    ),
-                                    default_message='postGameUpdate returned no result',
-                                )
+                                orgService = self.tenantsOrgServices[tenantKey]
+                                if hasattr(orgService, 'submitUnfinishedGameReport'):
+                                    # IFA: locate the row in the live 'משחקים אשר דוחות עבורם לא
+                                    # נקלטו או לא הושלמו' table (rather than navigating straight
+                                    # to gameDetail['internalGameId']) so the click-through path
+                                    # matches what a referee sees on the site.
+                                    result, message = self._org_service_result(
+                                        await orgService.submitUnfinishedGameReport(
+                                            refereeDetail=tenantRefereeDetail, page=page, data=data,
+                                            date=gameDetail.get('date'), tournamentName=gameDetail.get('tournamentName'),
+                                            homeTeamName=gameDetail.get('homeTeamName'), guestTeamName=gameDetail.get('guestTeamName'),
+                                            fixture=gameDetail.get('fixture'), field=gameDetail.get('field'),
+                                        ),
+                                        default_message='submitUnfinishedGameReport returned no result',
+                                    )
+                                else:
+                                    result, message = self._org_service_result(
+                                        await orgService.postGameUpdate(
+                                            refereeDetail=tenantRefereeDetail, gameId=gameId, data=data, page=page
+                                        ),
+                                        default_message='postGameUpdate returned no result',
+                                    )
                                 template['message'] = message
                                 self.logger.info(f"processTemplates {templateAction} {msgSid} gameId={gameId} {gameDetail['gameTitle']} result={result}", refereeDetail=tenantRefereeDetail)
                                 title = f'משחק {gameDetail["gameTitle"]}'
@@ -666,12 +722,13 @@ class RefereeProcessService():
                                         title = 'דו״ח בפורטל עודכן'
                                         msg = f"דו״ח השיפוט {gameDetail['gameTitle']} עודכן בפורטל"
                                     message = msg
-                                    #self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType=template['action'], to=mobileNo, contextDate='created', title=title, message=msg)
+                                    #self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=gamePk, notificationType=template['action'], target_to=mobileNo, contextDate='created', title=title, message=msg)
                                 else:
                                     failureMessage = f'עדכון תוצאת המשחק נכשל' if templateAction == 'postgameupdate' else 'העלאת דו״ח המשחק נכשלה'
                         
                         elif templateAction == 'createrefsixgame':
                             gameId, refereeGame, gameDetail, gamePk = getGameDetail(template)
+                            tournamentGameId = gameDetail.get('id') if gameDetail else None
                             if not gameDetail or not refereeGame:
                                 template['status'] = 'cancelled'
                                 template['updated'] = localNow
@@ -708,8 +765,9 @@ class RefereeProcessService():
                 
                     elif templateAction == 'changepassword':
                         targetMobileNo = template['data']['targetMobileNo'] if template.get('data', {}).get('targetMobileNo') else mobileNo
-                        targetTenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=targetMobileNo)
-                        targetGlobalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=targetMobileNo)
+                        targetRefereeId = self.globalRefereesByMobile.get(targetMobileNo, {}).get('refereeId')
+                        targetTenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=targetRefereeId)
+                        targetGlobalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=targetRefereeId)
                         result = False
                         if targetTenantRefereeDetail:
                             title = 'עדכון סיסמא'
@@ -728,8 +786,8 @@ class RefereeProcessService():
                             template['updated'] = localNow
                     
                     if callPostProcess:
-                        await self.postProcessTemplate(template=template, tenantRefereeDetail=tenantRefereeDetail, gamePk=gamePk, title=title, message=message, failureMessage=failureMessage, page=page)
-                    '''
+                        await self.postProcessTemplate(template=template, tenantRefereeDetail=tenantRefereeDetail, tournamentGameId=tournamentGameId, title=title, message=message, failureMessage=failureMessage, page=page)
+                    
                     if template['status'] == 'created' and failureMessage:
                         template['retries'] = int(template.get('retries', '0')) + 1
                         if template['retries'] > 3:
@@ -739,10 +797,10 @@ class RefereeProcessService():
                             message = failureMessage
                             self.logger.warning(f"{msgSid} ניסיון {template['retries']} של ביצוע הפעולה נכשל", refereeDetail=tenantRefereeDetail)
                     
-                    self.cacheService.setRefereeTemplate(tenantKey=tenantKey, mobileNo=mobileNo, msgSid=msgSid, value=template)
+                    self.cacheService.setRefereeTemplate(tenantKey=tenantKey, refereeId=refereeId, msgSid=msgSid, value=template)
                     if title and message:
-                        self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType=templateAction, to=targetMobileNo, contextDate='created', title=title, message=message)
-                    '''
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=gamePk, notificationType=templateAction, target_to=targetMobileNo, contextDate='created', title=title, message=message)
+                    
         except Exception as ex:
             self.logger.error(f'processTemplates', ex, refereeDetail=tenantRefereeDetail)
 
@@ -755,28 +813,26 @@ class RefereeProcessService():
             return False, default_message
         return False, default_message
 
-    def setNotification(self, tenantKey:str, target:str, id:str, notificationType:str, to:str=None, contextDate:str='gameDate', reminderInHrs:float=None, status:str=None, title:str=None, message:str=None, upsert:bool=False, delete:bool=False):
-        id = helpers.resolve_notification_item_id(id, target)
-        notifications = self.cacheService.getNotifications(tenantKey=tenantKey, target=target, id=id, notificationType=notificationType, to=to, status=status, forceReload=True)
+    def setNotification(self, tenantKey:str, target:str, target_id:str, notificationType:str, target_to=None, contextDate:str='gameDate', reminderInHrs:float=None, status:str=None, title:str=None, message:str=None, upsert:bool=False, delete:bool=False):
+        notifications = self.cacheService.getNotifications(tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType, target_to=target_to, status=status)
         if not notifications and upsert and not delete:
-            all_for_item = self.cacheService.getNotifications(tenantKey=tenantKey, target=target, id=id, forceReload=True) or {}
+            all_for_item = self.cacheService.getNotifications(tenantKey=tenantKey, target=target, target_id=target_id) or {}
             notifications = {
                 k: v for k, v in all_for_item.items()
-                if v.get('notificationType') == notificationType and (to is None or v.get('to') == to)
+                if v.get('notificationType') == notificationType and (target_to is None or v.get('target_to') == target_to)
             }
         if delete:
             if notifications:
                 for notification in notifications.values():
-                    timestamp = notification['timestamp']
                     notification['status'] = 'deleted'
-                    self.cacheService.setNotification(tenantKey=tenantKey, target=target, id=id, notificationType=notificationType, to=to, timestamp=timestamp, value=notification)
+                    self.cacheService.setNotification(tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType, target_to=target_to, value=notification)
             return
 
         #   createNotification = False
         #   if notificationType found
         #       if status == created
         #           then update notification
-        #       else      
+        #       else
         #           if upsert
         #               pass
         #           else
@@ -788,20 +844,20 @@ class RefereeProcessService():
         #       create notification
         createNotification = False
         if notifications:
-            created_items = [(ts, n) for ts, n in notifications.items() if n.get('status') == 'created']
+            created_items = [(k, n) for k, n in notifications.items() if n.get('status') == 'created']
             if upsert and len(created_items) > 1:
-                created_items.sort(key=lambda x: x[1].get('timestamp', 0))
-                keep_ts = created_items[0][1].get('timestamp')
-                for _ts, extra in created_items[1:]:
+                created_items.sort(key=lambda x: x[1].get('created') or 0)
+                keep_id = created_items[0][1].get('id')
+                for _k, extra in created_items[1:]:
                     extra['status'] = 'deleted'
                     self.cacheService.setNotification(
-                        tenantKey=tenantKey, target=target, id=id, notificationType=notificationType,
-                        to=to, timestamp=extra['timestamp'], value=extra,
+                        tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType,
+                        target_to=target_to, value=extra,
                     )
-                notifications = {k: v for k, v in notifications.items() if v.get('status') != 'created' or v.get('timestamp') == keep_ts}
+                notifications = {k: v for k, v in notifications.items() if v.get('status') != 'created' or v.get('id') == keep_id}
 
             createdFound = False
-            for timestamp, notification in notifications.items():
+            for notification in notifications.values():
                 if notification['status'] == 'created':
                     createdFound = True
                     notification['contextDate'] = contextDate
@@ -815,15 +871,119 @@ class RefereeProcessService():
             createNotification = True
 
         if createNotification:
-            timestamp = int(time.time())
-            notifications = {timestamp: {'contextDate': contextDate, 'reminderInHrs': reminderInHrs, 'status': 'created', 'timestamp': timestamp, 'title': title, 'message': message, 'id': id, 'target': target, 'notificationType': notificationType, 'tenantKey': tenantKey}}
-        
+            # No 'id' here - this is genuinely new, no row exists yet. postgresClient.setNotifications
+            # uses a present value['id'] to update that exact row directly; target_id (the game/item
+            # this notification is about) is a different thing entirely and must not be mistaken
+            # for the notification's own row id.
+            notifications = {0: {'contextDate': contextDate, 'reminderInHrs': reminderInHrs, 'status': 'created', 'title': title, 'message': message, 'target': target, 'notificationType': notificationType, 'tenantKey': tenantKey}}
+
         for notification in notifications.values():
-            timestamp = notification['timestamp']
-            self.cacheService.setNotification(tenantKey=tenantKey, target=target, id=id, notificationType=notificationType, to=to, timestamp=timestamp, value=notification)
-        
+            self.cacheService.setNotification(tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType, target_to=target_to, value=notification)
+
         return next(iter(notifications.values()))
-    
+
+    def getEffectiveNotificationSetting(self, tenantKey: str, refereeId: int, typeKey: str, refereeDetail: Optional[dict] = None) -> Optional[dict]:
+        """Resolves the effective config for one notification type, cascading:
+        notification_types catalog default -> tenants.notification_settings[typeKey] override ->
+        referees.notification_overrides[typeKey] override. Consumed by newer features (commute
+        reminder actions, time-to-leave push) - the existing hardcoded reminder dispatch
+        (gameFirstReminder/gameLastReminder/refereeLastReminder above) does not call this yet.
+        Returns None (excluded) whenever the FINAL resolved 'enabled' is false - checked once
+        after all three layers merge, not per-layer, so a disable at any layer (catalog global
+        kill switch, tenant, or referee) excludes it, and a later layer can still explicitly
+        re-enable what an earlier layer disabled (e.g. a referee opting back into a type their
+        tenant disabled by default). A dict with enabled=False embedded would be truthy in
+        Python, so callers doing `if setting:` need this collapsed to None, not left as a dict.
+        refereeDetail: pass the caller's own already-fetched, already-normalized referee row
+        (see _normalize_referee_row_from_get) to skip the internal lookup - getReferees hits the
+        DB on every call (referee-specific, not cached), so a caller resolving many typeKeys for
+        the same referee (e.g. getRefereeNotificationSettings's per-catalog-type loop) should
+        fetch it once and pass it through here instead of one DB round trip per type."""
+        catalogEntry = self.tenantRepository.get_notification_type(type_key=typeKey)
+        effective = {
+            'enabled': catalogEntry.enabled if catalogEntry is not None else True,
+            'contextTime': catalogEntry.context_time if catalogEntry else 'gameStart',
+            'offsetMinutes': catalogEntry.offset_minutes if catalogEntry else 0,
+            'channels': catalogEntry.channels if catalogEntry else [],
+        }
+
+        tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
+        tenantOverride = ((tenant.notification_settings or {}).get(typeKey) if tenant else None) or {}
+        effective.update({k: v for k, v in tenantOverride.items() if v is not None})
+
+        if refereeDetail is None:
+            refereeDetail = self._normalize_referee_row_from_get(
+                self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=refereeId)
+            ) if refereeId else None
+        refereeOverride = ((refereeDetail or {}).get('notificationOverrides', {}).get(typeKey)) or {}
+        effective.update({k: v for k, v in refereeOverride.items() if v is not None})
+
+        return effective if effective['enabled'] else None
+
+    def setRefereeNotificationOverride(self, refereeId: int, typeKey: str, enabled: Optional[bool] = None, offsetMinutes: Optional[int] = None) -> None:
+        """Merges enabled/offsetMinutes into referees.notification_overrides[typeKey], preserving
+        any other field already on that entry and every other type's entry untouched."""
+        refereeDetail = self._normalize_referee_row_from_get(
+            self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=refereeId)
+        )
+        if not refereeDetail:
+            return
+        overrides = dict(refereeDetail.get('notificationOverrides') or {})
+        entry = dict(overrides.get(typeKey) or {})
+        if enabled is not None:
+            entry['enabled'] = enabled
+        if offsetMinutes is not None:
+            entry['offsetMinutes'] = offsetMinutes
+        overrides[typeKey] = entry
+        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', refereeId=refereeId, propertyName='notificationOverrides', value=overrides)
+
+    def getRefereeNotificationSettings(self, tenantKeys: list, refereeId: int) -> list:
+        """Dynamic, catalog-driven replacement for the old fixed 5-field reminder settings: one
+        entry per notification_type in the catalog - regardless of whether any of the referee's
+        tenants has it enabled, so the referee can always see and set every type - carrying the
+        referee's own effective value (resolved tenant-agnostically, tenantKey='GLOBAL', since
+        this is one personal preference shared across all the referee's tenants - mirroring the
+        old dedicated-column design, just no longer hardcoded to 3 specific types). hoursInAdvance
+        is always a positive "how many hours in this type's natural direction" number - the UI
+        doesn't need to know the before/after sign convention, only
+        setRefereeNotificationOverride's caller (clientUpdateUserDetails) does, to convert it
+        back to offsetMinutes."""
+        catalog = self.tenantRepository.get_notification_types()
+        # get_notification_types() runs the raw catalog dict through the NotificationType model,
+        # and model construction drops any key not declared as a model field - properties JSONB
+        # keys (label/hint) get flattened to the top level by _merge_props before that happens,
+        # so they never survive into catalogEntry.properties. Read them from the un-modeled
+        # cacheService dict instead, where the flattened label/hint are still present.
+        rawCatalog = self.cacheService.getNotificationTypes()
+
+        refereeDetail = self._normalize_referee_row_from_get(
+            self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=refereeId)
+        ) if refereeId else None
+        refereeOverrides = (refereeDetail or {}).get('notificationOverrides') or {}
+
+        result = []
+        for typeKey, catalogEntry in catalog.items():
+            setting = self.getEffectiveNotificationSetting(tenantKey='GLOBAL', refereeId=refereeId, typeKey=typeKey, refereeDetail=refereeDetail)
+            contextTime = catalogEntry.context_time
+            # Preserve the referee's own configured timing even while disabled (matches the old
+            # dedicated-column behavior, where toggling the enabled checkbox off never cleared
+            # the hours field) - only fall back to the catalog default if they never set one.
+            offsetMinutes = (refereeOverrides.get(typeKey) or {}).get('offsetMinutes')
+            if offsetMinutes is None:
+                offsetMinutes = setting['offsetMinutes'] if setting else catalogEntry.offset_minutes
+            hoursInAdvance = offsetMinutes / 60 if contextTime == 'gameEnd' else -offsetMinutes / 60
+            result.append({
+                'typeKey': typeKey,
+                'label': rawCatalog.get(typeKey, {}).get('label', typeKey),
+                'hint': rawCatalog.get(typeKey, {}).get('hint', ''),
+                'contextTime': contextTime,
+                'enabled': setting is not None,
+                'hoursInAdvance': hoursInAdvance,
+                'seq': catalogEntry.seq,
+            })
+        result.sort(key=lambda r: r['seq'])
+        return result
+
     def _normalize_referee_row_from_get(self, data, mobile_no=None):
         """Normalize getReferees / getRefereeProperties result to a single referee row dict."""
         if not data or not isinstance(data, dict):
@@ -838,32 +998,13 @@ class RefereeProcessService():
                 return inner
         return data
 
-    def _internal_referee_id_from_ref_detail(self, ref_detail):
-        if not ref_detail:
-            return None
-        for key in ('refereeId', 'internalRefereeId'):
-            v = ref_detail.get(key)
-            if v is not None:
-                try:
-                    return int(v)
-                except (TypeError, ValueError):
-                    pass
-        ph = ref_detail.get('* phone') or ''
-        if isinstance(ph, str) and ph.startswith('tmpRefId:'):
-            tail = ph.split(':', 1)[-1].strip()
-            try:
-                return int(tail)
-            except ValueError:
-                return None
-        return None
-
     def _normalize_ref_name_for_match(self, name):
         if not name or not isinstance(name, str):
             return ''
         return ' '.join(name.strip().split()).casefold()
 
     def _internal_referee_id_from_merged_referee_row(self, detail):
-        """IFA/LIGA internal id from tenant/global merged referee row or tmp mobile key."""
+        """IFA/LIGA internal id from a tenant/global merged referee row."""
         if not detail or not isinstance(detail, dict):
             return None
         v = detail.get('internalRefereeId')
@@ -872,13 +1013,6 @@ class RefereeProcessService():
                 return int(v)
             except (TypeError, ValueError):
                 pass
-        m = detail.get('mobileNo')
-        if isinstance(m, str) and m.startswith('tmpRefId:'):
-            tail = m.split(':', 1)[-1].strip()
-            try:
-                return int(tail)
-            except ValueError:
-                return None
         return None
 
     def _mobile_no_for_global_referee_row(self, gr):
@@ -937,164 +1071,14 @@ class RefereeProcessService():
             ref_detail['internalRefereeId'] = iid
             ref_detail['refereeId'] = iid
 
-    def _invalidate_referee_maps_after_tmp_merge(self):
-        for attr in ('_globalRefereesByMobile', '_refereesByRefId', '_refereesByMobile', '_refereesByGuid', '_globalRefereesByName'):
-            if hasattr(self.handleUsers, attr):
-                delattr(self.handleUsers, attr)
-        (self.globalRefereesByMobile, self.refereesByRefId, self.refereesByMobile, self.refereesByGuid, self.globalRefereesByName) = self.handleUsers.getAllReferees()
-
-    def _resolve_tournament_name_by_game_pk_scan(self, tenant_key, game_pk):
-        """Infer tournament from gamePk: pick the tournament whose name is a prefix of gamePk (longest match wins)."""
-        if not tenant_key or not game_pk:
-            return None
-        pk = str(game_pk).strip()
-        if not pk:
-            return None
-        tournaments = self.cacheService.getTournaments(tenantKey=tenant_key, forceReload=False) or {}
-        names = [n for n in tournaments.keys() if n]
-        names.sort(key=lambda n: len(str(n)), reverse=True)
-        for tournament_name in names:
-            tn = str(tournament_name)
-            if pk.startswith(tn):
-                return tournament_name
-        return None
-
-    def _patch_one_tournament_game_tmp_phone(self, tenant_key, tournament_name, game_pk, tmp_mobile, real_mobile):
-        """Rewrite tmpRefId * phone in a single tournament game's referee list (no full tournament scan)."""
-        if not tournament_name or not game_pk or not tmp_mobile or not real_mobile:
-            return False
-        try:
-            games = self.cacheService.getTournamentGames(
-                tenantKey=tenant_key,
-                tournamentName=tournament_name,
-                gamePk=game_pk,
-                nonArchivedOnly=False,
-                forceReload=True) or {}
-        except Exception as ex:
-            self.logger.debug(
-                f'_patch_one_tournament_game_tmp_phone tn={tournament_name} pk={game_pk}: {ex}')
-            return False
-        if not isinstance(games, dict) or not games:
-            return False
-        gdetail = games.get(game_pk)
-        if gdetail is None and len(games) == 1:
-            gdetail = next(iter(games.values()))
-        if gdetail is None and games.get('gamePk') == game_pk:
-            gdetail = games
-        if not isinstance(gdetail, dict):
-            return False
-        refs = gdetail.get('referees')
-        if not refs and isinstance(gdetail.get('nested'), dict):
-            refs = list(gdetail['nested'].values())
-        if not isinstance(refs, list):
-            return False
-        changed = False
-        for r in refs:
-            if isinstance(r, dict) and r.get('* phone') == tmp_mobile:
-                r['* phone'] = real_mobile
-                changed = True
-        if changed:
-            pk = gdetail.get('gamePk') or game_pk
-            self.cacheService.setTournamentGame(
-                tenantKey=tenant_key, tournamentName=tournament_name, gamePk=pk, value=gdetail)
-        return changed
-
-    def _migrate_tmp_referee_mobile_full(self, tenant_key, tmp_mobile, real_mobile):
-        """
-        Merge tmpRefId:* referee rows onto real mobile (GLOBAL + tenant), re-key refereeGamesNew
-        rows, patch embedded tournament referees, remove placeholder referee keys.
-        """
-        g_tmp = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=tmp_mobile, forceReload=True), tmp_mobile) or {}
-        t_tmp = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey=tenant_key, mobileNo=tmp_mobile, forceReload=True), tmp_mobile) or {}
-        if not g_tmp and not t_tmp:
-            return False
-        g_real = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=real_mobile, forceReload=True), real_mobile) or {}
-        t_real = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey=tenant_key, mobileNo=real_mobile, forceReload=True), real_mobile) or {}
-        merged_g = {**g_tmp, **g_real, 'mobileNo': real_mobile}
-        merged_t = {**t_tmp, **t_real, 'mobileNo': real_mobile}
-        merged_t['refId'] = t_real.get('refId') or t_tmp.get('refId') or merged_t.get('refId')
-        self.cacheService.setReferee(tenantKey='GLOBAL', mobileNo=real_mobile, value=merged_g)
-        self.cacheService.setReferee(tenantKey=tenant_key, mobileNo=real_mobile, value=merged_t)
-
-        try:
-            rg = self.cacheService.getRefereeGamesNew(
-                tenantKey=tenant_key, mobileNo=tmp_mobile, forceReload=True,
-                includeArchived=True, includeRemoved=True, includeCanceled=True)
-            if isinstance(rg, dict):
-                tournament_by_pk = {}
-                for gpk, gv in list(rg.items()):
-                    if gv is None:
-                        continue
-                    if isinstance(gv, dict):
-                        gd = gv.get('gameDetail') if isinstance(gv.get('gameDetail'), dict) else {}
-                        tname = gv.get('tournamentName') or gd.get('tournamentName')
-                        if not tname and gpk:
-                            if gpk not in tournament_by_pk:
-                                tournament_by_pk[gpk] = self._resolve_tournament_name_by_game_pk_scan(
-                                    tenant_key, gpk)
-                            tname = tournament_by_pk[gpk]
-                            if tname:
-                                gv['tournamentName'] = tname
-                                if isinstance(gv.get('gameDetail'), dict):
-                                    gv['gameDetail']['tournamentName'] = tname
-                        if tname and gpk:
-                            self._patch_one_tournament_game_tmp_phone(
-                                tenant_key, tname, gpk, tmp_mobile, real_mobile)
-                    self.cacheService.setRefereeGameNew(tenantKey=tenant_key, mobileNo=real_mobile, gamePk=gpk, value=gv)
-                    self.cacheService.deleteRefereeGameNew(tenantKey=tenant_key, mobileNo=tmp_mobile, gamePk=gpk)
-        except Exception as ex:
-            self.logger.error(f'migrate RefereeGamesNew {tmp_mobile} -> {real_mobile}', ex)
-
-        try:
-            rr = self.cacheService.getRefereeReviewsNew(
-                tenantKey=tenant_key, mobileNo=tmp_mobile, forceReload=True)
-            if isinstance(rr, dict):
-                for key, rv in list(rr.items()):
-                    if not isinstance(rv, dict):
-                        continue
-                    gpk = rv.get('gamePk') or key
-                    self.cacheService.setRefereeReviewNew(tenantKey=tenant_key, mobileNo=real_mobile, gamePk=gpk, value=rv)
-                    try:
-                        self.cacheService.dbClient.delete(
-                            tableName='refereeReviews', tenantKey=tenant_key, mobileNo=tmp_mobile, gamePk=gpk)
-                    except Exception as ex_del:
-                        self.logger.debug(f'delete review tmp={tmp_mobile} gamePk={gpk}: {ex_del}')
-        except Exception as ex:
-            self.logger.error(f'migrate RefereeReviewsNew {tmp_mobile} -> {real_mobile}', ex)
-
-        try:
-            self.cacheService.dbClient.delete(tableName='referees', tenantKey='GLOBAL', mobileNo=tmp_mobile)
-            self.cacheService.dbClient.delete(tableName='referees', tenantKey=tenant_key, mobileNo=tmp_mobile)
-        except Exception as ex:
-            self.logger.warning(f'remove tmp referee {tmp_mobile}: {ex}')
-
-        self._invalidate_referee_maps_after_tmp_merge()
-        self.logger.info(f'migrated tmp referee {tmp_mobile} -> {real_mobile} tenant={tenant_key}')
-        return True
-
-    def _maybe_migrate_tmp_referee_to_mobile(self, tenant_key, ref_detail, real_mobile):
-        """When IFA exposes a real mobile but DB still only has tmpRefId:internalId rows, merge onto mobile."""
-        if not real_mobile or str(real_mobile).startswith('tmpRefId:'):
-            return
-        existing = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey=tenant_key, mobileNo=real_mobile, forceReload=True), real_mobile)
-        if existing and existing.get('refId'):
-            return
-        iid = self._internal_referee_id_from_ref_detail(ref_detail)
-        if iid is None:
-            return
-        tmp_key = f'tmpRefId:{iid}'
-        tmp_g = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=tmp_key, forceReload=True), tmp_key)
-        tmp_t = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey=tenant_key, mobileNo=tmp_key, forceReload=True), tmp_key)
-        if not tmp_g and not tmp_t:
-            return
-        self._migrate_tmp_referee_mobile_full(tenant_key, tmp_key, real_mobile)
+    def _referee_lookup_kwargs(self, phoneIdentifier):
+        """'* phone' now holds either a real mobile number (E.164, starts with '+') or, for
+        mobile-less referees, the bare referees.id as a string - resolve to the right
+        getReferees()/get_referee_game_by_pk() kwarg accordingly."""
+        s = str(phoneIdentifier)
+        if s.isdigit():
+            return {'refereeId': int(s)}
+        return {'mobileNo': phoneIdentifier}
 
     async def postParseGames(self, tenantKey, objType, refereeData, page):
         async def updateGroupName(gameDetail):
@@ -1128,11 +1112,10 @@ class RefereeProcessService():
         swName = f'postParseGames={mobileNo}'
         helpers.stopwatchStart(swName)
         globalRefereeDetail = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=mobileNo), mobileNo) or {}
+            self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=refereeData.get('refereeId')), mobileNo) or {}
         tenantRefereeDetail = self._normalize_referee_row_from_get(
-            self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo), mobileNo) or {}
-        tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
-        tenantNotifications = tenant.get('notifications', {})
+            self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeData.get('refereeId')), mobileNo) or {}
+        tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
 
         try:
             items = refereeData[objType]['currentList']
@@ -1140,22 +1123,22 @@ class RefereeProcessService():
             
             for gamePk, refereeGame in sortedItemsByDate.items():
                 tournamentName = refereeGame['tournamentName']
-                tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
+                tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName, game=refereeGame)
                 if not tournament:
                     tournament = self.handleTournaments.createTournament(tenantKey=tenantKey, tournamentName=tournamentName)
     
-                section = self.cacheService.get_section_by_name(tenantKey=tenantKey, sectionName=tournament.get('section'))
+                section = self.tenantRepository.get_section(tenant_key=tenantKey, section_name=tournament.get('section'))
 
                 refereeGame['tournamentName'] = tournamentName
 
                 groupName = f'{refereeGame["tournamentName"]} {refereeGame["gameTitle"]}'
 
-                gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName)
-                gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame, forceReload=True)
+                gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName, game=refereeGame)
+                gameDetail = self.cacheService.getGameDetail(game=refereeGame, forceReload=True)
                 if not gameDetail:
-                    gameDetail = { 'gamePk': gamePk, 'tournamentName': tournamentName, 'season': self.season, 'groupName': groupName, 'archived': False }
+                    gameDetail = { 'gamePk': gamePk, 'tournamentName': tournamentName, 'season': tenant.season, 'groupName': groupName, 'archived': False }
                 refereeGame['gameDetail'] = gameDetail
-                gameDetail['id'] = gameDetail.get('id', str(uuid.uuid4())[:8])
+                gameDetail['gameId'] = gameDetail.get('gameId', str(uuid.uuid4())[:8])
                 gameDetail['groupMobileNumbers'] = gameDetail.get('groupMobileNumbers', [])
                 gameDetail['gameDuration'] = gameDetail.get('gameDuration', gameDuration)
 
@@ -1171,59 +1154,65 @@ class RefereeProcessService():
                 refereesMobileNos = {}
                 mainReferees = []
                 secretaryReferee = None
+                reviewerReferee = None
                 isMainReferee = False
                 isSecretaryReferee = False
                 refereeIds = []
-                sortedReferees = sorted(referees, key=lambda refDetail: self.cacheService.get_role_by_name(tenantKey=tenantKey, roleName=refDetail['role']).get('order', '99'))
+                sortedReferees = sorted(referees, key=lambda refDetail: (lambda r: r.order or '99' if r else '99')(self.tenantRepository.get_role(tenant_key=tenantKey, role_name=refDetail['role'])))
                 refereesList = []
                 for refDetail in sortedReferees:
                     roleName = refDetail['role']
-                    role = self.cacheService.get_role_by_name(tenantKey=tenantKey, roleName=roleName)
-                    
+                    role = self.tenantRepository.get_role(tenant_key=tenantKey, role_name=roleName.replace('*', ''))
+
                     refPhone = refDetail.get('* phone')
                     if refPhone:
-                        if not str(refPhone).startswith('tmpRefId:'):
-                            raw_chk = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=refPhone)
-                            tenant_chk = self._normalize_referee_row_from_get(raw_chk, refPhone)
-                            if not tenant_chk:
-                                self._enrich_ref_detail_internal_id_from_name(tenantKey, refDetail)
-                            self._maybe_migrate_tmp_referee_to_mobile(tenantKey, refDetail, refPhone)
-                        raw_tenant = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=refPhone)
+                        refPhoneLookupKwargs = self._referee_lookup_kwargs(refPhone)
+                        raw_tenant = self.cacheService.getReferees(tenantKey=tenantKey, **refPhoneLookupKwargs)
                         gameTenantRefereeDetail = self._normalize_referee_row_from_get(raw_tenant, refPhone)
-                        gameRefId = gameTenantRefereeDetail.get('refId') if gameTenantRefereeDetail else None
+                        if not gameTenantRefereeDetail:
+                            self._enrich_ref_detail_internal_id_from_name(tenantKey, refDetail)
+                        gameGlobalRefereeId = gameTenantRefereeDetail.get('refereeId') if gameTenantRefereeDetail else None
                         gameRefereeGame = None
-                        if gameRefId:
-                            refereeIds.append(gameRefId)
+                        if gameGlobalRefereeId:
+                            refereeIds.append(gameGlobalRefereeId)
 
                         if refPhone == mobileNo:
-                            refereeGame['role'] = roleName
-                            if role.get('mainReferee', False):
+                            refereeGame['roleId'] = role.id if role else None
+                            refereeGame['role'] = role.role_name if role else None
+                            if role and role.role_type == 'main':
                                 isMainReferee = True
-                            if role.get('secretaryReferee', False):
+                            if role and role.role_type == 'secretary':
                                 isSecretaryReferee = True
-                            if role.get('reviewer', False) == True and gameTenantRefereeDetail:
+                            if role and role.role_type == 'reviewer' and gameTenantRefereeDetail:
                                 refereeGame['reviewer'] = gameTenantRefereeDetail.get('refId') or refPhone
 
                             refDetail['* status'] = refDetail.get('* status') or refereeGame.get('status')
-                            refDetail['* address'] = globalRefereeDetail.get('addressDetails', {}).get('address') or refDetail.get('* address')
+                            refDetail['* address'] = globalRefereeDetail.get('address') or refDetail.get('* address')
                         else:
-                            if gameRefId:
-                                gameRefereeGame = self.cacheService.get_referee_game_by_pk(tenantKey=tenantKey, gamePk=gamePk, refId=gameRefId)
+                            if gameGlobalRefereeId:
+                                gameRefereeGame = self.cacheService.get_referee_game_by_pk(tenantKey=tenantKey, gamePk=gamePk, refereeId=gameGlobalRefereeId)
                             else:
-                                gameRefereeGame = self.cacheService.get_referee_game_by_pk_new(tenantKey=tenantKey, gamePk=gamePk, mobileNo=refPhone)
+                                gameRefereeGame = self.cacheService.get_referee_game_by_pk(tenantKey=tenantKey, gamePk=gamePk, **refPhoneLookupKwargs)
                             refDetail['* status'] = gameRefereeGame.get('status') if gameRefereeGame else refDetail.get('* status')
                             refDetail['* address'] = refereesDetails.get(refPhone, {}).get('address') or refDetail.get('* address')
 
-                        if role.get('mainReferee', False):
-                            if gameTenantRefereeDetail:
-                                mainReferees.append(gameTenantRefereeDetail.get('refId') or refPhone)
+                        if role and role.role_type == 'main':
+                            if gameTenantRefereeDetail and gameGlobalRefereeId:
+                                mainReferees.append(gameGlobalRefereeId)
 
-                        if role.get('secretaryReferee', False):
-                            if gameTenantRefereeDetail:
-                                secretaryReferee = gameTenantRefereeDetail.get('refId') or refPhone
+                        if role and role.role_type == 'secretary':
+                            if gameTenantRefereeDetail and gameGlobalRefereeId:
+                                secretaryReferee = gameGlobalRefereeId
 
-                        if not role.get('reviewer', False):
-                            refereesMobileNos[MessagingService.adjustMobileNo(refPhone)] = refDetail.get('* name') 
+                        if role and role.role_type == 'reviewer':
+                            if gameTenantRefereeDetail and gameGlobalRefereeId:
+                                reviewerReferee = gameGlobalRefereeId
+
+                        if not (role and role.role_type == 'reviewer'):
+                            # Only real mobile numbers can receive WhatsApp messages - a bare
+                            # referee id (mobile-less referee) has nothing to adjust/message.
+                            if 'mobileNo' in refPhoneLookupKwargs:
+                                refereesMobileNos[MessagingService.adjustMobileNo(refPhone)] = refDetail.get('* name')
                         else:
                             refDetail['reviewer'] = True
                             del sortedReferees[roleName]
@@ -1240,6 +1229,7 @@ class RefereeProcessService():
                     gameDetail['referees'] = refereesList
                 gameDetail['mainReferees'] = mainReferees
                 gameDetail['secretaryReferee'] = secretaryReferee
+                gameDetail['reviewerReferee'] = reviewerReferee
                 gameDetail['removedRefereeIds'] = gameDetail.get('removedRefereeIds', [])
                 gameDetail['refereeIds'] = refereeIds
                 
@@ -1247,7 +1237,7 @@ class RefereeProcessService():
                 teams = teamNames.split(' - ')
                 gameDetail['homeTeamName'] = refereeGame.get('homeTeamName', teams[0].strip())
                 gameDetail['guestTeamName'] = refereeGame.get('guestTeamName', teams[1].strip())
-                gameDetail['date'] = refereeGame['date']
+                gameDetail['date'] = refereeGame['date'] = helpers.ensure_aware(refereeGame['date'])
                 gameDetail['endTime'] = gameDetail['date'] + timedelta(minutes=gameDuration)
                 gameDetail['dow'] = self.handleRefereeData.dayOfWeekInHebrew(gameDetail.get('date'))
                 mandatoryTags = [ 'dateText', 'dow', 'gameTitle', 'round', 'fixture', 'field' ]
@@ -1259,7 +1249,7 @@ class RefereeProcessService():
                         if tag in gameDetail:
                             del gameDetail[tag]
                         self.logger.debug(f'postParseGames game={gamePk} missing mandatory tag={tag}')
-                optionalTags = [ 'homeTeamName', 'guestTeamName', 'internalGameId', 'homeTeamScore', 'guestTeamScore', 'gameResult' ]
+                optionalTags = [ 'homeTeamName', 'guestTeamName', 'internalGameId', 'homeTeamScore', 'guestTeamScore', 'gameResult', 'comment' ]
                 for tag in optionalTags:
                     if refereeGame.get(tag):
                         gameDetail[tag] = refereeGame[tag]
@@ -1289,55 +1279,62 @@ class RefereeProcessService():
                 activeGroupMobileNumbers = [ mobileNo for mobileNo in refereesMobileNos.keys() if self.refereesByMobile.get(tenantKey, {}).get(mobileNo) ]
                 gameDetail['activeGroupMobileNumbers'] = activeGroupMobileNumbers
 
-                firstGameReminderEnabled = globalRefereeDetail.get('firstGameReminderEnabled', True)
-                commuteReminderEnabled = globalRefereeDetail.get('commuteReminderEnabled', True)
-                firstGameReminderTimeInAdvance = int(globalRefereeDetail.get('firstGameReminderTimeInAdvance', '48'))
-                commuteReminderTimeInAdvance = int(globalRefereeDetail.get('commuteReminderTimeInAdvance', '3'))
+                result = self.cacheService.setTournamentGame(tournamentGameId=gameDetail.get('id'), tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
+                if result[1]:
+                    gameDetail = result[0]
+                tournamentGameId = gameDetail.get('id')
+                refereeId = refereeData.get('refereeId')
+                gameFirstReminderSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='gameFirstReminder')
+                commuteReminderSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='refereeLastReminder')
 
                 #gameFirstReminder
-                if firstGameReminderEnabled:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameFirstReminder', reminderInHrs=firstGameReminderTimeInAdvance, upsert=True)
+                if gameFirstReminderSetting:
+                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameFirstReminder, reminderInHrs=-gameFirstReminderSetting['offsetMinutes'] / 60, upsert=True)
                 else:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameFirstReminder', delete=True)
+                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameFirstReminder, delete=True)
 
                 #refereeLastReminder & gameLastReminder
                 if refereeGame.get('state') == 'active':
-                    if commuteReminderEnabled:
-                        self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeLastReminder', to=mobileNo, reminderInHrs=commuteReminderTimeInAdvance, upsert=True)
+                    if commuteReminderSetting:
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeLastReminder, target_to=refereeId, reminderInHrs=-commuteReminderSetting['offsetMinutes'] / 60, upsert=True)
                     else:
-                        self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeLastReminder', delete=True)
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeLastReminder, delete=True)
                 if len(referees) > 1:
-                    if commuteReminderEnabled:
-                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameLastReminder', reminderInHrs=commuteReminderTimeInAdvance, upsert=True)
+                    if commuteReminderSetting:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameLastReminder, reminderInHrs=-commuteReminderSetting['offsetMinutes'] / 60, upsert=True)
                     else:
-                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameLastReminder', delete=True)
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameLastReminder, delete=True)
 
                 #gameLineupsAnnounced
-                gameLineupsAnnouncedEnabled = globalRefereeDetail.get('gameLineupsAnnouncedEnabled', True)
-                if gameLineupsAnnouncedEnabled:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameLineupsAnnounced', reminderInHrs=float(tenantNotifications['gameLineupsAnnounced']), upsert=True)
-                else:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameLineupsAnnounced', delete=True)
+                if 'אימון' not in tournamentName:
+                    gameLineupsSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='gameLineupsAnnounced')
+                    if gameLineupsSetting:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameLineupsAnnounced, reminderInHrs=-gameLineupsSetting['offsetMinutes'] / 60, upsert=True)
+                    else:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameLineupsAnnounced, delete=True)
 
                 #refereeGameReport
-                self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='refereeGameReport', delete=True)
-                self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='refereeGameUpdate', delete=True)
+                self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameReport, delete=True)
+                self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameUpdate, delete=True)
                 if isMainReferee or isSecretaryReferee:
-                    if 'refereeGameReport' in tenantNotifications:
-                        self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeGameReport', to=mobileNo, reminderInHrs=float(tenantNotifications['refereeGameReport']), upsert=True)
+                    refereeGameReportSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='refereeGameReport')
+                    if refereeGameReportSetting:
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameReport, target_to=refereeId, reminderInHrs=-refereeGameReportSetting['offsetMinutes'] / 60, upsert=True)
                     else:
-                        self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeGameReport', to=mobileNo, status='created', delete=True)
-                    
-                    if section.get('skipRefereeGameUpdateReminder', False) == False:
-                        if 'refereeGameUpdate' in tenantNotifications:
-                            self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeGameUpdate', to=mobileNo, reminderInHrs=float(tenantNotifications['refereeGameUpdate']), upsert=True)
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameReport, target_to=refereeId, status='created', delete=True)
+
+                    if not (section and section.skip_referee_game_update_reminder):
+                        refereeGameUpdateSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='refereeGameUpdate')
+                        if refereeGameUpdateSetting:
+                            self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameUpdate, target_to=refereeId, reminderInHrs=-refereeGameUpdateSetting['offsetMinutes'] / 60, upsert=True)
                         else:
-                            self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeGameUpdate', to=mobileNo, status='created', delete=True)
-                
-                if 'refereeCommuteGameUpdate' in tenantNotifications:
-                    self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeCommuteGameUpdate', to=mobileNo, reminderInHrs=float(tenantNotifications['refereeCommuteGameUpdate']), upsert=True)
+                            self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameUpdate, target_to=refereeId, status='created', delete=True)
+
+                refereeCommuteGameUpdateSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='refereeCommuteGameUpdate')
+                if refereeCommuteGameUpdateSetting:
+                    self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeCommuteGameUpdate, target_to=refereeId, reminderInHrs=-refereeCommuteGameUpdateSetting['offsetMinutes'] / 60, upsert=True)
                 else:
-                    self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeCommuteGameUpdate', to=mobileNo, status='created', delete=True)
+                    self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeCommuteGameUpdate, target_to=refereeId, status='created', delete=True)
                 
                 chatGroupId = gameDetail.get('chatGroupId')
                 self.logger.debug(f'createChatGroup={createChatGroup} checkSendGreenApiMessages={checkSendGreenApiMessages} avoidChatGroups={self.avoidChatGroups} chatGroupId={chatGroupId} groupName={groupName} groupMobileNumbers={groupMobileNumbers} isMainReferee={isMainReferee}')
@@ -1348,17 +1345,9 @@ class RefereeProcessService():
                         chatGroupId = groupResponse.get('chatId') if groupResponse else None
                         gameDetail['chatGroupId'] = chatGroupId
                         if chatGroupId:
-                            changed = self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
+                            changed = self.cacheService.setTournamentGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
                             if isMainReferee:
                                 await self.messagingService.greenApiClient.handleAction('setGroupAdmin', {'chatGroupId': chatGroupId, 'to': mobileNo})
-
-                            try:
-                                #self.logger.info(f'libraqm support: {features.check("raqm")}', refereeDetail)
-                                groupJpg = helpers.createHebrewTextImage(gameDetail)
-                                if os.path.exists(groupJpg):
-                                    await self.messagingService.greenApiClient.handleAction('setGroupPicture', {'chatGroupId': chatGroupId, 'pictureFile': groupJpg})
-                            except Exception as ex:
-                                self.logger.error(f'setGroupPicture gamePk={gameDetail["gamePk"]} cg={chatGroupId}', ex, refereeDetail=globalRefereeDetail)
 
                             gameDetail['updateGroup'] = True
                     
@@ -1372,12 +1361,20 @@ class RefereeProcessService():
                             self.logger.error(f'setGroupPicture gamePk={gameDetail["gamePk"]} cg={chatGroupId}', ex, refereeDetail=globalRefereeDetail)
 
                 if createChatGroup and chatGroupId and len(referees) > 1:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='chatGroupCreated', contextDate='created', upsert=True)                    
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='transportationPoll', reminderInHrs=48, upsert=True)
-                    
+                    chatGroupCreatedSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='chatGroupCreated')
+                    if chatGroupCreatedSetting:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.chatGroupCreated, contextDate='created', upsert=True)
+                    else:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.chatGroupCreated, delete=True)
+
+                    transportationPollSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='transportationPoll')
+                    if transportationPollSetting:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.transportationPoll, reminderInHrs=48, upsert=True)
+                    else:
+                        self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.transportationPoll, delete=True)
                 else:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='chatGroupCreated', delete=True)                    
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='transportationPoll', delete=True)
+                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.chatGroupCreated, delete=True)                    
+                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.transportationPoll, delete=True)
 
                 if groupName != gameDetail.get('groupName'):
                     gameDetail['groupName'] = groupName
@@ -1392,33 +1389,34 @@ class RefereeProcessService():
                 
                 gameDetail['updateGroup'] = False
 
-                result = self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
+                result = self.cacheService.setTournamentGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
                 refereeGame['gameDetail'] = result[0]
 
             for gamePk, refereeGame in refereeData[objType]['prevList'].items():
-                gameDetail = refereeGame.get('gameDetail', {}) or self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
+                gameDetail = refereeGame.get('gameDetail', {}) or self.cacheService.getGameDetail(game=refereeGame)
                 if gamePk not in refereeData[objType]['currentList'].keys():
                     await updateGroupName(gameDetail=gameDetail)
                     tournamentName = gameDetail.get('tournamentName')
-                    self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
+                    self.cacheService.setTournamentGame(tournamentGameId=gameDetail.get('id'), tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
 
             sw1 = helpers.stopwatchStop(swName)
             gamesReportsObjType = 'gamesReports'
-            if gamesReportsObjType in tenant.get('objTypes', []):
+            if gamesReportsObjType in (tenant.obj_types if tenant else []):
                 getListSuccessful = await self.tenantsOrgServices[tenantKey].getListForReferee(tenantKey=tenantKey, objType=gamesReportsObjType, refereeData=refereeData, page=page)
                 if getListSuccessful == True:
                     gamesReports = refereeData[gamesReportsObjType]['currentList']
                     for gamePk, refereeReportGame in gamesReports.items():
                         refereeReportGame['gamePk'] = gamePk
-                        gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeReportGame)
+                        gameDetail = self.cacheService.getGameDetail(game=refereeReportGame)
                         if not gameDetail:
                             continue
+                        tournamentGameId = gameDetail.get('id')
                         gameDetail['gameReportStatus'] = 'pending'
                         
-                        isMainReferee = mobileNo in gameDetail.get('mainReferees', []) or tenantRefereeDetail.get('refId') in gameDetail.get('mainReferees', [])
-                        isSecretaryReferee = mobileNo in (gameDetail.get('secretaryReferee') or []) or tenantRefereeDetail.get('refId') in (gameDetail.get('secretaryReferee') or [])
+                        isMainReferee = tenantRefereeDetail.get('refereeId') in gameDetail.get('mainReferees', [])
+                        isSecretaryReferee = tenantRefereeDetail.get('refereeId') == gameDetail.get('secretaryReferee')
                         if isMainReferee or isSecretaryReferee:
-                            gameReportNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeGameReport', to=mobileNo)
+                            gameReportNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameReport, target_to=refereeData.get('refereeId'))
                             shouldCreateNotification = True
                             now = helpers.localNow()
                             for notification in gameReportNotifications.values():
@@ -1429,30 +1427,36 @@ class RefereeProcessService():
                                     shouldCreateNotification = False
                                     break
                             if shouldCreateNotification:
-                                self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeGameReport', to=mobileNo, reminderInHrs=float(tenantNotifications['refereeGameReport']), upsert=True)
+                                # Effective settings (catalog/tenant.notification_settings/referee override
+                                # cascade), not the legacy tenant.notifications dict this duplicate path used
+                                # to read directly - see getEffectiveNotificationSetting.
+                                refereeGameReportSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'), typeKey='refereeGameReport')
+                                if refereeGameReportSetting:
+                                    self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeGameReport, target_to=refereeData.get('refereeId'), reminderInHrs=-refereeGameReportSetting['offsetMinutes'] / 60, upsert=True)
                         
                         if refereeReportGame.get('internalGameId'):
                             gameDetail['internalGameId'] = refereeReportGame['internalGameId']
                         if refereeReportGame.get('gameReportUrl'):
                             gameDetail['gameReportUrl'] = refereeReportGame['gameReportUrl']
-                        self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=refereeReportGame['tournamentName'], gamePk=gamePk, value=gameDetail)
+                        self.cacheService.setTournamentGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, tournamentName=refereeReportGame['tournamentName'], gamePk=gamePk, value=gameDetail)
                         #refereeData[gamesReportsObjType][gameDetail['id']] = refereeReportGame
 
                     completedGamePks = list(set(gamePk for gamePk, refereeGame in refereeData[objType]['prevList'].items() if refereeGame.get('state', 'active') in ('active', 'archived')) - set(gamesReports.keys()))
                     for gamePk in completedGamePks:
                         refereeGame = refereeData[objType]['prevList'][gamePk]
-                        gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
-                        isMainReferee = mobileNo in gameDetail.get('mainReferees', []) or tenantRefereeDetail.get('refId') in gameDetail.get('mainReferees', [])
-                        isSecretaryReferee = mobileNo in (gameDetail.get('secretaryReferee') or []) or tenantRefereeDetail.get('refId') in (gameDetail.get('secretaryReferee') or [])
+                        gameDetail = self.cacheService.getGameDetail(game=refereeGame)
+                        tournamentGameId = gameDetail.get('id') if gameDetail else None
+                        isMainReferee = tenantRefereeDetail.get('refereeId') in gameDetail.get('mainReferees', [])
+                        isSecretaryReferee = tenantRefereeDetail.get('refereeId') == gameDetail.get('secretaryReferee')
                         if isMainReferee or isSecretaryReferee:
                             gameDetail['gameReportStatus'] = 'completed'
-                            refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=gamePk, status='created', to=mobileNo)
+                            refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, status='created', target_to=refereeData.get('refereeId'))
                             if refereeGamesNotifications:
                                 for notification in refereeGamesNotifications.values():
                                     notificationType = notification['notificationType']
-                                    if notificationType in ['refereeGameUpdate', 'refereeGameReport']:
+                                    if notificationType in [NotificationTypeKey.refereeGameUpdate, NotificationTypeKey.refereeGameReport]:
                                         notification['status'] = 'deleted'
-                                        self.cacheService.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType=notificationType, to=mobileNo, timestamp=notification['timestamp'], value=notification)
+                                        self.cacheService.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=notificationType, target_to=refereeData.get('refereeId'), value=notification)
 
             sw2 = helpers.stopwatchStop(swName)
 
@@ -1471,16 +1475,16 @@ class RefereeProcessService():
         refereeDetail = None
         try:
             mobileNo = refereeData['mobileNo']
-            refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
+            refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'))
             numOfReviews = len(refereeData[objType]['currentList'])
             i = 0
 
             for reviewPk, review in refereeData[objType]['currentList'].items():
                 prevReview = refereeData[objType]['prevList'].get(reviewPk) 
                 if prevReview:
-                    review['id'] = prevReview['id']
+                    review['gameId'] = prevReview['gameId']
                 else:
-                    review['id'] = str(uuid.uuid4())[:8]
+                    review['gameId'] = str(uuid.uuid4())[:8]
 
                 review['no.'] = f'{numOfReviews-i}'
                 review['gameTitle'] = review['gameTitle']
@@ -1499,7 +1503,7 @@ class RefereeProcessService():
         refereeDetail = None
         try:
             mobileNo = refereeData['mobileNo']
-            refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
+            refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'))
 
             prevList = refereeData[objType]['prevList']
             currentList = refereeData[objType]['currentList']
@@ -1525,10 +1529,10 @@ class RefereeProcessService():
                 if objType == 'games':
                     if currentGameDetail.get('tournamentName') == None:
                         self.logger.error(f'compareList {objType} pk={pk} missing gameDetail={currentItem.get("gameDetail")}')
-                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=currentGameDetail['tournamentName'])
+                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=currentGameDetail['tournamentName'], game=currentItem)
                     if tournament:
-                        rule = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament.get('rules'))
-                        includeReviewer = rule.get('includeReviewer', False)
+                        rule = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules'))
+                        includeReviewer = rule.include_reviewer if rule else False
                 prevItemText = generateDetailsFunc(tenantKey=tenantKey, gameDetail=currentItem | currentGameDetail, includeReferees=includeReferees, includeReviewer=includeReviewer)
                 refereeData[objType]['addedText'] += f'{prevItemText}\n'
 
@@ -1537,8 +1541,16 @@ class RefereeProcessService():
             candidateToArchiveFromPrevList = {}
             if 'removeFilter' in self.dataDic[objType]:
                 for pk, prevItem in activePrevList.items():
+                    # Manual games (see apply_manual_games.py / postgresClient.setTournamentGame)
+                    # have no federation page to scrape - they'd otherwise look identical to a
+                    # real removal every cycle. Only reconciliation (which archives the manual
+                    # stand-in once the scraper finds the real game) or the referee's own explicit
+                    # delete may remove one - never this generic scrape-diff path, in any
+                    # manual_status.
+                    if objType == 'games' and (prevItem.get('gameDetail') or {}).get('isManual'):
+                        continue
                     # future game should be removed
-                    gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=prevItem['tournamentName'])
+                    gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=prevItem['tournamentName'], game=prevItem)
                     # if future game
                     if prevItem.get('date') >= now:
                         if prevItem.get('state', 'active') == 'removed':
@@ -1561,7 +1573,6 @@ class RefereeProcessService():
                 refereeData[objType]['removedText'] += f'{prevItemText}\n'
 
             refereeData[objType]['archived'] = sorted(candidateToArchiveFromPrevList.keys(), key=lambda gamePk: candidateToArchiveFromPrevList[gamePk].get('date'))
-            #refereeData[objType]['archived'] = sorted(list(set(candidateToArchiveFromPrevList.keys()) - set(currentList.keys())), key=lambda gamePk: candidateToArchiveFromPrevList[gamePk].get('date'))
 
             #Changed/Nonchanged
             changedList = {}
@@ -1572,17 +1583,17 @@ class RefereeProcessService():
                 prevGameDetail = prevItem.get('gameDetail') or {}
                 currentItem = currentList[pk]
                 if objType == 'games' and 'gameDetail' not in currentItem:
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=currentItem)
+                    gameDetail = self.cacheService.getGameDetail(game=currentItem)
                     currentItem['gameDetail'] = gameDetail
                     self.logger.error(f'compareList {objType} pk={pk} missing gameDetail', refereeDetail=refereeDetail)
                 currentGameDetail = currentItem['gameDetail'] if objType == 'games' else {}
                 includeReferees = True
                 includeReviewer = False
                 if objType == 'games':
-                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=currentItem['tournamentName'])
+                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=currentItem['tournamentName'], game=currentItem)
                     if tournament:
-                        rule = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament.get('rules'))
-                        includeReviewer = rule.get('includeReviewer', False)
+                        rule = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules'))
+                        includeReviewer = rule.include_reviewer if rule else False
                 prevItemText = generateDetailsFunc(tenantKey=tenantKey, gameDetail=prevItem | prevGameDetail, includeReferees=includeReferees, includeReviewer=includeReviewer)
                 currentItemText = generateDetailsFunc(tenantKey=tenantKey, gameDetail=currentItem | currentGameDetail, includeReferees=includeReferees, includeReviewer=includeReviewer)
                 if prevItemText != currentItemText:
@@ -1600,10 +1611,10 @@ class RefereeProcessService():
                 includeReferees = True
                 includeReviewer = False
                 if objType == 'games':
-                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=currentItem['tournamentName'])
+                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=currentItem['tournamentName'], game=currentItem)
                     if tournament:
-                        rule = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament.get('rules'))
-                        includeReviewer = rule.get('includeReviewer', False)
+                        rule = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules'))
+                        includeReviewer = rule.include_reviewer if rule else False
                 currentItemText = generateDetailsFunc(tenantKey=tenantKey, gameDetail=currentItem | currentGameDetail, includeReferees=includeReferees, includeReviewer=includeReviewer)
                 refereeData[objType]['changedText'] += f'{currentItemText}\n'
 
@@ -1656,26 +1667,25 @@ class RefereeProcessService():
 
     async def handleNotifications(self, tenantKey, objType, refereeData, browser=None):
         mobileNo = refereeData['mobileNo']
-        refId = refereeData['refId']
-        name = refereeData['name']
-        tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-        globalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=mobileNo)
-        
+        refereeId = refereeData['refereeId']
+        tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeId)
+        globalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=refereeId)
+
         async def _notifications_work(browser_for_notifications):
-            tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
-            skipAvailabilityNotifications = tenant.get('skipAvailabilityNotifications', [])
+            tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
+            skipAvailabilityNotifications = tenant.skip_availability_notifications if tenant else []
             
             allowMessageSending = self.messagingService.allowMessageSending(to=globalRefereeDetail)
 
             localTime = datetime.now(ZoneInfo(ConfigManager.get_config_value(self.config, 'TZ', 'UTC')))
             localHour = localTime.hour
-            defaultAvailableFromHour = int(tenant.get('defaultAvailableFromHour', '8'))
-            defaultAvailableToHour = int(tenant.get('defaultAvailableToHour', '21'))
+            defaultAvailableFromHour = tenant.default_available_from_hour if tenant else 8
+            defaultAvailableToHour = tenant.default_available_to_hour if tenant else 21
             allowDefaultAvailability = True
             if defaultAvailableFromHour <= defaultAvailableToHour and (localHour < defaultAvailableFromHour or localHour > defaultAvailableToHour) \
                         or defaultAvailableFromHour > defaultAvailableToHour and (localHour > defaultAvailableFromHour and localHour < defaultAvailableToHour):
                 allowDefaultAvailability = False
-            
+
             if False and not allowMessageSending:
                 self.logger.warning(f'handleNotifications, mobileNo={mobileNo}, out of message acceptance limitation', refereeDetail=tenantRefereeDetail)
                 return
@@ -1685,11 +1695,12 @@ class RefereeProcessService():
                 if itemPk not in refereeData[objType]['currentList'].keys():
                     items[itemPk] = item
             sortedItemsByDate = helpers.sortDictByProperty(obj=items, property='date')
-            sortedItemsByDate['NONGAME'] = { 'tenantKey': 'GLOBAL', 'date': helpers.localNow() }
+            sortedItemsByDate[None] = { 'tenantKey': 'GLOBAL', 'date': helpers.localNow() }
             for itemPk, item in sortedItemsByDate.items():
-                gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=item) or {}
+                gameDetail = self.cacheService.getGameDetail(game=item) or {}
+                tournamentGameId = gameDetail.get('id')
                 tournamentName = gameDetail.get('tournamentName')
-                gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName)
+                gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName, game=item)
                 self.logger.debug(f"notifications {item.get('date')}", refereeDetail=tenantRefereeDetail)
 
                 refereeGamesNotifications = None
@@ -1697,42 +1708,41 @@ class RefereeProcessService():
                 notifications = None
                 if objType == 'games':
                     if item.get('state', 'active') == 'removed':
-                        refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=itemPk, status='created', to=mobileNo, forceReload=True)
+                        refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, status='created', target_to=refereeId)
                         if refereeGamesNotifications:
                             for notification in refereeGamesNotifications.values():
                                 if notification.get('notificationType') != 'removedItem':
                                     notification['status'] = 'deleted'
-                                    self.cacheService.setNotification(tenantKey=notification['tenantKey'], target='refereeGames', id=itemPk, notificationType=notification['notificationType'], to=mobileNo, timestamp=notification['timestamp'], value=notification)
+                                    self.cacheService.setNotification(tenantKey=notification['tenantKey'], target='refereeGames', target_id=tournamentGameId, notificationType=notification['notificationType'], target_to=refereeId, value=notification)
 
-                    refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=item.get('tenantKey', tenantKey), target='refereeGames', id=itemPk, status='created', to=mobileNo, forceReload=True)
+                    refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=item.get('tenantKey', tenantKey), target='refereeGames', target_id=tournamentGameId, status='created', target_to=refereeId)
                     tournamentGamesNotifications = {}
                     if item.get('state', 'active') == 'active':
-                        tournamentGamesNotifications = self.cacheService.getNotifications(tenantKey=item.get('tenantKey', tenantKey), target='tournamentGames', id=itemPk, status='created', forceReload=True) if item.get('state', 'active') != 'removed' else None
+                        tournamentGamesNotifications = self.cacheService.getNotifications(tenantKey=item.get('tenantKey', tenantKey), target='tournamentGames', target_id=tournamentGameId, status='created') if item.get('state', 'active') != 'removed' else None
                     notifications:dict = helpers.merge_nested_dicts(refereeGamesNotifications, tournamentGamesNotifications)
                 elif objType == 'reviews':
                     if item.get('state', 'active') == 'removed':
-                        refereeReviewsNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', id=itemPk, status='created', to=mobileNo)
+                        refereeReviewsNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, status='created', target_to=refereeId)
                         if refereeReviewsNotifications:
                             for notification in refereeReviewsNotifications.values():
                                 if notification.get('notificationType') != 'removedItem':
                                     notification['status'] = 'deleted'
-                                    self.cacheService.setNotification(tenantKey=notification['tenantKey'], target='refereeReviews', id=itemPk, notificationType=notification['notificationType'], to=mobileNo, timestamp=notification['timestamp'], value=notification)
+                                    self.cacheService.setNotification(tenantKey=notification['tenantKey'], target='refereeReviews', target_id=tournamentGameId, notificationType=notification['notificationType'], target_to=refereeId, value=notification)
 
-                    notifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', id=itemPk, status='created', to=mobileNo, forceReload=True)
+                    notifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, status='created', target_to=refereeId)
                 pass
                 seen_notification_keys = set()
                 for key, notification in notifications.items():
                     notificationType = notification['notificationType']
-                    dedupe_key = (notification.get('target'), notificationType, notification.get('to'))
+                    dedupe_key = (notification.get('target'), notificationType, notification.get('target_to'))
                     if dedupe_key in seen_notification_keys:
                         notification['status'] = 'deleted'
                         self.cacheService.setNotification(
                             tenantKey=notification['tenantKey'],
                             target=notification['target'],
-                            id=itemPk,
+                            target_id=tournamentGameId,
                             notificationType=notificationType,
-                            to=notification.get('to'),
-                            timestamp=notification['timestamp'],
+                            target_to=notification.get('target_to'),
                             value=notification,
                         )
                         continue
@@ -1740,26 +1750,35 @@ class RefereeProcessService():
                     available = allowMessageSending or notificationType in skipAvailabilityNotifications and allowDefaultAvailability
                     if not available:
                         continue
-                    gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName)
-                    contextDate = notification.get('contextDate', 'gameDate')
-                    reminderInHrs = float(notification.get('reminderInHrs') or '0')
-                    if contextDate == 'created':
+                    gameDuration = self.handleTournaments.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName, game=item)
+                    # Timing now resolved live from the notification_types catalog
+                    # (context_time/offset_minutes), cascaded through tenant/referee overrides via
+                    # getEffectiveNotificationSetting, instead of the contextDate/reminderInHrs
+                    # baked onto the notification record at creation time - so later catalog/tenant/
+                    # referee-level changes affect already-created notifications too. context_time
+                    # is now 'created' | 'gameStart' | 'gameEnd' (previously 'now'/'gameStart'/'gameEnd'
+                    # with 'created' handled only via the notification record's own contextDate).
+                    setting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey=notificationType, refereeDetail=globalRefereeDetail)
+                    if setting is None:
+                        continue
+                    contextTime = setting['contextTime']
+                    reminderInHrs = -setting['offsetMinutes'] / 60
+                    if contextTime == 'created':
                         timePassed = helpers.localNow() - notification['created']
                         if timePassed.total_seconds() > 12 * 60 * 60:
                             notification['status'] = 'deferred'
-                            self.cacheService.setNotification(tenantKey=notification['tenantKey'], target=notification['target'], id=itemPk, notificationType=notificationType, to=notification.get('to'), timestamp=notification['timestamp'], value=notification)
+                            self.cacheService.setNotification(tenantKey=notification['tenantKey'], target=notification['target'], target_id=tournamentGameId, notificationType=notificationType, target_to=notification.get('target_to'), value=notification)
                             continue
                         dueDate = None #notification['created']
-                    elif contextDate == 'gameDate':
-                        dueDate = gameDetail.get('date') if reminderInHrs >=0 else gameDetail.get('date') + timedelta(minutes=gameDuration) 
-                    else:
-                        dueDate = helpers.localNow()
+                    elif contextTime == 'gameEnd':
+                        dueDate = gameDetail.get('date') + timedelta(minutes=gameDuration)
+                    else:  # 'gameStart'
+                        dueDate = gameDetail.get('date')
                     if reminderInHrs and reminderInHrs == -99:
                         continue
                     processNotification = await self.checkNotificationTime(dueDatetime=dueDate, hoursInAdvance=reminderInHrs, reminderOffsetInMins=15)
                     if processNotification:
                         await self.handleSingleNotification(tenantKey=tenantKey, objType=objType, refereeData=refereeData, notification=notification, itemPk=itemPk, item=item, gameDetail=gameDetail, browser=browser_for_notifications)
-       
 
         try:
             if browser is not None:
@@ -1784,26 +1803,27 @@ class RefereeProcessService():
                             pass
 
         except Exception as ex:
-            self.logger.error(f'handleNotifications {refId}', ex, refereeDetail=globalRefereeDetail)
+            self.logger.error(f'handleNotifications {refereeId}', ex, refereeDetail=globalRefereeDetail)
 
     async def handleSingleNotification(self, tenantKey, objType, refereeData, notification, itemPk, item, gameDetail, browser=None):
+        tournamentGameId = (gameDetail.get('id') or itemPk) if gameDetail else itemPk
         mobileNo = refereeData['mobileNo']
         refId = refereeData['refId']
         name = refereeData['name']
-        tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-        globalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=mobileNo)
-        
+        tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'))
+        globalRefereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', refereeId=refereeData.get('refereeId'))
+
         try:
-            tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
+            tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey, game=item)
             localTime = datetime.now(ZoneInfo(ConfigManager.get_config_value(self.config, 'TZ', 'UTC')))
             localHour = localTime.hour
-            defaultAvailableFromHour = int(tenant.get('defaultAvailableFromHour', '8'))
-            defaultAvailableToHour = int(tenant.get('defaultAvailableToHour', '21'))
+            defaultAvailableFromHour = tenant.default_available_from_hour if tenant else 8
+            defaultAvailableToHour = tenant.default_available_to_hour if tenant else 21
             allowDefaultAvailability = True
             if defaultAvailableFromHour <= defaultAvailableToHour and (localHour < defaultAvailableFromHour or localHour > defaultAvailableToHour) \
                         or defaultAvailableFromHour > defaultAvailableToHour and (localHour > defaultAvailableFromHour and localHour < defaultAvailableToHour):
                 allowDefaultAvailability = False
-            skipAvailabilityNotifications = tenant.get('skipAvailabilityNotifications', [])
+            skipAvailabilityNotifications = tenant.skip_availability_notifications if tenant else []
             allowMessageSending = self.messagingService.allowMessageSending(to=globalRefereeDetail)
             msgSid = None
             abortNotification = False
@@ -1815,25 +1835,26 @@ class RefereeProcessService():
             available = allowMessageSending or notificationType in skipAvailabilityNotifications and allowDefaultAvailability
             if not available:
                 return
-            notificationTo = notification.get('to')
-            internalMsgId = notification['entityKey']
+            notificationTo = notification.get('target_to')
+            internalMsgId = str(notification['id'])
 
             tournamentName = gameDetail.get('tournamentName') if gameDetail else None
-            tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
+            tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName, game=item)
             rules = None
             if tournament and tournament.get('rules'):
-                rules = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament.get('rules').strip())
+                rules = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules').strip())
             referees:list = gameDetail.get('referees', []) if gameDetail else []
-            isMainReferee = refId in gameDetail.get('mainReferees', []) if gameDetail else False
-            isSecretaryReferee = refId == gameDetail.get('secretaryReferee', '' ) if gameDetail else False
+            refereeId = tenantRefereeDetail.get('refereeId') if tenantRefereeDetail else None
+            isMainReferee = refereeId in gameDetail.get('mainReferees', []) if gameDetail else False
+            isSecretaryReferee = refereeId == gameDetail.get('secretaryReferee') if gameDetail else False
             chatGroupId = gameDetail.get('chatGroupId') if gameDetail else None
             field = None
             fieldAddressDetails = None
-            fieldTitle = gameDetail.get('field') if gameDetail else None
+            fieldTitle = gameDetail.get('fieldName') if gameDetail else None
             if fieldTitle:
-                field = self.cacheService.get_field_by_name(tenantKey=tenantKey, fieldName=fieldTitle)
+                field = self.tenantRepository.get_field(tenant_key=tenantKey, field_name=fieldTitle, game=item)
             if field:
-                fieldAddressDetails = field.get('addressDetails')
+                fieldAddressDetails = field.address
 
             noticeType = 'regular'
             noticeTitle = None
@@ -1844,8 +1865,8 @@ class RefereeProcessService():
             minsLeft = round(secondsLeft/60)
             hoursLeft = round(minsLeft/60)
 
-            if notificationType == 'addedItem' or notificationType == 'updatedItem':
-                isNewItem = notificationType == 'addedItem'
+            if notificationType == NotificationTypeKey.addedItem or notificationType == NotificationTypeKey.updatedItem:
+                isNewItem = notificationType == NotificationTypeKey.addedItem
 
                 if objType == 'games':
                     itemStatus = item.get('status')
@@ -1931,23 +1952,23 @@ class RefereeProcessService():
                             to = chatGroupId
                         else:
                             to = mobileNo
-                        msgSid = await self.messagingService.sendLocation(to=to, latitude=to_coordinates_lat, longitude=to_coordinates_lng, name=field['title'], address=fieldAddressDetails['address'])
+                        msgSid = await self.messagingService.sendLocation(to=to, latitude=to_coordinates_lat, longitude=to_coordinates_lng, name=field.title, address=fieldAddressDetails['address'])
 
                     if rules:
                         noticeType = 'regular'
                         noticeTitle = f'*תזכורת אחרונה-חוקים*'
                         noticeDetails = ''
-                        for rule in rules['game']:
-                            noticeDetails += f"\n{rule}: {rules['game'][rule]}"
+                        for rule in (rules.game or {}):
+                            noticeDetails += f"\n{rule}: {rules.game[rule]}"
                         if tournament['tournament'] == 'cup':
                             noticeDetails += '\nחוקים לגביע:'
-                            for rule in rules['cup']:
-                                noticeDetails += f"\n{rule}: {rules['cup'][rule]}"
+                            for rule in (rules.cup or {}):
+                                noticeDetails += f"\n{rule}: {rules.cup[rule]}"
 
             elif notificationType.startswith('refereeLastReminder'):
                 if tenantRefereeDetail.get('refSixEnabled', False) == True and item.get('refSixCreated', False) == False:
-                    template = { 'action': 'createrefsixgame', 'gameId': gameDetail.get('id'), 'status': 'created' }
-                    self.cacheService.setRefereeTemplate(tenantKey=tenantKey, mobileNo=mobileNo, msgSid=str(uuid.uuid4())[:16], value=template)
+                    template = { 'action': 'createrefsixgame', 'gameId': gameDetail.get('gameId'), 'status': 'created' }
+                    self.cacheService.setRefereeTemplate(tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), msgSid=str(uuid.uuid4())[:16], value=template)
 
                 noticeTitle = f'*תזכורת אחרונה*'
                 noticeDetails = f'בעוד {hoursLeft} שעות מתחיל המשחק נא להערך בהתאם'
@@ -1955,11 +1976,11 @@ class RefereeProcessService():
                 if len(referees) == 1 or not (self.messagingService.checkSendGreenApiMessages(to=tenantRefereeDetail) or self.messagingService.useMeta):
                     if rules:
                         noticeDetails += f'\n*חוקים:*'
-                        for rule in rules['game']:
-                            noticeDetails += f"\n{rule}: {rules['game'][rule]}"
+                        for rule in (rules.game or {}):
+                            noticeDetails += f"\n{rule}: {rules.game[rule]}"
                         if tournament['tournament'] == 'cup':
-                            for rule in rules['cup']:
-                                noticeDetails += f"\n{rule}: {rules['cup'][rule]}"
+                            for rule in (rules.cup or {}):
+                                noticeDetails += f"\n{rule}: {rules.cup[rule]}"
 
             elif notificationType.startswith('gameLineupsAnnounced'):
                 if tournament and gameDetail:
@@ -2021,7 +2042,7 @@ class RefereeProcessService():
 
             elif notificationType.startswith('openWindow'):
                 msgSid = await self.messagingService.sendOpenWindowMessage(toMobile=mobileNo, toName=name)
-                self.cacheService.setCachedKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, value=helpers.localNow(), propertyName='openWindowMessageSent', ttlSeconds=60 * 60 * 12)
+                self.cacheService.setCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, value=helpers.localNow(), propertyName='openWindowMessageSent', ttlSeconds=60 * 60 * 12)
 
             else:
                 if notification.get('title'):
@@ -2057,7 +2078,16 @@ class RefereeProcessService():
 
                 if noticeType == 'regular':
                     skipPushNotification = len(notification['sentPushMsgIds']) > 0 if notification.get('sentPushMsgIds') else False
-                    msgSid, sentPushMsgIds = await self.messagingService.sendMessage(to=to, message=message, performOpenWindowCheck=True, skipPushNotification=skipPushNotification, returnSentPushMsgIds=True, internalMsgId=internalMsgId, forceUseGreenApi=forceUseGreenApi, gameId=gameDetail['id'] if gameDetail else None)
+                    pushSection = None
+                    pushCategory = None
+                    leaveByTime = None
+                    if notificationType.startswith('refereeLastReminder'):
+                        # Lets iOS show Waze/Set-Origin/Ignore actions and, if a commute route was
+                        # resolved above, schedule a local "time to leave" notification.
+                        pushSection = 'games'
+                        pushCategory = 'COMMUTE_REMINDER'
+                        leaveByTime = item.get('commute', {}).get('departDateTime')
+                    msgSid, sentPushMsgIds = await self.messagingService.sendMessage(to=to, message=message, performOpenWindowCheck=True, skipPushNotification=skipPushNotification, returnSentPushMsgIds=True, internalMsgId=internalMsgId, forceUseGreenApi=forceUseGreenApi, gameId=gameDetail['gameId'] if gameDetail else None, pushSection=pushSection, pushCategory=pushCategory, leaveByTime=leaveByTime)
                 elif noticeType == 'poll':
                     msgSid = await self.messagingService.sendPoll(to=to, message=message, options=noticeOptions)
 
@@ -2069,7 +2099,7 @@ class RefereeProcessService():
                     if sentPushMsgIds:
                         notification['sentPushMsgIds'] = sentPushMsgIds
     
-                    self.cacheService.setNotification(tenantKey=notification['tenantKey'], target=target, id=itemPk, notificationType=notificationType, to=notificationTo, timestamp=notification['timestamp'], value=notification)
+                    self.cacheService.setNotification(tenantKey=notification['tenantKey'], target=target, target_id=tournamentGameId, notificationType=notificationType, target_to=notificationTo, value=notification)
             
             elif msgSid or len(sentPushMsgIds) > 0:
                 if msgSid:
@@ -2078,7 +2108,7 @@ class RefereeProcessService():
                     notification['messageSid'] = msgSid
                 if sentPushMsgIds:
                     notification['sentPushMsgIds'] = sentPushMsgIds
-                self.cacheService.setNotification(tenantKey=notification['tenantKey'], target=target, id=itemPk, notificationType=notificationType, to=notificationTo, timestamp=notification['timestamp'], value=notification)
+                self.cacheService.setNotification(tenantKey=notification['tenantKey'], target=target, target_id=tournamentGameId, notificationType=notificationType, target_to=notificationTo, value=notification)
        
         except Exception as ex:
             self.logger.error(f'handleSingleNotification {refId}', ex, refereeDetail=globalRefereeDetail)
@@ -2129,20 +2159,20 @@ class RefereeProcessService():
         noticeDetails = ''
         try:
             tenantKey = refereeGame['tenantKey']
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
-            fieldAddressDetails = None
-            fieldTitle = gameDetail.get('field')
+            gameDetail = self.cacheService.getGameDetail(game=refereeGame)
+            tournamentGameId = gameDetail.get('id')
+            field = None
+            fieldTitle = gameDetail.get('fieldName')
             if fieldTitle:
-                field = self.cacheService.get_field_by_name(tenantKey=tenantKey, fieldName=fieldTitle)
+                field = self.tenantRepository.get_field(tenant_key=tenantKey, field_name=fieldTitle, game=refereeGame)
             if field:
-                fieldAddressDetails = field.get('addressDetails')
-                if not fieldAddressDetails:
+                if not field.address:
                     self.logger.warning(f'getFieldAndCommuteDetails {globalRefereeDetail["mobileNo"]} missing field address details for field {tenantKey}:{fieldTitle}', refereeDetail=globalRefereeDetail)
                     return ''
 
-            originLocation = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=globalRefereeDetail['mobileNo'], propertyName='originLocation')
+            originLocation = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=globalRefereeDetail['mobileNo'], propertyName='originLocation')
             if not originLocation or originLocation.get('expiredBy') < helpers.localNow():
-                if not globalRefereeDetail.get('addressDetails'):
+                if not globalRefereeDetail.get('address'):
                     self.logger.warning(f'getFieldAndCommuteDetails {globalRefereeDetail["mobileNo"]} missing address details', refereeDetail=globalRefereeDetail)
                     return ''
 
@@ -2151,9 +2181,9 @@ class RefereeProcessService():
                     'lat': globalRefereeDetail['addressDetails']['coordinates']['lat']
                 }
 
-            if originLocation and originLocation.get('lng') and originLocation.get('lat') and fieldAddressDetails:
-                to_coordinates_lat = fieldAddressDetails['coordinates']['lat']
-                to_coordinates_lng = fieldAddressDetails['coordinates']['lng']
+            if originLocation and originLocation.get('lng') and originLocation.get('lat') and field and field.lat and field.lng:
+                to_coordinates_lat = field.lat
+                to_coordinates_lng = field.lng
 
                 if 'commute' not in refereeGame:
                     refereeGame['commute'] = {}
@@ -2176,6 +2206,10 @@ class RefereeProcessService():
                     else:
                         durationStr = f'{durationStr} שעות'
                     departDateTime = arriveAt + timedelta(seconds=-duration_secs)
+                    # Exposed to the push-notification payload (see handleSingleNotification's
+                    # refereeLastReminder branch) so iOS can locally schedule a "time to leave"
+                    # notification 10 minutes before this, without the server polling/re-computing.
+                    refereeGame['commute']['departDateTime'] = departDateTime.isoformat()
                     departTimeStr = departDateTime.strftime("%H:%M")
                     if departTimeStr:
                         noticeDetails += f'\n\n*משך הנסיעה* הוא {durationStr}'
@@ -2186,12 +2220,14 @@ class RefereeProcessService():
                     distance = int(distance_meters)/1000
                     noticeDetails += f'\n*המרחק* הוא {distance:.1f} קילומטרים'
 
-                self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=tenantRefereeDetail['refId'], gamePk=refereeGame['gamePk'], value=refereeGame)
+                self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), gamePk=refereeGame['gamePk'], value=refereeGame)
             
             #waze link
-            noticeDetails += f'\n\n*קישור:* {fieldAddressDetails["wazeLink"]}'
+            if field and field.waze_link:
+                noticeDetails += f'\n\n*קישור:* {field.waze_link}'
             #field address
-            noticeDetails += f'\n\n*כתובת:* {fieldAddressDetails["address"]}'
+            if field and field.address:
+                noticeDetails += f'\n\n*כתובת:* {field.address}'
         except Exception as ex:
             self.logger.error(f'getFieldDetailsAndCommute {globalRefereeDetail["mobileNo"]}', ex, refereeDetail=globalRefereeDetail)
         
@@ -2201,14 +2237,13 @@ class RefereeProcessService():
         noticeDetails = ''
         try:
             tenantKey = refereeGame['tenantKey']
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
-            fieldAddressDetails = None
-            fieldTitle = gameDetail.get('field')
+            gameDetail = self.cacheService.getGameDetail(game=refereeGame)
+            tournamentGameId = gameDetail.get('id')
+            field = None
+            fieldTitle = gameDetail.get('fieldName')
             if fieldTitle:
-                field = self.cacheService.get_field_by_name(tenantKey=tenantKey, fieldName=fieldTitle)
-            if field:
-                fieldAddressDetails = field.get('addressDetails')
-            destinationLocation = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=globalRefereeDetail['mobileNo'], propertyName='originLocation')
+                field = self.tenantRepository.get_field(tenant_key=tenantKey, field_name=fieldTitle, game=refereeGame)
+            destinationLocation = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=globalRefereeDetail['mobileNo'], propertyName='originLocation')
             #use home address
             if True or not destinationLocation or destinationLocation.get('expiredBy') < helpers.localNow():
                 if not globalRefereeDetail.get('addressDetails'):
@@ -2220,9 +2255,9 @@ class RefereeProcessService():
                     'lat': globalRefereeDetail['addressDetails']['coordinates']['lat']
                 }
 
-            if destinationLocation and destinationLocation.get('lng') and destinationLocation.get('lat') and fieldAddressDetails:
-                from_coordinates_lat = fieldAddressDetails['coordinates']['lat']
-                from_coordinates_lng = fieldAddressDetails['coordinates']['lng']
+            if destinationLocation and destinationLocation.get('lng') and destinationLocation.get('lat') and field:
+                from_coordinates_lat = field.lat
+                from_coordinates_lng = field.lng
 
                 if 'commute' not in refereeGame:
                     refereeGame['commute'] = {}
@@ -2241,7 +2276,7 @@ class RefereeProcessService():
                 if distance_from_game_meters:
                     refereeGame['commute']['distanceFromField'] = distance_from_game_meters
 
-                self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=tenantRefereeDetail['refId'], gamePk=refereeGame['gamePk'], value=refereeGame)
+                self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), gamePk=refereeGame['gamePk'], value=refereeGame)
 
                 if refereeGame['commute'].get('distanceToField') and distance_from_game_meters:
                     totalDistance = int(refereeGame['commute']['distanceToField']) + distance_from_game_meters
@@ -2277,6 +2312,7 @@ class RefereeProcessService():
         message = ''
         failureMessage = None
         gamePk = refereeGame['gamePk']
+        tournamentGameId = gameDetail.get('id')
 
         try:
             if tenantRefereeDetail.get('refSixEnabled', False) == False:
@@ -2352,7 +2388,7 @@ class RefereeProcessService():
 
                 if result:
                     refereeGame['refSixCreated'] = result.get('success')
-                    self.cacheService.setRefereeGame(tenantKey=refereeGame['tenantKey'], refId=tenantRefereeDetail['refId'], gamePk=refereeGame['gamePk'], value=refereeGame)
+                    self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=refereeGame['tenantKey'], refereeId=tenantRefereeDetail.get('refereeId'), gamePk=refereeGame['gamePk'], value=refereeGame)
                     await self.messagingService.sendMessage(to=tenantRefereeDetail['mobileNo'], title=f'{gameDetail["gameTitle"]} RefSix', message=result.get('message'))
                     success = result.get('success')
                     message = result.get('message') or ''
@@ -2372,23 +2408,31 @@ class RefereeProcessService():
             failureMessage = message
             self.logger.warning(message, refereeDetail=tenantRefereeDetail)
 
-        await self.postProcessTemplate(template=template, tenantRefereeDetail=tenantRefereeDetail, gamePk=gamePk, title=title, message=message, failureMessage=failureMessage)
+        await self.postProcessTemplate(template=template, tenantRefereeDetail=tenantRefereeDetail, tournamentGameId=tournamentGameId, title=title, message=message, failureMessage=failureMessage)
 
     async def postCompare(self, tenantKey, objType, refereeData, page):
         tenantRefereeDetail = None
         try:
-            refId = refereeData['refId']
+            refereeId = refereeData.get('refereeId')
             mobileNo = refereeData['mobileNo']
-            tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-            tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
-            tenantNotifications = tenant.get('notifications', {})
-            addedItemNotificationReminderInHrs = float(tenantNotifications.get('addedItem')) if tenantNotifications.get('addedItem') else None
+            tenantRefereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, refereeId=refereeId)
+            # Effective settings (catalog/tenant.notification_settings/referee override cascade),
+            # not the legacy tenant.notifications dict this used to read directly - see
+            # getEffectiveNotificationSetting. Resolved once per type since tenantKey/refereeId are
+            # fixed for the whole call.
+            addedItemSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='addedItem')
+            removedItemSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='removedItem')
+            archivedItemSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='archivedItem')
+            updatedItemSetting = self.getEffectiveNotificationSetting(tenantKey=tenantKey, refereeId=refereeId, typeKey='updatedItem')
+            addedItemNotificationReminderInHrs = -addedItemSetting['offsetMinutes'] / 60 if addedItemSetting else None
             updated = False
 
             for itemPk in refereeData[objType].get('removed', []):
-                addedItemNotification = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=itemPk, notificationType='addedItem', to=mobileNo)
                 prevItem = refereeData[objType]['prevList'][itemPk]
                 prevItem['state'] = 'removed'
+                gameDetail = self.cacheService.getGameDetail(game=prevItem)
+                tournamentGameId = gameDetail.get('id') if gameDetail else None
+                addedItemNotification = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.addedItem, target_to=refereeId)
 
                 if addedItemNotification and addedItemNotificationReminderInHrs:
                     timeElapsed = helpers.localNow() - list(addedItemNotification.values())[0].get('created')
@@ -2396,36 +2440,35 @@ class RefereeProcessService():
                         prevItem['state'] = 'canceled'
 
                 if objType == 'games':
-                    refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=itemPk, status='created', to=mobileNo)
+                    refereeGamesNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, status='created', target_to=refereeId)
                     if refereeGamesNotifications:
                         for notification in refereeGamesNotifications.values():
                             notification['status'] = 'deleted'
-                            self.cacheService.setNotification(tenantKey=tenantKey, target='refereeGames', id=itemPk, notificationType=notification['notificationType'], to=notification.get('to'), timestamp=notification['timestamp'], value=notification)
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=prevItem)
+                            self.cacheService.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=notification['notificationType'], target_to=notification.get('target_to'), value=notification)
                     if gameDetail and mobileNo in gameDetail.get('activeGroupMobileNumbers', []):
                         gameDetail['activeGroupMobileNumbers'].remove(mobileNo)
-                        self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'], gamePk=itemPk, value=gameDetail)
+                        self.cacheService.setTournamentGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'], gamePk=itemPk, value=gameDetail)
 
-                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=itemPk, value=prevItem)
-                    
-                    addedItemNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=itemPk, notificationType='addedItem', to=mobileNo)
+                    self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=itemPk, value=prevItem)
+
+                    addedItemNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.addedItem, target_to=refereeId)
                     addedItemNotificationSent = len(addedItemNotifications) == 0 or any(notification for notification in addedItemNotifications.values() if notification.get('status') == 'sent')
-                    if addedItemNotificationSent:
-                        self.setNotification(tenantKey=tenantKey, target='refereeGames', id=itemPk, notificationType='removedItem', to=mobileNo, contextDate='created', status='created')
-                    
+                    if addedItemNotificationSent and removedItemSetting:
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.removedItem, target_to=refereeId, contextDate='created', status='created')
+
                 elif objType == 'reviews':
-                    refereeReviewsNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', id=itemPk, status='created', to=mobileNo)
+                    refereeReviewsNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, status='created', target_to=refereeId)
                     if refereeReviewsNotifications:
                         for notification in refereeReviewsNotifications.values():
                             notification['status'] = 'deleted'
-                            self.cacheService.setNotification(tenantKey=tenantKey, target='refereeReviews', id=itemPk, notificationType=notification['notificationType'], to=notification.get('to'), timestamp=notification['timestamp'], value=notification)
+                            self.cacheService.setNotification(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, notificationType=notification['notificationType'], target_to=notification.get('target_to'), value=notification)
 
-                    self.cacheService.setRefereeReview(tenantKey=tenantKey, refId=refId, gamePk=itemPk, value=prevItem)
-                    
-                    addedItemNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', id=itemPk, notificationType='addedItem', to=mobileNo)
+                    self.cacheService.setRefereeReview(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=itemPk, value=prevItem)
+
+                    addedItemNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, notificationType=NotificationTypeKey.addedItem, target_to=refereeId)
                     addedItemNotificationSent = len(addedItemNotifications) == 0 or any(notification for notification in addedItemNotifications.values() if notification.get('status') == 'sent')
-                    if addedItemNotificationSent:
-                        self.setNotification(tenantKey=tenantKey, target='refereeReviews', id=itemPk, notificationType='removedItem', to=mobileNo, contextDate='created', status='created')
+                    if addedItemNotificationSent and removedItemSetting:
+                        self.setNotification(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, notificationType=NotificationTypeKey.removedItem, target_to=refereeId, contextDate='created', status='created')
 
                 updated = True
 
@@ -2435,17 +2478,11 @@ class RefereeProcessService():
                     continue
                 if objType == 'games':
                     prevItem['state'] = 'archived'
-                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=itemPk, value=prevItem)
-                    self.setNotification(tenantKey=tenantKey, target='refereeGames', id=itemPk, notificationType='archivedItem', to=mobileNo, contextDate='created', status='created')
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=prevItem)
-                    if gameDetail and gameDetail.get('state', 'active') == 'active':
-                        tournamentName = gameDetail['tournamentName']
-                        tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
-                        '''
-                        helpers.run_async_in_thread(self.tenantsOrgServices[tenantKey].refreshTournamentGamesUrl, tenantKey=tenantKey, tournamentName=tournamentName, round=gameDetail.get('round'), fixture=gameDetail.get('fixture'), fetchSquads=False)
-                        if tournament and tournament.get('section'):
-                            helpers.run_async_in_thread(self.tenantsOrgServices[tenantKey].refreshLeaguesTables, tenantKey=tenantKey, tournamentName=tournamentName)
-                        '''
+                    gameDetail = self.cacheService.getGameDetail(game=prevItem)
+                    tournamentGameId = gameDetail.get('id') if gameDetail else None
+                    self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=itemPk, value=prevItem)
+                    if archivedItemSetting:
+                        self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.archivedItem, target_to=refereeId, contextDate='created', status='created')
 
             objItemPKs = refereeData[objType]['added'] + refereeData[objType]['changed']
             for itemPk in objItemPKs:
@@ -2454,41 +2491,50 @@ class RefereeProcessService():
                 prevItem = refereeData[objType]['prevList'].get(itemPk, {})
 
                 if objType == 'games':
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=item)
+                    gameDetail = self.cacheService.getGameDetail(game=item)
+                    tournamentGameId = gameDetail.get('id') if gameDetail else None
                     item['state'] = 'active'
                     if item.get('date') >= helpers.localNow():
-                        if False and isNewItem:
-                            tournamentName = item['tournamentName']
-                            helpers.run_async_in_thread(self.tenantsOrgServices[tenantKey].refreshTournamentGames, tenantKey=tenantKey, tournamentName=tournamentName, round=gameDetail.get('round'), fixture=gameDetail.get('fixture'), fetchGameDetails=False)
                         if item.get('status') != 'מאושר':
-                            self.setNotification(tenantKey=tenantKey, target='refereeGames', id=itemPk, notificationType='addedItem', to=mobileNo, contextDate='created', reminderInHrs=addedItemNotificationReminderInHrs, status='created')
+                            if addedItemSetting:
+                                self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.addedItem, target_to=refereeId, contextDate='created', reminderInHrs=addedItemNotificationReminderInHrs, status='created')
                         else:
-                            self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=itemPk, notificationType='updatedItem', contextDate='created', status='created')
+                            if updatedItemSetting:
+                                self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.updatedItem, contextDate='created', status='created')
                     if tenantRefereeDetail.get('refSixEnabled', False) == True and item.get('refSixCreated', False) == False:
-                        template = { 'action': 'createrefsixgame', 'gameId': gameDetail.get('id'), 'status': 'created' }
-                        self.cacheService.setRefereeTemplate(tenantKey=tenantKey, mobileNo=mobileNo, msgSid=str(uuid.uuid4())[:16], value=template)
-                    
+                        template = { 'action': 'createrefsixgame', 'gameId': gameDetail.get('gameId'), 'status': 'created' }
+                        self.cacheService.setRefereeTemplate(tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), msgSid=str(uuid.uuid4())[:16], value=template)
+
                     if item.get('status', '') != prevItem.get('status', ''):
                         if item['status'] == 'מאושר':
                             item['approvedDate'] = helpers.localNow()
                         elif item['status'] == 'שיבוץ נדחה':
                             item['declinedDate'] = helpers.localNow()
                     
-                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=itemPk, value=item)
-                
+                    # Reuse the tournament_game_id already resolved above (gameDetail.get('id'))
+                    # instead of letting setRefereeGame redundantly re-resolve it from gamePk -
+                    # avoids a second lookup that could disagree/fail even though we just proved
+                    # the game exists a few lines up. Falls back to gamePk-based resolution inside
+                    # setRefereeGame when gameDetail itself couldn't be resolved.
+                    self.cacheService.setRefereeGame(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=itemPk, value=item)
+
                 elif objType == 'reviews':
                     item['state'] = 'active'
-                    self.cacheService.setRefereeReview(tenantKey=tenantKey, refId=refId, gamePk=itemPk, value=item)
+                    gameDetail = self.cacheService.getGameDetail(game=item)
+                    tournamentGameId = gameDetail.get('id') if gameDetail else None
+                    self.cacheService.setRefereeReview(tournamentGameId=tournamentGameId, tenantKey=tenantKey, refereeId=refereeId, gamePk=itemPk, value=item)
                     if isNewItem:
-                        self.setNotification(tenantKey=tenantKey, target='refereeReviews', id=itemPk, notificationType='addedItem', to=mobileNo, contextDate='created', status='created')
+                        if addedItemSetting:
+                            self.setNotification(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, notificationType=NotificationTypeKey.addedItem, target_to=refereeId, contextDate='created', status='created')
                     else:
-                        self.setNotification(tenantKey=tenantKey, target='refereeReviews', id=itemPk, notificationType='updatedItem', to=mobileNo, contextDate='created', status='created')
+                        if updatedItemSetting:
+                            self.setNotification(tenantKey=tenantKey, target='refereeReviews', target_id=tournamentGameId, notificationType=NotificationTypeKey.updatedItem, target_to=refereeId, contextDate='created', status='created')
 
                 updated = True
 
             if updated:
-                self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value=helpers.localNow(), propertyName=f'{objType}_lastUpdate')
-            self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value=helpers.localNow(), propertyName=f'{objType}_lastRun')
+                self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=refereeId, value=helpers.localNow(), propertyName=f'{objType}_lastUpdate')
+            self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=refereeId, value=helpers.localNow(), propertyName=f'{objType}_lastRun')
 
             self.logger.debug(f'postCompare: {objType}', refereeDetail=tenantRefereeDetail)
         
@@ -2510,7 +2556,7 @@ class RefereeProcessService():
             "address": "דרך בין ירושלים לבית שמשון",
             "wazeLink": "https://www.waze.com/ul?ll=31.768319,35.213711&z=17&entry=tt"
         }
-        refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=refereeDetail['refId'], from_date=datetime.now() - timedelta(days=2), to_date=datetime.now() + timedelta(days=1), includeArchived=True)
+        refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=refereeDetail.get('refereeId'), from_date=datetime.now() - timedelta(days=2), to_date=datetime.now() + timedelta(days=1), includeArchived=True)
         refereeData = {
             'refId': refereeDetail['refId'],
             'games': {
@@ -2548,31 +2594,24 @@ class RefereeProcessService():
         mobileNo = '+972547799979'
         tenantKey = 'IL#football#2025-26'
         referee = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-        refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=referee['refId'], from_date=datetime.now() - timedelta(days=0), to_date=datetime.now() + timedelta(days=3), includeArchived=True)
+        refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=referee.get('refereeId'), from_date=datetime.now() - timedelta(days=0), to_date=datetime.now() + timedelta(days=3), includeArchived=True)
         for gamePk, refereeGame in refereeGames.items():
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
+            gameDetail = self.cacheService.getGameDetail(game=refereeGame)
+            tournamentGameId = gameDetail.get('id') if gameDetail else None
             referees = gameDetail.get('referees', [])
             if refereeGame.get('state') == 'active':
                 if True:
-                    self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeLastReminder', to=mobileNo, reminderInHrs=180, upsert=True)
+                    self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeLastReminder, target_to=mobileNo, reminderInHrs=180, upsert=True)
                 else:
-                    self.setNotification(tenantKey=tenantKey, target='refereeGames', id=gamePk, notificationType='refereeLastReminder', delete=True)
+                    self.setNotification(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.refereeLastReminder, delete=True)
             if len(referees) > 1:
                 if True:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameLastReminder', reminderInHrs=180, upsert=True)
+                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameLastReminder, reminderInHrs=180, upsert=True)
                 else:
-                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', id=gamePk, notificationType='gameLastReminder', delete=True)
-            refNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=gamePk, status='created', to=mobileNo)
-            gameNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='tournamentGames', id=gamePk, status='created')
+                    self.setNotification(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, notificationType=NotificationTypeKey.gameLastReminder, delete=True)
+            refNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, status='created', target_to=mobileNo)
+            gameNotifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='tournamentGames', target_id=tournamentGameId, status='created')
             pass
-
-    async def fixTmpReferees(self, tenantKey):
-        referees = self.cacheService.getReferees(tenantKey='GLOBAL', forceReload=True)
-        for mobileNo, referee in referees.items():
-            if mobileNo and mobileNo.startswith('tmpRefId:'):
-                #find referee with same name combination
-                name = referee.get('name')
-                #find real mobile using _normalize_ref_name_for_match
 
     def aaa(self):
         refereeDetail = None            
@@ -2590,10 +2629,11 @@ class RefereeProcessService():
             'refId': refereeDetail['refId'],
             'name': refereeDetail['name']
         }
-        games = self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=refereeDetail['refId'], from_date=datetime.now() - timedelta(days=0), to_date=datetime.now() + timedelta(days=1), includeArchived=True)
+        games = self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=refereeDetail.get('refereeId'), from_date=datetime.now() - timedelta(days=0), to_date=datetime.now() + timedelta(days=1), includeArchived=True)
         for game in games.values():
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=game)
-            notifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', id=game['gamePk'], to=refereeDetail['mobileNo'])
+            gameDetail = self.cacheService.getGameDetail(game=game)
+            tournamentGameId = (gameDetail.get('id') or game['gamePk']) if gameDetail else game['gamePk']
+            notifications = self.cacheService.getNotifications(tenantKey=tenantKey, target='refereeGames', target_id=tournamentGameId, target_to=refereeDetail['mobileNo'])
             for notification in notifications.values():
                 if notification.get('notificationType') != 'refereeLastReminder':
                     continue

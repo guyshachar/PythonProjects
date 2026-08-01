@@ -10,7 +10,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 # Import your application's classes
 from shared.logger import Logger
 from shared.messaging import MessagingService, GreenApiClient, TwilioClient, MetaClient, ManychatClient, TelegramClient
-from shared.db import RedisClient, DynamodbClient, DbClientBase, CacheService
+from shared.db import RedisClient, DynamodbClient, PostgresClient, DbClientBase, CacheService
+from shared.db.repositories import TenantRepository
 from shared.handleUsers import HandleUsers
 from shared.handleTournaments import HandleTournaments
 from shared.handleRefereeData import HandleRefereeData
@@ -21,6 +22,19 @@ from shared.commonHelper import CommonHelper
 from shared.orgRelated import MultiTenantSupport, IFAService, IHAService, OrgServiceFactory
 from rpApi.pollService import PollService
 from shared.commute_service import CommuteService
+from shared.configManager import ConfigManager
+
+
+def _resolve_use_api() -> bool:
+    env_val = os.getenv('useApi')
+    if env_val is not None:
+        return eval(env_val) == True
+    try:
+        merged = ConfigManager._load_merged_file_config()
+        cfg_val = str(merged.get('env', {}).get('useApi', 'False')).lower()
+        return cfg_val in ('true', '1')
+    except Exception:
+        return False
 
 # Define a type variable for database clients
 DbClientType = TypeVar('DbClientType', bound=DbClientBase)
@@ -44,7 +58,9 @@ class AppContainer(containers.DeclarativeContainer):
 
         tenants = cacheService.getTenants()
         for tenantKey, tenant in tenants.items():
-            if tenant['countryCode'] == 'IL' and tenant['eventType'] == 'football':
+            countryCodeVal = tenant.get('countryCode') if isinstance(tenant, dict) else tenant.country_code
+            eventTypeVal = tenant.get('eventType') if isinstance(tenant, dict) else tenant.event_type
+            if countryCodeVal == 'IL' and eventTypeVal == 'football':
                 try:
                     tenantServices[tenantKey] = IFAService(
                         logger=logger,
@@ -128,11 +144,19 @@ class AppContainer(containers.DeclarativeContainer):
         dynamodbClient=dynamodb_client,
     )
 
+    postgres_db_client = providers.Singleton(
+        PostgresClient,
+        env=config.env,
+        logger=logger,
+        pg_config=config.postgres,
+    )
+
     # Type-annotated Selector that returns a DbClient
     db_client: providers.Provider[DbClientType] = providers.Selector(
         config.db.type,
         redis=redis_db_client,
         dynamodb=dynamodb_db_client,
+        postgres=postgres_db_client,
     )
 
     multi_tenant_support = providers.Singleton(
@@ -165,12 +189,20 @@ class AppContainer(containers.DeclarativeContainer):
         multiTenantSupport=multi_tenant_support,
     )
 
+    # --- Repositories ---
+
+    tenant_repository = providers.Singleton(
+        TenantRepository,
+        cache_service=cache_service,
+    )
+
     # --- Business Logic / Handlers ---
 
     handle_users = providers.Singleton(
         HandleUsers,
         logger=logger,
         cacheService=cache_service,
+        tenantRepository=tenant_repository,
     )
 
     referees_data = providers.Callable(
@@ -179,7 +211,10 @@ class AppContainer(containers.DeclarativeContainer):
             handle_users.refereesByRefId,
             handle_users.refereesByMobile,
             handle_users.refereesByGuid,
-            handle_users.globalRefereesByName
+            handle_users.globalRefereesByName,
+            handle_users.globalRefereesById,
+            handle_users.refereesById,
+            handle_users.refereesByInternalId
         ),
         handle_users=handle_users
     )
@@ -215,7 +250,10 @@ class AppContainer(containers.DeclarativeContainer):
         fromPhoneNumberId=config.messaging.meta.phone_number_id,
         whatsappBusinessAccountId=config.messaging.meta.whatsapp_business_account_id,
         fromMobile=config.messaging.meta.from_mobile,
-        useClient=config.messaging.meta.useClient
+        metaBaseUrl=config.messaging.meta.base_url,
+        apiServiceUrlBase=config.apiServiceUrlBase,
+        useClient=config.messaging.meta.useClient,
+        formattedName=config.formattedName
     )
 
     # ManyChat Client
@@ -234,6 +272,7 @@ class AppContainer(containers.DeclarativeContainer):
         cacheService=cache_service,
         username=config.messaging.telegram.username,
         fromMobile=config.messaging.telegram.from_mobile,
+        apiServiceUrlBase=config.apiServiceUrlBase,
         useClient=config.messaging.telegram.useClient,
     )
 
@@ -258,7 +297,7 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     meta_templates = providers.Callable(
-        lambda newGameMessageTemplate, gameUpdateMessageTemplate, gameNoticeMessageTemplate, menuMessageTemplate, onBoardingActivateMessageTemplate, onBoardingJoinConfirmationMessageTemplate, onBoardingRegistrationMessageTemplate, openWindowMessageTemplate, gamePortalCodeMessageTemplate: {
+        lambda newGameMessageTemplate, gameUpdateMessageTemplate, gameNoticeMessageTemplate, menuMessageTemplate, onBoardingActivateMessageTemplate, onBoardingJoinConfirmationMessageTemplate, onBoardingRegistrationMessageTemplate, openWindowMessageTemplate, gamePortalCodeMessageTemplate, loginOtpMessageTemplate: {
             'newGame': newGameMessageTemplate,  # Meta template name
             'gameUpdate': gameUpdateMessageTemplate,
             'gameNotice': gameNoticeMessageTemplate,
@@ -267,7 +306,8 @@ class AppContainer(containers.DeclarativeContainer):
             'onBoardingJoinConfirmation': onBoardingJoinConfirmationMessageTemplate,
             'onBoardingRegistration': onBoardingRegistrationMessageTemplate,
             'openWindow': openWindowMessageTemplate,
-            'gamePortalCode': gamePortalCodeMessageTemplate
+            'gamePortalCode': gamePortalCodeMessageTemplate,
+            'loginOtp': loginOtpMessageTemplate
         },
         newGameMessageTemplate=config.messaging.meta.templates.newGameMessageTemplate,
         gameUpdateMessageTemplate=config.messaging.meta.templates.gameUpdateMessageTemplate,
@@ -277,7 +317,8 @@ class AppContainer(containers.DeclarativeContainer):
         onBoardingJoinConfirmationMessageTemplate=config.messaging.meta.templates.onBoardingJoinConfirmationMessageTemplate,
         onBoardingRegistrationMessageTemplate=config.messaging.meta.templates.onBoardingRegistrationMessageTemplate,
         openWindowMessageTemplate=config.messaging.meta.templates.openWindowMessageTemplate,
-        gamePortalCodeMessageTemplate=config.messaging.meta.templates.gamePortalCodeMessageTemplate
+        gamePortalCodeMessageTemplate=config.messaging.meta.templates.gamePortalCodeMessageTemplate,
+        loginOtpMessageTemplate=config.messaging.meta.templates.loginOtpMessageTemplate
     )
 
     manychat_templates = providers.Callable(
@@ -307,6 +348,7 @@ class AppContainer(containers.DeclarativeContainer):
         logger=logger,
         multiTenantSupport=multi_tenant_support,
         cacheService=cache_service,
+        tenantRepository=tenant_repository,
     )
     
     messaging_service = providers.Singleton(
@@ -323,7 +365,8 @@ class AppContainer(containers.DeclarativeContainer):
         manychatClient=manychat_client,
         telegramClient=telegram_client,
         useMessageTemplates=config.messaging.useMessageTemplates,
-        messageTemplates=message_templates
+        messageTemplates=message_templates,
+        tenantRepository=tenant_repository,
     )
 
     orgServiceFactory = providers.Singleton(
@@ -332,7 +375,8 @@ class AppContainer(containers.DeclarativeContainer):
         multiTenantSupport=multi_tenant_support,
         cacheService=cache_service,
         handleUsers=handle_users,
-        messagingService=messaging_service
+        messagingService=messaging_service,
+        tenantRepository=tenant_repository,
     )
     
     handle_tournaments = providers.Singleton(
@@ -342,6 +386,7 @@ class AppContainer(containers.DeclarativeContainer):
         commonHelper=common_helper,
         orgServiceFactory=orgServiceFactory,
         messagingService=messaging_service,
+        tenantRepository=tenant_repository,
     )
 
     handle_referee_data = providers.Singleton(
@@ -351,7 +396,8 @@ class AppContainer(containers.DeclarativeContainer):
         commonHelper=common_helper,
         messagingService=messaging_service,
         handleUsers=handle_users,
-        referees_data=referees_data
+        referees_data=referees_data,
+        tenantRepository=tenant_repository,
     )
 
     docker_client = providers.Singleton(
@@ -433,6 +479,7 @@ class AppContainer(containers.DeclarativeContainer):
         orgServiceFactory=orgServiceFactory,
         commuteService=commute_service,
         config=config,
+        tenantRepository=tenant_repository,
     )
 
     # --- AWS Clients ---
@@ -446,7 +493,7 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     # --- Main Application Logic ---
-    if eval(os.getenv('useApi', 'False')) == True:
+    if True or _resolve_use_api():
         from rpApi.refPortalImplementationApiDI import RefPortalImplementationApi
         
         ref_portal_implementation = providers.Factory(
@@ -471,6 +518,7 @@ class AppContainer(containers.DeclarativeContainer):
             awsS3Client=aws_s3_client,
             referees_data=referees_data,
             config=config,
+            tenantRepository=tenant_repository,
         )
 
     def init_resources(self):
@@ -510,8 +558,12 @@ class AppContainer(containers.DeclarativeContainer):
             self.logger.error(f"ERROR: Failed to shutdown resources:", e)
 
     def getAppContainer():
+        # Bridge config.common.json/config.{env}.json's 'env' section into os.environ before
+        # anything else runs, so legacy os.getenv() call sites throughout shared/rpApi/rpGw see
+        # JSON-sourced values without being rewritten - see ConfigManager.sync_env_to_process.
+        ConfigManager.sync_env_to_process()
         import shared.configurationDI as configDI
         container = AppContainer()
         container.config.from_dict(configDI.configDI)
-        container.init_resources()    
-        return container     
+        container.init_resources()
+        return container

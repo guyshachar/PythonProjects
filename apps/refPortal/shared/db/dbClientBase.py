@@ -11,38 +11,44 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import shared.jsonHelper as jsonHelper
 from shared.logger import Logger
-from shared.enumTypes import EntityType
+from shared.db.enumTypes import EntityType
 
 class DbClientBase(ABC):
 
     CacheTypes:dict[EntityType, dict[str, Any]] = {
-        EntityType.CLIENTIDENTIFIERS: {'ttl': 60*60, 'partitionKeys': [], 'entityKeys': ['clientIdentifier']},   # 60 minutes
+        EntityType.CLIENTIDENTIFIERS: {'ttl': 1, 'partitionKeys': [], 'entityKeys': ['clientIdentifier']},   # 60 minutes
         EntityType.FIELDS: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['fieldName']},      # 1 day
         EntityType.TOURNAMENTS: {'ttl': 60*60, 'partitionKeys': [], 'entityKeys': ['tournamentName']},  # 1 hour
         EntityType.SEASONS: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['seasonName']},     # 1 hour
         EntityType.RULES: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['ruleName']},       # 1 hour
         EntityType.SECTIONS: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['sectionName']},    # 1 hour
         EntityType.ROLES: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['roleName']},       # 1 day
-        EntityType.REFEREES: {'ttl': 60*60, 'partitionKeys': [], 'entityKeys': ['mobileNo']},     # 1 hour
+        EntityType.REFEREES: {'ttl': 60*60, 'partitionKeys': [], 'entityKeys': ['mobileNo/refereeId']},     # 1 hour
+        EntityType.AREAS: {'ttl': 60*60, 'partitionKeys': [], 'entityKeys': ['areaName']},     # 1 hour
+        EntityType.NOTIFICATIONTYPES: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['typeKey']},  # 1 day
         EntityType.DOCUMENTS: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['documentName']},   # 1 day
         EntityType.TENANTS: {'ttl': 24*60*60, 'partitionKeys': [], 'entityKeys': ['tenantName']}, # 1 day
-        EntityType.REFEREEGAMES: {'ttl': 60*60, 'partitionKeys': ['refId/mobileNo'], 'entityKeys': ['gamePk'], 'excludeKeys': ['gameDetail']},   # 60 minutes
-        EntityType.REFEREEREVIEWS: {'ttl': 60*60, 'partitionKeys': ['refId/mobileNo'], 'entityKeys': ['gamePk'], 'excludeKeys': ['reviewDetail']}, # 60 minutes
+        EntityType.REFEREEGAMES: {'ttl': 60*60, 'partitionKeys': ['refereeId'], 'entityKeys': ['gamePk'], 'excludeKeys': ['gameDetail']},   # 60 minutes
+        EntityType.REFEREEREVIEWS: {'ttl': 60*60, 'partitionKeys': ['refereeId'], 'entityKeys': ['gamePk'], 'excludeKeys': ['reviewDetail']}, # 60 minutes
         EntityType.TOURNAMENTSGAMES: {'ttl': 60*60, 'partitionKeys': ['tournamentName'], 'entityKeys': ['gamePk']}, # 60 minutes
         EntityType.TOURNAMENTGAMESARCHIVED: {'ttl': 60*60, 'partitionKeys': ['tournamentName'], 'entityKeys': ['gamePk']}, # 60 minutes
-        EntityType.REFEREETEMPLATES: {'ttl': 60*60, 'partitionKeys': ['mobileNo'], 'entityKeys': ['action' ,'msgSid']}, # 60 minutes
-        EntityType.REFEREEAVAILABILITY: {'ttl': 60*60, 'partitionKeys': ['mobileNo'], 'entityKeys': []}, # 60 minutes
-        EntityType.COLLECTEDITEMS: {'ttl': 24*60*60, 'partitionKeys': ['objType', 'mobileNo'], 'entityKeys': []}, # 1 day
-        EntityType.NOTIFICATIONS: {'ttl': 60*60, 'partitionKeys': ['target', 'id'], 'entityKeys': ['notificationType', 'to', 'timestamp']}, # 60 minutes
+        EntityType.REFEREETEMPLATES: {'ttl': 60*60, 'partitionKeys': ['refereeId'], 'entityKeys': ['action' ,'msgSid']}, # 60 minutes
+        EntityType.REFEREEAVAILABILITY: {'ttl': 60*60, 'partitionKeys': ['refereeId'], 'entityKeys': []}, # 60 minutes
+        EntityType.COLLECTEDITEMS: {'ttl': 24*60*60, 'partitionKeys': ['objType', 'refereeId'], 'entityKeys': []}, # 1 day
+        # alwaysMultiRecord: (target, target_id, notificationType, target_to) does not uniquely
+        # identify one row - multiple notifications can legitimately share that whole tuple,
+        # differing only by status/id (e.g. one 'created' + one 'deleted'/'sent' row for the
+        # same identity) - never let the decorator auto-unwrap this to a single flat dict.
+        EntityType.NOTIFICATIONS: {'ttl': 60*60, 'partitionKeys': ['target', 'target_id'], 'entityKeys': ['notificationType', 'target_to'], 'alwaysMultiRecord': True}, # 60 minutes
         EntityType.KEYVAL: {'ttl': 60*60, 'partitionKeys': ['key'], 'entityKeys': []}, # 1 day
         EntityType.MESSAGES: {'ttl': 60*60, 'partitionKeys': ['msgSid'], 'entityKeys': []}, # 60 minutes
-        EntityType.REFEREEMESSAGES: {'ttl': 5*60, 'partitionKeys': ['mobileNo', 'direction'], 'entityKeys': ['msgSid']}, # 60 minutes
-        EntityType.REFEREELOCATIONS: {'ttl': 7*24*60*60, 'partitionKeys': ['mobileNo'], 'entityKeys': []}, # 7 days
-        EntityType.POSITIONUPDATES: {'ttl': 7*24*60*60, 'partitionKeys': ['mobileNo'], 'entityKeys': []}, # 7 days
+        EntityType.REFEREEMESSAGES: {'ttl': 5*60, 'partitionKeys': ['refereeId', 'direction'], 'entityKeys': ['msgSid']}, # 60 minutes
+        EntityType.REFEREELOCATIONS: {'ttl': 7*24*60*60, 'partitionKeys': ['refereeId'], 'entityKeys': []}, # 7 days
+        EntityType.POSITIONUPDATES: {'ttl': 7*24*60*60, 'partitionKeys': ['refereeId'], 'entityKeys': []}, # 7 days
         EntityType.INVOCATIONS: {'ttl': 7*24*60*60, 'partitionKeys': ['invocationId'], 'entityKeys': []}, # 7 days
-        EntityType.REFERENCEIDS: {'ttl': 7*24*60*60, 'partitionKeys': ['target', 'id'], 'entityKeys': []}, # 7 days
+        EntityType.REFERENCEIDS: {'ttl': 7*24*60*60, 'partitionKeys': ['target', 'target_id'], 'entityKeys': []}, # 7 days
         EntityType.POLLS: {'ttl': 7*24*60*60, 'partitionKeys': ['pollId'], 'entityKeys': []}, # 7 days
-        EntityType.POLLVOTES: {'ttl': 7*24*60*60, 'partitionKeys': ['pollId', 'mobileNo'], 'entityKeys': ['questionId']}, # 7 days
+        EntityType.POLLVOTES: {'ttl': 7*24*60*60, 'partitionKeys': ['pollId', 'refereeId'], 'entityKeys': ['questionId']}, # 7 days
         EntityType.LEAGUETABLES: {'ttl': 7*24*60*60, 'partitionKeys': [], 'entityKeys': ['tournamentName']}, # 60 minutes
     }
 
@@ -287,19 +293,31 @@ class DbClientBase(ABC):
         pass
 
     @abstractmethod
-    def getRefereeProperties(self, mobileNo, propertyName=None):
+    def getRefereeProperties(self, mobileNo=None, refereeId=None, propertyName=None, **entityKeys):
+        """Global (cross-tenant) referee profile from the referees table."""
         pass
 
     @abstractmethod
-    def setRefereeProperties(self, mobileNo, value, propertyName=None):
+    def setRefereeProperties(self, mobileNo=None, refereeId=None, value=None, propertyName=None, **entityKeys):
+        """Upsert a global referee profile into the referees table."""
         pass
 
     @abstractmethod
-    def getRefereeAvailaiblity(self, mobileNo:str, fromDate:datetime=None, toDate:datetime=None):
+    def getTenantRefereeProperties(self, tenantKey: str = None, mobileNo=None, refereeId=None, propertyName=None, **entityKeys):
+        """Tenant-scoped referee properties (status, role, etc.)."""
         pass
 
     @abstractmethod
-    def setRefereeAvailaiblity(self, mobileNo:str, value):
+    def setTenantRefereeProperties(self, tenantKey: str = None, mobileNo: str = None, refereeId=None, value=None, propertyName=None, **entityKeys):
+        """Upsert tenant-scoped referee properties."""
+        pass
+
+    @abstractmethod
+    def getRefereeAvailaiblity(self, mobileNo:str=None, refereeId=None, fromDate:datetime=None, toDate:datetime=None):
+        pass
+
+    @abstractmethod
+    def setRefereeAvailaiblity(self, mobileNo:str=None, refereeId=None, value=None):
         pass
 
     @abstractmethod
@@ -311,63 +329,31 @@ class DbClientBase(ABC):
         pass
 
     @abstractmethod
-    def setRefereeProperties(self, mobileNo, value, propertyName=None):
+    def getRefereeGames(self, refId=None, mobileNo=None, refereeId=None, season=None, gamePk=None, includeArchived=False, includeRemoved=False, includeCanceled=False, fromDate=None, toDate=None):
         pass
 
     @abstractmethod
-    def getRefereeGames(self, refId, season=None, gamePk=None, includeArchived=False, includeRemoved=False, includeCanceled=False, fromDate=None, toDate=None):
+    def setRefereeGame(self, value, refId=None, mobileNo=None, refereeId=None, gamePk=None):
         pass
 
     @abstractmethod
-    def getRefereeGamesNew(self, mobileNo, season=None, gamePk=None, includeArchived=False, includeRemoved=False, includeCanceled=False, fromDate=None, toDate=None):
+    def removeRefereeGame(self, refId=None, mobileNo=None, refereeId=None, gamePk=None):
         pass
 
     @abstractmethod
-    def setRefereeGame(self, refId, gamePk, value):
+    def archiveRefereeGame(self, refId=None, mobileNo=None, refereeId=None, gamePk=None):
         pass
 
     @abstractmethod
-    def setRefereeGameNew(self, mobileNo, gamePk, value):
+    def getRefereeReviews(self, refId=None, mobileNo=None, refereeId=None, season=None, gamePk=None, removed=False, fromDate=None, toDate=None):
         pass
 
     @abstractmethod
-    def removeRefereeGame(self, refId, gamePk):
+    def setRefereeReview(self, value, refId=None, mobileNo=None, refereeId=None, gamePk=None):
         pass
 
     @abstractmethod
-    def removeRefereeGameNew(self, mobileNo, gamePk):
-        pass
-
-    @abstractmethod
-    def archiveRefereeGame(self, refId, gamePk):
-        pass
-
-    @abstractmethod
-    def archiveRefereeGameNew(self, mobileNo, gamePk):
-        pass
-
-    @abstractmethod
-    def getRefereeReviews(self, refId, season=None, gamePk=None, removed=False, fromDate=None, toDate=None):
-        pass
-
-    @abstractmethod
-    def getRefereeReviewsNew(self, mobileNo, season=None, gamePk=None, removed=False, fromDate=None, toDate=None):
-        pass
-
-    @abstractmethod
-    def setRefereeReview(self, refId, gamePk, value):
-        pass
-
-    @abstractmethod
-    def setRefereeReviewNew(self, mobileNo, gamePk, value):
-        pass
-
-    @abstractmethod
-    def removeRefereeReview(self, refId, gamePk):
-        pass
-
-    @abstractmethod
-    def removeRefereeReviewNew(self, mobileNo, gamePk):
+    def removeRefereeReview(self, refId=None, mobileNo=None, refereeId=None, gamePk=None):
         pass
 
     @abstractmethod
@@ -388,10 +374,6 @@ class DbClientBase(ABC):
 
     @abstractmethod
     def getGameDetail(self, game:dict):
-        pass
-
-    @abstractmethod
-    def getGameDetailById(self, gameId:str):
         pass
 
     @abstractmethod
@@ -431,19 +413,19 @@ class DbClientBase(ABC):
         pass
 
     @abstractmethod
-    def getReferenceId(self, target:str, id:str=None):
+    def getReferenceId(self, target:str, target_id:str=None):
         pass
 
     @abstractmethod
-    def setReferenceId(self, target:str, id:str, value):
+    def setReferenceId(self, target:str, target_id:str, value):
         pass
     
     @abstractmethod
-    def getNotifications(self, tenantKey:str, target:str, id:str=None, notificationType:str=None, to:str=None, timestamp:int=None, status:str=None, **entityKeys):
+    def getNotifications(self, tenantKey:str, target:str, target_id:str=None, notificationType:str=None, to:str=None, timestamp:int=None, status:str=None, **entityKeys):
         pass
 
     @abstractmethod
-    def setNotifications(self, tenantKey:str, target:str, id:str, notificationType:str, to:str, timestamp:int, value):
+    def setNotifications(self, tenantKey:str, target:str, target_id:str, notificationType:str, to:str, timestamp:int, value):
         pass
 
     @abstractmethod
@@ -468,4 +450,10 @@ class DbClientBase(ABC):
     
     @abstractmethod
     def setPollVote(self, pollId, mobileNo, questionId, value=None):
+        pass
+
+    @abstractmethod
+    def incrementRateLimit(self, action: str, window: str, limit: int, ttl_seconds: int) -> bool:
+        """Atomically increment the counter for (action, window).
+        Returns True if under limit (request allowed), False if blocked."""
         pass

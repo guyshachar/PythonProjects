@@ -10,6 +10,9 @@ from .dbClientBase import DbClientBase
 from .cacheService import CacheService
 from .dynamodbClient import DynamodbClient
 from .redisClient import RedisClient
+from .postgresClient import PostgresClient
+
+from .repositories import TenantRepository
 
 __all__ = [
     'CacheService',
@@ -18,5 +21,7 @@ __all__ = [
     'DbClientBase',
     'DynamodbClient',
     'RedisClient',
+    'PostgresClient',
+    'TenantRepository',
 ]
 

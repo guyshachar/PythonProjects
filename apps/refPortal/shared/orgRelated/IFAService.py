@@ -22,8 +22,8 @@ from shared.orgRelated.multiTenantSupport import MultiTenantSupport
 from shared.orgRelated.ifa_payment_scraper import IfaPaymentScraper
 
 class IFAService(OrgServiceBase):
-    def __init__(self, logger:Logger, multiTenantSupport:MultiTenantSupport, cacheService:CacheService, handleUsers:HandleUsers, messagingService:'MessagingService'):
-        super().__init__(logger=logger, multiTenantSupport=multiTenantSupport, cacheService=cacheService, handleUsers=handleUsers, messagingService=messagingService, countryCode=OrgServiceCountryCode.ISRAEL, eventType=OrgServiceEventType.IFA)
+    def __init__(self, logger:Logger, multiTenantSupport:MultiTenantSupport, cacheService:CacheService, handleUsers:HandleUsers, messagingService:'MessagingService', tenantRepository=None):
+        super().__init__(logger=logger, multiTenantSupport=multiTenantSupport, cacheService=cacheService, handleUsers=handleUsers, messagingService=messagingService, countryCode=OrgServiceCountryCode.ISRAEL, eventType=OrgServiceEventType.IFA, tenantRepository=tenantRepository)
 
         self.protocol = 'https://'
         self.baseUrl = 'www.football.org.il'
@@ -39,6 +39,23 @@ class IFAService(OrgServiceBase):
         self.ifaPaymentScraper = IfaPaymentScraper(logger=self.logger)
         from shared.refsix_client import RefSixClient
         self.refsixClient = RefSixClient(self.logger, self.cacheService)
+
+        self.gameReportFieldMap = {
+            'startTime': "[formcontrolname='start']",
+            'endTime': "[formcontrolname='end']",
+            'breakMinutes': "[formcontrolname='brakeTime']",
+            'addedTimeMinutes': "[formcontrolname='duration']",
+            'addedTimeReason': "[formcontrolname='reason']",
+            'homeScore': "div.input:has(i.home-team) input",  # no formcontrolname on this input
+            'guestScore': "[formcontrolname='guestTeam']",
+            # Half-time score row only appears for league/cup games (confirmed via a submitted
+            # report showing 'מחצית: 1-0'), not the training-game form used to verify the rest
+            # of this map. Scoped by the row's visible label since the final-score row's inputs
+            # aren't reliably distinguishable by formcontrolname alone (see homeScore above) —
+            # verify against a live pending league report and adjust if this doesn't match.
+            'homeHTScore': "div.score-row:has-text('מחצית') div.input:has(i.home-team) input",
+            'guestHTScore': "div.score-row:has-text('מחצית') [formcontrolname='guestTeam']",
+        }
 
         self.dataDic1 = {
             "games" : {
@@ -91,7 +108,7 @@ class IFAService(OrgServiceBase):
 
     async def get2FA_PortalCode(self, tenantKey, mobileNo, _2FA_PortalCodeField):
         now = helpers.localNow()
-        _2FA_PortalCodeObj = self.cacheService.getCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='2FA_PortalCode')
+        _2FA_PortalCodeObj = self.cacheService.getCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='2FA_PortalCode')
         if _2FA_PortalCodeObj:
             if not isinstance(_2FA_PortalCodeObj, dict):
                 await _2FA_PortalCodeField.fill(_2FA_PortalCodeObj)
@@ -121,10 +138,10 @@ class IFAService(OrgServiceBase):
         try:
             self.logger.info(f'login start')
             tenantKey = refereeDetail['tenantKey']
-            id = refereeDetail.get('id')
+            id_number = refereeDetail.get('idNumber')
             mobileNo = refereeDetail['mobileNo']
-            self.logger.info(f'login#1, tenantKey={tenantKey}, id={id}, mobileNo={mobileNo}')
-            loginOnHold = self.cacheService.getCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginOnHold')
+            self.logger.info(f'login#1, tenantKey={tenantKey}, id_number={id_number}, mobileNo={mobileNo}')
+            loginOnHold = self.cacheService.getCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='loginOnHold')
             
             try:
                 pageOk = page.url if page else 'NotOk'
@@ -160,13 +177,13 @@ class IFAService(OrgServiceBase):
                         return False, f'Login form changed, input_elements_cnt={input_elements_cnt}'
       
                     usernameField = input_elements[0]
-                    await usernameField.fill(id)
+                    await usernameField.fill(id_number)
 
                     idField = input_elements[1]
                     await idField.fill(mobileNo)
 
                     await idField.press("Enter")
-                    self.cacheService.setCachedKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='2FA_PortalCode_RequestDatetime', value=helpers.localNow())
+                    self.cacheService.setCacheOnlyKeyVal(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='2FA_PortalCode_RequestDatetime', value=helpers.localNow(), ttlSeconds=60 * 30)
                     await asyncio.sleep(5000 * self.latencyFactor / 1000)
 
                     # 2FA Portal Code
@@ -311,12 +328,17 @@ class IFAService(OrgServiceBase):
         gamesResults = []
 
         try:
-            gamesTable = await self.getLocator(parent=page, selector='table.ng-tns-c150-1')
+            gamesTable = await page.locator("app-home-assignment-confirmation table").all()
+            if not gamesTable:
+                gamesTable = await page.get_by_role("heading", name="םיצוביש רושיא").locator("xpath=following-sibling::table[1]").all()
+
+            #gamesTable = await self.getLocator(parent=page, selector='table.ng-tns-c150-1')
             self.logger.debug(f'convertGamesTableToText/tablesLocator={1 if gamesTable else 0}', refereeDetail=refereeDetail)
-            if not gamesTable: #probably no games
+            if not gamesTable or len(gamesTable) == 0: #probably no games
                 return []
             
-            if gamesTable: 
+            if len(gamesTable) > 0: 
+                gamesTable = gamesTable[0]
                 gameRows = await gamesTable.locator('tr').all()
                 rowsCnt = len(gameRows)
                 self.logger.debug(f'convertGamesTableToText/rowsLocator={rowsCnt}', refereeDetail=refereeDetail)
@@ -421,7 +443,11 @@ class IFAService(OrgServiceBase):
         results = []
 
         try:
-            gamesTables = await page.locator('table.ng-tns-c150-1').all()
+            gamesTables = await page.locator("app-home-unfinished-game-reports mat-accordion").all()
+            rows = await page.locator("app-home-unfinished-game-reports mat-expansion-panel").all()
+            #if not gamesTables:
+            #    gamesTables = page.get_by_role("heading", name="אל וא וטלקנ אל םרובע תוחוד רשא םיקחשמ locator("xpath=following-sibling::mat-accordion[1]").)"ומלשוה
+            #gamesTables = await page.locator('table.ng-tns-c150-1').all()
             gamesReportsTables = await page.locator('table.ng-star-inserted').all()
             gamesReportsTablesCnt = len(gamesReportsTables)
             self.logger.debug(f'convertGamesReportsTableToText/tablesLocator={gamesReportsTablesCnt}', refereeDetail=refereeDetail)
@@ -884,9 +910,9 @@ class IFAService(OrgServiceBase):
         tournamentName = tournament['text']
         #print(f"league={tournament} --> {section['tableResult']}")
         leagueTable = None
-        if section['tableResult'] == 'IFA':
+        if section.table_result == 'IFA':
             leagueTable = await self.getIFALeagueData(page=page, tournamentUrl=tournament['href'])
-        elif section['tableResult'] == 'Vole':
+        elif section.table_result == 'Vole':
             if tournament.get('voleHref'):
                 leagueTable = await self.getVoleLeagueData(page=page, voleUrl=tournament['voleHref'])
         if leagueTable:
@@ -921,7 +947,7 @@ class IFAService(OrgServiceBase):
                     if tournament.get('section'):
                         result = True
                         self.logger.debug(f'refreshLeaguesTables {_tournamentName}')
-                        await self.refreshLeaguesTablesByTournament(page=page, tournament=tournament, section=self.cacheService.get_section_by_name(tenantKey=tenantKey, sectionName=tournament['section']))
+                        await self.refreshLeaguesTablesByTournament(page=page, tournament=tournament, section=self.tenantRepository.get_section(tenant_key=tenantKey, section_name=tournament['section']))
 
                 await browser.close()
 
@@ -960,8 +986,8 @@ class IFAService(OrgServiceBase):
                 continue
             if tournamentName and tournamentName != matchedName:
                 continue
-            section = self.cacheService.get_section_by_name(tenantKey=tenantKey, sectionName=league.get('section'))
-            if not section or section.get('tableResult') != 'Vole':
+            section = self.tenantRepository.get_section(tenant_key=tenantKey, section_name=league.get('section'))
+            if not section or section.table_result != 'Vole':
                 continue
             leagueVoleUrl = await leagueRow.get_attribute('href')
             if not leagueVoleUrl:
@@ -1113,8 +1139,8 @@ class IFAService(OrgServiceBase):
                                         homeTeamScore = score_m.group(2).strip()
                                         guestTeamScore = score_m.group(1).strip()
                                         gameResult = {
-                                            'full_time_score': [homeTeamScore, guestTeamScore]
-                                        }                                        
+                                            'full_time': [homeTeamScore, guestTeamScore]
+                                        }
                                     gameUrl = await gameRow.get_attribute("href")
                                     internalGameId = None
                                     if gameUrl:
@@ -1171,7 +1197,7 @@ class IFAService(OrgServiceBase):
                         game_date = datetime.fromisoformat(game_date)
                     except ValueError:
                         game_date = helpers.convert_to_datetime(game_date)
-                if isinstance(game_date, datetime) and now < game_date:
+                if isinstance(game_date, datetime) and now < helpers.ensure_aware(game_date):
                     return False
             gameUrl = gameDetail['url']
             scrapGameDetails = await self.scrapGameDetails(page=page, gameUrl=gameUrl)
@@ -1188,18 +1214,31 @@ class IFAService(OrgServiceBase):
             gameDetailRefereeNames = [referee['* name'] for referee in gameDetail.get('referees')]
             for referee in scrapGameDetails.get('referees'):
                 refName = referee['name']
+                internalRefereeId = referee['refereeId']
                 globalReferee = self.globalRefereesByName.get(refName)
-                mobileNo = None
-                if not globalReferee:
-                    mobileNo = f'tmpRefId:{referee['refereeId']}'
-                    self.cacheService.setRefereeProperty(tenantKey='GLOBAL', mobileNo=mobileNo, value={'name': refName})
-                    self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value={'internalRefereeId': referee['refereeId'], 'status': 'draft'})
-                else:
-                    if (len(globalReferee) == 1):
-                        mobileNo = globalReferee[0]['mobileNo']
-                        self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, propertyName='internalRefereeId', value=referee['refereeId'])
+                phoneIdentifier = None
+                if globalReferee and len(globalReferee) == 1:
+                    # Unambiguous name match against an already-known referee - reuse their
+                    # identity and keep this tenant's internalRefereeId current.
+                    matchedRefereeId = globalReferee[0].get('refereeId')
+                    phoneIdentifier = globalReferee[0].get('mobileNo') or str(matchedRefereeId)
+                    self._linkRefereeToTenant(tenantKey=tenantKey, refereeId=matchedRefereeId, internalRefereeId=internalRefereeId)
+                elif not globalReferee:
+                    # No name match at all - reuse a referee already created for this
+                    # internalRefereeId (this run or a previous one) rather than create a
+                    # duplicate, else create a real referee row with no mobile number yet.
+                    matchedRefereeId = (self.refereesByInternalId.get(tenantKey) or {}).get(internalRefereeId, {}).get('refereeId')
+                    if not matchedRefereeId:
+                        newValue, created = self.cacheService.dbClient.setRefereeProperties(value={'name': refName})
+                        matchedRefereeId = newValue.get('refereeId') if created else None
+                    if matchedRefereeId:
+                        self._linkRefereeToTenant(tenantKey=tenantKey, refereeId=matchedRefereeId, internalRefereeId=internalRefereeId, default_status='draft')
+                        self.refereesByInternalId.setdefault(tenantKey, {})[internalRefereeId] = {'refereeId': matchedRefereeId, 'name': refName}
+                        phoneIdentifier = str(matchedRefereeId)
+                # else: ambiguous name match (multiple referees share this name) - leave
+                # unresolved rather than guessing, matching prior behavior.
                 if refName not in gameDetailRefereeNames:
-                    ref = { 'role': referee['role'], '* name': refName, '* phone': mobileNo }
+                    ref = { 'role': referee['role'], '* name': refName, '* phone': phoneIdentifier }
                     gameDetail['referees'].append(ref)
 
             if (
@@ -1273,15 +1312,15 @@ class IFAService(OrgServiceBase):
                     self.logger.debug(f"Error getting half time score from div.result-half: {str(e)}")
                             
                 return {
-                    'full_time_score': full_time_score,
-                    'half_time_score': half_time_score
+                    'full_time': full_time_score.split(':'),
+                    'half_time': half_time_score.split(':')
                 }
-                
+
             except Exception as e:
                 self.logger.debug(f"Error scraping game result: {str(e)}")
                 return {
-                    'full_time_score': None,
-                    'half_time_score': None
+                    'full_time': None,
+                    'half_time': None
                 }
                 
         async def scrapTeamSectionDetails(page, ariaAttributeValue=None, coach=False, container_css=None):
@@ -1550,8 +1589,8 @@ class IFAService(OrgServiceBase):
         breakTime = None
         rules = None
         if tournament and tournament.get('rules'):
-            rules = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament.get('rules').strip())
-            match = re.search(r"\d+", rules.get('game').get('זמני מחצית'))
+            rules = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules').strip())
+            match = re.search(r"\d+", (rules.game or {}).get('זמני מחצית', '') if rules else '')
             if match:
                 breakTime = int(match.group())
         msg = f'**סיכום משחק**'
@@ -1607,12 +1646,158 @@ class IFAService(OrgServiceBase):
 
         return False
 
+    async def getUnfinishedGameReports(self, page, refereeDetail):
+        """Scrape the 'משחקים אשר דוחות עבורם לא נקלטו או לא הושלמו' table on the referee
+        home page. Returns a dict keyed by gamePk; each entry adds homeTeamName/guestTeamName
+        (split from the combined 'gameTitle' column) and a 'statusCell' locator that opens
+        the game report form when clicked."""
+        page = await self.gotoUrl(page=page, url=self.gamesUrl)
+        await asyncio.sleep(300 * self.latencyFactor / 1000)
+        convertResults = await self.convertGamesReportsTableToText(page=page, refereeDetail=refereeDetail)
+        if not convertResults:
+            return {}
+        gamesReports = await self.parseText(tenantKey=refereeDetail['tenantKey'], objType='gamesReports', convertResults=convertResults)
+        for report in (gamesReports or {}).values():
+            homeTeamName, guestTeamName = self._splitGameReportTeams(report.get('gameTitle'))
+            report['homeTeamName'] = homeTeamName
+            report['guestTeamName'] = guestTeamName
+            report['statusCell'] = report.get('cells', {}).get('status')
+        return gamesReports or {}
+
+    def _splitGameReportTeams(self, gameTitle):
+        if not gameTitle or ':' not in gameTitle:
+            return None, None
+        homeTeamName, guestTeamName = gameTitle.split(':', 1)
+        return homeTeamName.strip(), guestTeamName.strip()
+
+    def findUnfinishedGameReport(self, gamesReports, date=None, tournamentName=None, homeTeamName=None, guestTeamName=None, fixture=None, field=None):
+        """Find a row scraped by getUnfinishedGameReports() matching the given date/time,
+        tournament, home/guest team names, fixture and field. Any criterion left as None is
+        not filtered on."""
+        if isinstance(date, str):
+            date = helpers.convert_to_datetime(date)
+        tournamentName = self.fixNameQuote(tournamentName).strip() if tournamentName else None
+        homeTeamName = self.fixNameQuote(homeTeamName).strip() if homeTeamName else None
+        guestTeamName = self.fixNameQuote(guestTeamName).strip() if guestTeamName else None
+        fixture = str(fixture).strip() if fixture is not None else None
+        field = field.strip() if field else None
+
+        for report in (gamesReports or {}).values():
+            if date and report.get('date') != date:
+                continue
+            if tournamentName and self.fixNameQuote(report.get('tournamentName') or '').strip() != tournamentName:
+                continue
+            if homeTeamName and self.fixNameQuote(report.get('homeTeamName') or '').strip() != homeTeamName:
+                continue
+            if guestTeamName and self.fixNameQuote(report.get('guestTeamName') or '').strip() != guestTeamName:
+                continue
+            if fixture and str(report.get('fixture') or '').strip() != fixture:
+                continue
+            if field:
+                reportField = (report.get('field') or '').strip()
+                if field != reportField and field not in reportField and reportField not in field:
+                    continue
+            return report
+
+        return None
+
+    async def openUnfinishedGameReportForm(self, page, statusCell) -> tuple[bool, str]:
+        """Click the status link of a row from getUnfinishedGameReports() and wait for the
+        game report form (referee/game-reports/{id}) to open."""
+        try:
+            if not statusCell:
+                return False, 'statusCell not found'
+            await statusCell.click()
+            await page.wait_for_url(re.compile(r'.*/referee/game-reports/\d+'), timeout=15000)
+            await page.wait_for_selector("button.confirm", timeout=15000)
+            return True, 'opened'
+        except Exception as ex:
+            self.logger.error('openUnfinishedGameReportForm', ex)
+            return False, str(ex)
+
+    async def submitUnfinishedGameReport(self, refereeDetail, page, data, date=None, tournamentName=None, homeTeamName=None, guestTeamName=None, fixture=None, field=None, beforeConfirm=None) -> tuple[bool, str]:
+        """
+        Scrape the 'משחקים אשר דוחות עבורם לא נקלטו או לא הושלמו' table, find the row matching
+        date/time, tournament, home/guest team names, fixture and field, click its status link
+        to open the game report form, fill in the given fields and submit by clicking 'המשך'.
+
+        data: dict of friendly field name -> value, using the keys in self.gameReportFieldMap:
+            {
+                'startTime': '19:00',            # זמן התחלת משחק
+                'endTime': '20:45',               # זמן גמר משחק
+                'breakMinutes': '15',             # משך הפסקה (דקות)
+                'addedTimeMinutes': '2',           # תוספת זמן (דקות)
+                'addedTimeReason': 'פציעת שחקן',   # סיבות לתוספת זמן
+                'homeScore': '2',                  # תוצאה - קבוצה ביתית (בסיום)
+                'guestScore': '1',                 # תוצאה - קבוצה אורחת (בסיום)
+                'homeHTScore': '1',                 # תוצאה - קבוצה ביתית (מחצית), league/cup games only
+                'guestHTScore': '0',                # תוצאה - קבוצה אורחת (מחצית), league/cup games only
+            }
+        Unrecognized keys are treated as raw CSS selectors, so callers can still target any
+        other field directly (optionally with '@N' for the Nth match, or a trailing '!' to skip).
+
+        beforeConfirm: optional async callable(page) invoked after all fields are filled but
+        before clicking 'המשך' — e.g. `await page.pause()` for a manual human review checkpoint
+        before this submits a real report.
+        """
+        try:
+            gamesReports = await self.getUnfinishedGameReports(page=page, refereeDetail=refereeDetail)
+            if not gamesReports:
+                return False, 'No unfinished game reports found'
+
+            report = self.findUnfinishedGameReport(
+                gamesReports=gamesReports, date=date, tournamentName=tournamentName,
+                homeTeamName=homeTeamName, guestTeamName=guestTeamName, fixture=fixture, field=field
+            )
+            if not report:
+                return False, 'Game not found in unfinished game reports table'
+
+            opened, message = await self.openUnfinishedGameReportForm(page=page, statusCell=report.get('statusCell'))
+            if not opened:
+                return False, message
+
+            await asyncio.sleep(300 * self.latencyFactor / 1000)
+
+            for fieldName, value in (data or {}).items():
+                selector = self.gameReportFieldMap.get(fieldName, fieldName)
+                if selector.endswith('!'):
+                    continue
+                selectorPart, occurrence = (selector.split('@') + ['0'])[:2]
+                locator = page.locator(selectorPart).nth(int(occurrence))
+                if await locator.count() == 0 or not await locator.is_visible() or await locator.is_disabled():
+                    continue
+                tag = await locator.evaluate("el => el.tagName.toLowerCase()")
+                if tag in ('input', 'textarea'):
+                    await locator.fill(str(value))
+                elif tag == 'select':
+                    selectOptions = locator.locator('option')
+                    for k in range(await selectOptions.count()):
+                        selectOption = selectOptions.nth(k)
+                        selectOptionValue = await selectOption.get_attribute("value")
+                        selectOptionText = await selectOption.text_content()
+                        if str(value) in selectOptionText:
+                            await locator.select_option(value=selectOptionValue)
+                            break
+                await asyncio.sleep(150 * self.latencyFactor / 1000)
+
+            if beforeConfirm:
+                await beforeConfirm(page)
+
+            confirmButton = page.locator("button.confirm")
+            if await confirmButton.count() == 0:
+                return False, 'confirm button not found'
+            await confirmButton.click()
+            return True, 'submitted'
+        except Exception as ex:
+            self.logger.error('submitUnfinishedGameReport', ex, refereeDetail=refereeDetail)
+            return False, str(ex)
+
     async def postGameReport(self, refereeDetail, gameId, data, page) -> tuple[bool, str]:
         pass
 
     async def postGameUpdate1(self, refereeDetail, gameId, data, page, statusCell):
         try:
-            self.logger.info(f'postGameUpdate refId={refereeDetail["refId"]} gameId={gameId} title={page.url}')
+            self.logger.info(f'postGameUpdate refId={refereeDetail["refereeId"]} gameId={gameId} title={page.url}')
             if statusCell:
                 await statusCell.click()
                 await asyncio.sleep(1000/1000)

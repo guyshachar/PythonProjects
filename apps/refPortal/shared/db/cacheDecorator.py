@@ -6,7 +6,7 @@ from typing import Callable, Any, Dict, Tuple, List, Optional
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from shared.enumTypes import EntityType, ActionType
+from shared.db.enumTypes import EntityType, ActionType
 from shared.logger import Logger
 import shared.helpers as helpers
 import shared.jsonHelper as jsonHelper
@@ -285,9 +285,15 @@ class CacheDecorator:
             lookup_key = '#'.join([str(v) for (k, v) in entity_key_parts])
         else:
             lookup_key = '#'.join([str(v) for (k, v) in partition_key_parts])
+        if lookup_key in result:
+            return result[lookup_key]
+        # Alt-identifier lookups (e.g. 'mobileNo/refereeId') query by a value that
+        # isn't the dict's natural key (always mobileNo) - fall back to the sole entry.
+        if len(result) == 1:
+            return next(iter(result.values()))
         return result.get(lookup_key)
 
-    def cache(self, entityType: EntityType, actionType: ActionType, identifierArgs: list=[]):
+    def cache(self, entityType: EntityType, actionType: ActionType):
         """Decorator that automatically generates cache keys"""
         def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
@@ -311,8 +317,10 @@ class CacheDecorator:
                         _entityType, _tenantKey, _entityKeys, _queryIterations = CacheDecorator.getEntityKeysAndFilters(entityType=entityType, **kwargs)
                         cache_identifier, query_filters = self.generate_cache_entity_identifier(partitionKeys, entityKeys, _entityKeys, _queryIterations, *args, **kwargs)
                         partition_key_parts = _entityKeys[:len(partitionKeys)]
-                        entity_key_parts = _entityKeys[len(partitionKeys):]                        
-                        singleRecordResponse = bool(entityKeys) and len(entity_key_parts) == len(entityKeys) or len(entityKeys) == 0 and len(partition_key_parts) == len(partitionKeys)
+                        entity_key_parts = _entityKeys[len(partitionKeys):]
+                        singleRecordResponse = not cacheTypeMeta.get('alwaysMultiRecord') and (
+                            bool(entityKeys) and len(entity_key_parts) == len(entityKeys) or len(entityKeys) == 0 and len(partition_key_parts) == len(partitionKeys)
+                        )
                         excludeKeys = cacheTypeMeta.get('excludeKeys', [])
 
                         cacheLog = {

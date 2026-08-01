@@ -4,6 +4,29 @@ from datetime import date,datetime
 import threading
 from decimal import Decimal
 
+def _resolve_db_type() -> str:
+    """Mirrors configurationDI's db.type resolution (env var 'db' > config file's env.db >
+    default 'redis') without pulling in the full DI container. Checking only the OS env var and
+    skipping the config-file fallback (as this used to) silently disagreed with the DI container's
+    own resolution whenever an environment set db via config.<env>.json's "env":{"db": ...} and
+    never exported it as an actual process env var too (e.g. config.test.json declares
+    "db": "postgres" but the test container has no matching env var) - every call site that relies
+    on this to skip DynamoDB-string-coercion of bools/numbers (preJsonSetToDynamoDb) then silently
+    stringified real Postgres-backed booleans, which strict-typed clients (the iOS app) reject."""
+    envVar = os.getenv('db')
+    if envVar is not None:
+        return envVar
+    try:
+        from shared.configManager import ConfigManager
+        merged = ConfigManager.get_merged_file_config()
+        return (merged.get('env') or {}).get('db', 'redis')
+    except Exception:
+        return 'redis'
+
+# See _resolve_db_type - lets standalone helpers like this one know whether the active backend is
+# 'dynamodb' or 'postgres'.
+DB_TYPE = _resolve_db_type()
+
 class DbChangeEncoder(json.JSONEncoder):
     def default(self, obj):
         try:
@@ -143,6 +166,10 @@ def load_from_json(data, asIs=False):
             objectHook=None
         else:
             objectHook=datetime_decoder
+        if isinstance(data, dict):
+            return data
+        elif isinstance(data, list):
+            return data
         obj = json.loads(data, object_hook=objectHook)
         return obj
     else:
@@ -195,7 +222,11 @@ def preJsonSetToDynamoDb(obj, excludeProps=[]):
             return dt.isoformat()
         except ValueError:
             return obj  # Return as is if not a valid datetime
-    elif isinstance(obj, bool):
+    
+    if DB_TYPE == 'postgres':
+        return obj
+
+    if isinstance(obj, bool):
         return str(obj)
     elif False and isinstance(obj, int):  # If it's a timestamp
         try:
@@ -211,7 +242,11 @@ def postJsonGetFromDynamoDb(obj, convert_to_timestamp=False):
         return {k: postJsonGetFromDynamoDb(v, convert_to_timestamp) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [postJsonGetFromDynamoDb(item, convert_to_timestamp) for item in obj]
-    elif isinstance(obj, str):
+
+    if DB_TYPE == 'postgres':
+        return obj
+
+    if isinstance(obj, str):
         try:
             # Convert ISO format string to datetime object
             dt = datetime.fromisoformat(obj)

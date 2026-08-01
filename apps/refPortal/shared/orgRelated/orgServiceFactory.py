@@ -1,7 +1,7 @@
 from enum import Enum
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from .orgServiceBase import OrgServiceBase, OrgServiceCountryCode, OrgServiceEventType
 
@@ -9,12 +9,14 @@ if TYPE_CHECKING:
     # Only import for type hints, not at runtime
     from .IFAService import IFAService
     from .IHAService import IHAService
+    from shared.db.repositories import TenantRepository
 
 class OrgServiceFactory:
-    def __init__(self, logger, multiTenantSupport, cacheService, handleUsers, messagingService):
+    def __init__(self, logger, multiTenantSupport, cacheService, handleUsers, messagingService, tenantRepository:'Optional[TenantRepository]'=None):
         self.logger = logger
         self.multiTenantSupport = multiTenantSupport
         self.cacheService = cacheService
+        self.tenantRepository = tenantRepository
         self.handleUsers = handleUsers
         self.messagingService = messagingService
         
@@ -45,9 +47,10 @@ class OrgServiceFactory:
                 cacheService=self.cacheService,
                 handleUsers=self.handleUsers,
                 messagingService=self.messagingService,
+                tenantRepository=self.tenantRepository,
                 **kwargs
             )
-        
+
         elif countryCode == OrgServiceCountryCode.ISRAEL and eventType == OrgServiceEventType.IHA:
             # Lazy import to avoid circular dependency
             from .IHAService import IHAService
@@ -57,6 +60,7 @@ class OrgServiceFactory:
                 cacheService=self.cacheService,
                 handleUsers=self.handleUsers,
                 messagingService=self.messagingService,
+                tenantRepository=self.tenantRepository,
                 **kwargs
             )
                 
@@ -69,7 +73,7 @@ class OrgServiceFactory:
             return self.get_org_service(countryCode=countryCode, eventType=eventType, **kwargs)
         
     def get_org_service(self, countryCode: str, eventType: str, **kwargs) -> OrgServiceBase:
-        factory = OrgServiceFactory(self.logger, self.multiTenantSupport, self.cacheService, self.handleUsers, self.messagingService)
+        factory = OrgServiceFactory(self.logger, self.multiTenantSupport, self.cacheService, self.handleUsers, self.messagingService, tenantRepository=self.tenantRepository)
         return factory.create_service(
             countryCode=OrgServiceCountryCode(countryCode),
             eventType=OrgServiceEventType(eventType),

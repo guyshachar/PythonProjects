@@ -36,6 +36,7 @@ class TelegramClient(MessagingClientBase):
         cacheService: CacheService,
         username: str,
         fromMobile: str,
+        apiServiceUrlBase: str = None,
         useClient: bool = False,
     ):
         super().__init__(
@@ -47,7 +48,7 @@ class TelegramClient(MessagingClientBase):
         )
         self.logger = logger
         self.cacheService = cacheService
-        self.apiServiceUrlBase = os.getenv("apiServiceUrlBase")
+        self.apiServiceUrlBase = apiServiceUrlBase
 
         self.botToken = helpers.get_secret("telegram_bot_token")
         if useClient and (not self.botToken):
@@ -479,7 +480,7 @@ class TelegramClient(MessagingClientBase):
             chatId=chatId, mobileNo=mobileNo, templateName=templateName, bodyParameters=bodyParameters, buttons=buttons
         )
         if msg_sid:
-            self.cacheService.setReferenceId(target="msgSid", id=msg_sid, value={"gameId": game_id})
+            self.cacheService.setReferenceId(target="msgSid", target_id=msg_sid, value={"gameId": game_id})
         return msg_sid
 
     def sendGamePortalCodeMessage(

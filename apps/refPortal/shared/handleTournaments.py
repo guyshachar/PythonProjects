@@ -17,18 +17,20 @@ import shared.helpers as helpers
 import shared.jsonHelper as jsonHelper
 from shared.logger import Logger
 from shared.db import CacheService
+from shared.db.repositories import TenantRepository
 from shared.commonHelper import CommonHelper
 from shared.orgRelated import OrgServiceFactory
 from shared.messaging.messagingService import MessagingService
 
 class HandleTournaments:
-    def __init__(self, logger:Logger, cacheService:CacheService, commonHelper:CommonHelper, orgServiceFactory:OrgServiceFactory, messagingService:MessagingService):
+    def __init__(self, logger:Logger, cacheService:CacheService, commonHelper:CommonHelper, orgServiceFactory:OrgServiceFactory, messagingService:MessagingService, tenantRepository:TenantRepository=None):
         try:
             self.logger = logger
-            self.cacheService = cacheService            
+            self.cacheService = cacheService
             self.commonHelper = commonHelper
             self.orgServiceFactory = orgServiceFactory
             self.messagingService = messagingService
+            self.tenantRepository = tenantRepository
 
             self.logger.info("🏆 HandleTournaments initialized with injected CacheService")
 
@@ -85,54 +87,95 @@ class HandleTournaments:
             leagues[league]['tournament'] = 'cup'
         jsonHelper.save_to_file(leagues, './data/tournaments/cups.json')
 
-    def createCalendar(self, games:list, mobileNo:str=None):
+    def _buildGameEventData(self, game: dict) -> dict | None:
+        """Per-game fields shared by createCalendar (ICS feed) and getCalendarEventsData (JSON,
+        for in-app EventKit import) - single source of truth so both stay consistent instead of
+        duplicating the duration/description/location computation."""
+        if not game:
+            return None
+        gameDetail = self.cacheService.getGameDetail(game=game)
+        if not gameDetail:
+            self.logger.warning(f"_buildGameEventData: skipping game with no detail tenantKey={game.get('tenantKey')}")
+            return None
+        tenantKey = gameDetail['tenantKey']
+        gameDesc = self.dataDic['games']['generate'](tenantKey=tenantKey, gameDetail=gameDetail, includeReferees=True)
+        tournamentName = gameDetail['tournamentName']
+        gameDurationInMins = self.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName, game=game)
+
+        fieldName = gameDetail.get('fieldName')
+        location = ''
+        if fieldName:
+            fieldValue = self.tenantRepository.get_field(tenant_key=tenantKey, field_name=fieldName)
+            if fieldValue:
+                location = f"{fieldName}, {fieldValue.address}" if fieldValue.address else fieldName
+
+        return {
+            'name': f"{gameDetail['gameTitle']}/{gameDetail['tournamentName']}",
+            'begin': gameDetail['date'],
+            'durationInMins': gameDurationInMins,
+            'description': gameDesc,
+            'location': location,
+            'gameId': gameDetail['gameId'],
+            'removal': game.get('state', 'active') == 'removed',
+        }
+
+    def createCalendar(self, games:list, refereeId:int=None):
         try:
             gamesCalendar = Calendar()
             timestamp = int(time.time())
             firstGame = True
             games = games if games is not None else []
             for game in games:
-                if not game:
-                    continue
-                if firstGame and mobileNo:
+                if firstGame and refereeId:
                     firstGame = False
-                    calendarName = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='calendarName')
+                    calendarName = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', refereeId=refereeId, propertyName='calendarName')
                     if calendarName:
                         gamesCalendar.extra.append(ContentLine('X-WR-CALNAME', value=calendarName))
-                gameDetail = self.cacheService.getGameDetail(tenantKey=game['tenantKey'], game=game)
-                if not gameDetail:
-                    self.logger.warning(f"createCalendar: skipping game with no detail tenantKey={game.get('tenantKey')}")
+                eventData = self._buildGameEventData(game)
+                if not eventData:
                     continue
-                tenantKey = gameDetail['tenantKey']
-                gameDesc = self.dataDic['games']['generate'](tenantKey=tenantKey, gameDetail=gameDetail, includeReferees=True)
-                tournamentName = gameDetail['tournamentName']
-                gameDurationInMins = self.calcGameDuration(tenantKey=tenantKey, tournamentName=tournamentName)
-
-                fieldName = gameDetail.get('field')
-                location = ''
-                if fieldName:
-                    fieldValue = self.cacheService.get_field_by_name(tenantKey=tenantKey, fieldName=fieldName)
-                    if fieldValue:
-                        addr_details = fieldValue.get('addressDetails')
-                        addr = addr_details.get('address', '') if isinstance(addr_details, dict) else ''
-                        location = f"{fieldName}, {addr}" if addr else fieldName
-
-                event = self.createCalendarEvent(
-                            name=f"{gameDetail['gameTitle']}/{gameDetail['tournamentName']}",
-                            begin=gameDetail['date'], \
-                            durationInMins=gameDurationInMins, \
-                            description=gameDesc, \
-                            location=location, \
-                            gameId=gameDetail['id'], \
-                            removal=game.get('state', 'active') == 'removed'
-                        )
+                event = self.createCalendarEvent(**eventData)
                 event.sequence = timestamp
                 gamesCalendar.events.add(event)
-            
+
             return gamesCalendar
         except Exception as ex:
             self.logger.error(f"Error creating calendar", ex)
             return None
+
+    def getCalendarEventsData(self, games: list) -> list[dict]:
+        """JSON-serializable per-game event data for in-app EventKit import (normal authenticated
+        API call, unlike createCalendar's ICS feed which is fetched via a URL-embedded token so
+        OS Calendar apps / WhatsApp links can subscribe without custom headers)."""
+        games = games if games is not None else []
+        results = []
+        for game in games:
+            eventData = self._buildGameEventData(game)
+            if not eventData:
+                continue
+            begin = self._naive_local_datetime(eventData['begin'])
+            results.append({
+                'name': eventData['name'],
+                'begin': begin.isoformat(),
+                'durationInMins': eventData['durationInMins'],
+                'description': eventData['description'],
+                'location': eventData['location'],
+                'gameId': eventData['gameId'],
+                'removal': eventData['removal'],
+            })
+        return results
+
+    def _naive_local_datetime(self, value):
+        # gameDetail['date'] can be a datetime (cold cache, straight from Postgres) or a string
+        # like "2026-07-12 11:00:00+03:00" (round-tripped through the Redis JSON cache) - and
+        # either shape may carry a tzinfo/offset that's already local (never UTC, for this data),
+        # not naive. pytz's localize() requires naive, so strip any tzinfo rather than convert -
+        # the wall-clock value is already correct local time either way (mirrors
+        # ScheduleAgent._game_datetime_value's handling of the same cache-shape inconsistency).
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None)
+        s = str(value).strip()
+        return datetime.fromisoformat(s.split('+')[0]).replace(tzinfo=None)
 
     def createCalendarEvent(self, name, begin, durationInMins, description, location, gameId, removal=False):
         event = Event()
@@ -145,7 +188,7 @@ class HandleTournaments:
             event.status = 'CANCELLED'
         else:
             event.name = name
-            event.begin = localTZ.localize(begin)
+            event.begin = localTZ.localize(self._naive_local_datetime(begin))
             event.duration = timedelta(minutes=durationInMins)
             event.description = description
             event.location = location
@@ -153,16 +196,16 @@ class HandleTournaments:
 
         return event
 
-    def calcGameDuration(self, tenantKey:str, tournamentName:str):
-        tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
-        tenant = self.cacheService.get_tenant_by_key(tenantKey=tenantKey)
-        gameDurationInMins = int(tenant.get('gameDurationInMins', '120'))
+    def calcGameDuration(self, tenantKey:str, tournamentName:str, game:dict=None):
+        tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName, game=game)
+        tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey, game=game)
+        gameDurationInMins = tenant.game_duration_in_mins if tenant else 120
         if tournament and tournament.get('rules'):
-            rules = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament['rules'].strip())
-            if rules:
-                gameDurationInMins = int(rules['gameGrossTime'])
-                if tournament['tournament'] == 'cup':
-                    gameDurationInMins += int(rules['cupGrossTime'])
+            rules = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament['rules'].strip())
+            if rules and rules.game_gross_time:
+                gameDurationInMins = rules.game_gross_time
+                if tournament['tournament'] == 'cup' and rules.cup_gross_time:
+                    gameDurationInMins += rules.cup_gross_time
                 gameDurationInMins += 5
         
         return gameDurationInMins
@@ -199,7 +242,9 @@ class HandleTournaments:
         return team
 
     async def findGameTeamsInTable(self, tenantKey, gameDetail):
-        tournamentName = gameDetail['tournamentName']
+        tournamentName = gameDetail.get('tournamentName')
+        if not tournamentName:
+            return (None, None, None, None)
         tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
         leagueTable = None
         homeTeam = None
@@ -230,7 +275,8 @@ class HandleTournaments:
             gameDetail['gamePk'] = gamePk
             gameDetail['groupName'] = f'{gameDetail['tournamentName']} {gameDetail["gameTitle"]}'
             gameUrl = gameDetail['url']
-            gameDetailFromDb = self.cacheService.getGameDetail(tenantKey=tenantKey, game=gameDetail) 
+            gameDetail.setdefault('tenantKey', tenantKey)
+            gameDetailFromDb = self.cacheService.getGameDetail(game=gameDetail)
             if gameDetailFromDb:
                 gameDetail = gameDetailFromDb
                 if not gameDetail.get('url'):
@@ -239,7 +285,6 @@ class HandleTournaments:
                     self.logger.info(f'updateGameUrl groupName={gameDetail["groupName"]} gameUrl={gameUrl}')
             else:
                 gameDetail['id'] = str(uuid.uuid4())[:8]
-                gameDetail['reminders'] = {}
                 gameDetail['groupMobileNumbers'] = ''
                 self.cacheService.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=gameDetail)
             

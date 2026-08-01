@@ -86,7 +86,7 @@ class GreenApiClient(MessagingClientBase):
                 "getContactInfo": (1, 1),
                 "getStateInstance": (1, 1)
             }
-            self.rateLimitManager = RateLimitManager(logger=self.greenApiLogger, rateLimits=rateLimits, dynamodbResource=self.cacheService.dbClient.dynamodbResource)
+            self.rateLimitManager = RateLimitManager(logger=self.greenApiLogger, rateLimits=rateLimits, db_client=self.cacheService.dbClient)
         finally:
             pass
         
@@ -110,6 +110,8 @@ class GreenApiClient(MessagingClientBase):
         return response
 
     def getChatId(self, to):
+        if not to:
+            return None
         if to.endswith("@g.us"):
             chatId = to
         elif to.endswith("@c.us"):
@@ -242,6 +244,8 @@ class GreenApiClient(MessagingClientBase):
 
     def sendMessage(self, to, message, mediaUrl=None, sendAt=None, quotedMessageId=None, previewUrl=False):
         chatId = self.getChatId(to)
+        if not chatId:
+            return None
         response = self.greenAPI.sending.sendMessage(chatId=chatId, message=message, quotedMessageId=quotedMessageId, linkPreview=previewUrl)
         msgSid = response.data.get('idMessage') if response.data else None
         return msgSid

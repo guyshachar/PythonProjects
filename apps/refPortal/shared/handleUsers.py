@@ -15,11 +15,13 @@ import shared.helpers as helpers
 import shared.jsonHelper as jsonHelper
 from shared.logger import Logger
 from shared.db import CacheService
+from shared.db.repositories import TenantRepository
 
 class HandleUsers():
-    def __init__(self, logger:Logger, cacheService:CacheService):
+    def __init__(self, logger:Logger, cacheService:CacheService, tenantRepository:TenantRepository=None):
         self.logger = logger
         self.cacheService = cacheService
+        self.tenantRepository = tenantRepository
 
         #descopeProjectId = os.getenv('descopeProjectId')
         #self.descopeClient = MyDescopeClient(self.logger, descopeProjectId)
@@ -63,19 +65,19 @@ class HandleUsers():
         decryptedPassword = fernet.decrypt(password).decode()
         return decryptedPassword
 
-    def changeRefereePassword(self, tenantKey, mobileNo, refPassword):
-        refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo, forceReload=True)
+    def changeRefereePassword(self, tenantKey, mobileNo=None, refPassword=None, refereeId=None):
+        refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId, forceReload=True)
         if not refereeDetail:
             return False
 
         encryptedPassword = self.encryptPassword(f'{refPassword}')
         refereeDetail['password'] = encryptedPassword
         refereeDetail['passwordChangedDate'] = helpers.localNow()
-        self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value=refereeDetail)
+        self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId, value=refereeDetail)
         return True
 
-    def updateRefereeArea(self, tenantKey, mobileNo, area):
-        self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value=area, propertyName='area')
+    def updateRefereeAreaId(self, tenantKey, mobileNo, areaId):
+        self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value=areaId, propertyName='areaId')
         return True
 
     def forceSend(self, mobileNo, onOff):
@@ -101,38 +103,69 @@ class HandleUsers():
     @property
     def globalRefereesByMobile(self):
         if not hasattr(self, '_globalRefereesByMobile'):
-            (self._globalRefereesByMobile, self._refereesByRefId, 
-            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName) = self.getAllReferees()
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
         return self._globalRefereesByMobile
 
     @property
     def refereesByRefId(self):
         if not hasattr(self, '_refereesByRefId'):
-            (self._globalRefereesByMobile, self._refereesByRefId, 
-            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName) = self.getAllReferees()
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
         return self._refereesByRefId
 
     @property
     def refereesByMobile(self):
         if not hasattr(self, '_refereesByMobile'):
-            (self._globalRefereesByMobile, self._refereesByRefId, 
-            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName) = self.getAllReferees()
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
         return self._refereesByMobile
 
     @property
     def refereesByGuid(self):
         if not hasattr(self, '_refereesByGuid'):
-            (self._globalRefereesByMobile, self._refereesByRefId, 
-            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName) = self.getAllReferees()
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
         return self._refereesByGuid
 
     #add property refereesByName
     @property
     def globalRefereesByName(self):
         if not hasattr(self, '_globalRefereesByName'):
-            (self._globalRefereesByMobile, self._refereesByRefId, 
-            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName) = self.getAllReferees()
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
         return self._globalRefereesByName
+
+    @property
+    def globalRefereesById(self):
+        if not hasattr(self, '_globalRefereesById'):
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
+        return self._globalRefereesById
+
+    @property
+    def refereesById(self):
+        if not hasattr(self, '_refereesById'):
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
+        return self._refereesById
+
+    @property
+    def refereesByInternalId(self):
+        """Tenant-scoped lookup for referees matched by their source-system internalRefereeId
+        rather than mobileNo - the primary path for referees without a mobile number yet."""
+        if not hasattr(self, '_refereesByInternalId'):
+            (self._globalRefereesByMobile, self._refereesByRefId,
+            self._refereesByMobile, self._refereesByGuid, self._globalRefereesByName,
+            self._globalRefereesById, self._refereesById, self._refereesByInternalId) = self.getAllReferees()
+        return self._refereesByInternalId
 
     #@property
     def getRefereeDetail(self, tenantKey, mobileNo):
@@ -142,35 +175,50 @@ class HandleUsers():
         return refereeDetail
 
     def getAllReferees(self):
-        tenants = self.cacheService.getTenants()
-        activeTenantKeys = [ tenantKey for tenantKey, tenant in tenants.items() if tenant.get('active') == True ]
-        
+        tenants = self.tenantRepository.get_tenants()
+        activeTenantKeys = [ tenantKey for tenantKey, tenant in tenants.items() if tenant.active ]
+
         globalRefereesByMobile = {}
-        referees = self.cacheService.getRefereesNoCache()
+        referees = self.cacheService.getRefereesNoCache()  # 'GLOBAL' and each tenantKey both keyed by refereeId
         globalReferees = referees['GLOBAL']
         refereesByRefId = {}
         refereesByMobile = {}
+        refereesById = {}
         refereesByGuid = {}
+        refereesByInternalId = {}
         globalRefereesByName = {}
-        
-        for mobileNo, globalReferee in globalReferees.items():
+        globalRefereesById = {}
+
+        for globalReferee in globalReferees.values():
+            mobileNo = globalReferee.get('mobileNo')
             globalReferee['tenantKeys'] = []
             globalReferee['activeTenantKeys'] = []
-            globalRefereesByMobile[mobileNo] = globalReferee
+            # mobile_no is nullable - referees without one simply have no entry here,
+            # rather than colliding on a shared None key like they used to.
+            if mobileNo:
+                globalRefereesByMobile[mobileNo] = globalReferee
+            if globalReferee.get('refereeId') is not None:
+                globalRefereesById[globalReferee['refereeId']] = globalReferee
             refName = globalReferee.get('name')
-            if not globalRefereesByName.get(refName):
-                globalRefereesByName[refName] = []
-            globalRefereesByName[refName].append(globalReferee)
-        
+            # Same rationale as the mobileNo guard above - a referee with no name at all is an
+            # incomplete/ghost record that shouldn't pollute name-based lookup/search.
+            if refName:
+                if not globalRefereesByName.get(refName):
+                    globalRefereesByName[refName] = []
+                globalRefereesByName[refName].append(globalReferee)
+
         for tenantKey in tenants.keys():
-            tenantReferees = referees.get(tenantKey)
+            tenantReferees = referees.get(tenantKey) or {}  # keyed by refereeId
             refereesByRefId[tenantKey] = {}
             refereesByMobile[tenantKey] = {}
+            refereesById[tenantKey] = {}
             refereesByGuid[tenantKey] = {}
-            #refereesByTenant = self.cacheService.getRefereesNoCache(tenantKey=tenantKey)
-            for mobileNo, globalReferee in globalRefereesByMobile.items():
-                #tenantReferee = refereesByTenant.get(mobileNo)
-                tenantReferee = tenantReferees.get(mobileNo)
+            refereesByInternalId[tenantKey] = {}
+            # Iterate globalRefereesById (every referee, including mobile-less ones) rather than
+            # globalRefereesByMobile - the old mobile-keyed loop only ever saw one mobile-less
+            # referee (whichever last collided into the shared None key), silently dropping the rest.
+            for refereeId, globalReferee in globalRefereesById.items():
+                tenantReferee = tenantReferees.get(refereeId)
                 if tenantReferee:
                     refereeDetail = globalReferee | tenantReferee
                     if tenantReferee.get('refId'):
@@ -179,12 +227,19 @@ class HandleUsers():
                     if tenantKey in activeTenantKeys:
                         globalReferee['activeTenantKeys'].append(tenantKey)
 
-                    refereesByMobile[tenantKey][mobileNo] = refereeDetail
-                
+                    mobileNo = globalReferee.get('mobileNo')
+                    if mobileNo:
+                        refereesByMobile[tenantKey][mobileNo] = refereeDetail
+                    refereesById[tenantKey][refereeId] = refereeDetail
+
                     if globalReferee.get('guid'):
                         refereesByGuid[tenantKey][globalReferee.get('guid')] = refereeDetail
-    
-        return (globalRefereesByMobile, refereesByRefId, refereesByMobile, refereesByGuid, globalRefereesByName)
+
+                    internalId = tenantReferee.get('internalRefereeId')
+                    if internalId is not None:
+                        refereesByInternalId[tenantKey][internalId] = refereeDetail
+
+        return (globalRefereesByMobile, refereesByRefId, refereesByMobile, refereesByGuid, globalRefereesByName, globalRefereesById, refereesById, refereesByInternalId)
     
     async def addPendingReferee(self, tenantKey, mobileNo, refId):
         refereeDetail = self.cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
@@ -524,8 +579,6 @@ class HandleUsers():
                 globalRefereeDetail['id'] = referee['id']
                 globalRefereeDetail['gender'] = 'M' if referee['gender'] == 'ז' else 'F'
                 globalRefereeDetail['timeArrivalInAdvance'] = 45
-                globalRefereeDetail['commuteReminderTimeInAdvance'] = 3
-                globalRefereeDetail['firstGameReminderTimeInAdvance'] = 24
                 if referee.get('address'):
                     addressDetails = self.generateRefereeAddress(referee['address'])
                     globalRefereeDetail['addressDetails'] = addressDetails
@@ -606,8 +659,6 @@ class HandleUsers():
                 global_ref = {}
                 global_ref['gender'] = 'M' if row.get('gender') == 'ז' else 'F'
                 global_ref['timeArrivalInAdvance'] = 45
-                global_ref['commuteReminderTimeInAdvance'] = 3
-                global_ref['firstGameReminderTimeInAdvance'] = 24
             global_ref['name'] = name
             global_ref['id'] = id
             self.cacheService.setReferee(tenantKey='GLOBAL', mobileNo=mobile, value=global_ref)
@@ -694,10 +745,6 @@ if __name__ == "__main__":
             del refereeDetail['status']
         if 'timeArrivalInAdvance' not in refereeDetail:
             refereeDetail['timeArrivalInAdvance'] = 45
-        if 'commuteReminderTimeInAdvance' not in refereeDetail:
-            refereeDetail['commuteReminderTimeInAdvance'] = 3
-        if 'firstGameReminderTimeInAdvance' not in refereeDetail:
-            refereeDetail['firstGameReminderTimeInAdvance'] = 24
         cacheService.setReferee(tenantKey='GLOBAL', mobileNo=mobileNo, value=refereeDetail)
 
     tenants = cacheService.getTenants()
@@ -728,7 +775,7 @@ if __name__ == "__main__":
             for game in games:
                 if game['state'] == 'active':
                     game['state'] = 'archived'
-                    cacheService.setRefereeGame(tenantKey=tenantKey, refId=tenantRefereeDetail['refId'], gamePk=game['gamePk'], value=game)
+                    cacheService.setRefereeGame(tenantKey=tenantKey, refereeId=tenantRefereeDetail.get('refereeId'), gamePk=game['gamePk'], value=game)
     pass
 
     clientIdentifiers = cacheService.getClientIdentifier(clientIdentifier=None, from_date=helpers.localNow() - timedelta(days=3))
@@ -745,10 +792,6 @@ if __name__ == "__main__":
             refereeDetail['name'] = 'לוטן וייס'
         if 'timeArrivalInAdvance' not in refereeDetail:
             refereeDetail['timeArrivalInAdvance'] = 45
-        if 'commuteReminderTimeInAdvance' not in refereeDetail:
-            refereeDetail['commuteReminderTimeInAdvance'] = 3
-        if 'firstGameReminderTimeInAdvance' not in refereeDetail:
-            refereeDetail['firstGameReminderTimeInAdvance'] = 24
         cacheService.setRefereeProperty(tenantKey='GLOBAL', mobileNo=mobileNo, value=refereeDetail)
         #handleUsers.activateByMobileNo(mobileNo=mobileNo)
     

@@ -1,5 +1,6 @@
 import os
 import boto3
+from shared.configManager import ConfigManager
 from botocore.exceptions import ClientError
 import json
 import time
@@ -9,6 +10,15 @@ import re
 import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+def _resolve_tz() -> str:
+    try:
+        merged = ConfigManager._load_merged_file_config()
+        return merged.get('env', {}).get('TZ') or os.getenv('TZ', 'UTC')
+    except Exception:
+        return os.getenv('TZ', 'UTC')
+
+_TZ = _resolve_tz()
 from difflib import get_close_matches
 from thefuzz import fuzz
 import logging
@@ -60,14 +70,36 @@ def calculate_distance_between_coordinates(lat1, lng1, lat2, lng2, unit='km'):
         return None
 
 def localNow():
-    localNow = datetime.now(ZoneInfo(os.getenv('TZ')))
-    localNow = localNow.replace(tzinfo=None)
+    localNow = datetime.now(ZoneInfo(_TZ))
+    #localNow = localNow.replace(tzinfo=None)
     return localNow
 
 def utcNow():
     utcNow = datetime.now(ZoneInfo('UTC'))
-    utcNow = utcNow.replace(tzinfo=None)
+    #utcNow = utcNow.replace(tzinfo=None)
     return utcNow
+
+def ensure_aware(v):
+    """Attach the local timezone to a naive datetime (assumed already local time, matching
+    localNow()/convert_to_datetime() conventions) so it can be safely compared/subtracted
+    against an offset-aware datetime without raising TypeError. Anything else passes through
+    unchanged."""
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=ZoneInfo(_TZ))
+    return v
+
+def to_bool(v, default=None):
+    """Coerce a value that may already be a real bool, or a legacy 'True'/'False' string left
+    over from DynamoDB-era data (which has no native boolean coercion the way JSON does), into
+    an actual bool. A raw string is truthy in Python regardless of its contents, so leaving
+    'False' un-coerced silently inverts the stored intent wherever it's used in an `if` check."""
+    if isinstance(v, bool):
+        return v
+    if v is None:
+        return default
+    if isinstance(v, str):
+        return v.strip().lower() == 'true'
+    return bool(v)
 
 def is_valid_time(s):
     try:
@@ -269,6 +301,10 @@ def listToDictionary(list):
     
     return dict
 
+def singleDictValue(dict):
+    key, value = next(iter(dict.items()))
+    return value
+
 def safe_get(nested_dict, keys, default=None):
     """
     Safely get a value from a nested dictionary.
@@ -301,7 +337,7 @@ def getGameIcsFilename(tenantKey, gameId):
     return (fileId, icsFile)
 
 def createIcs(name, begin, durationInMins, description, location, removal, fileName):
-    localTZ = pytz.timezone(os.getenv('TZ'))
+    localTZ = pytz.timezone(_TZ)
     gameCalendar = None
     event = None
 
@@ -518,9 +554,9 @@ async def takeScreenshot(page=None, refereeDetail=None, tag=None):
         _refereeDetail = refereeDetail or getObjectFromCaller(objectName='refereeDetail')
 
         timestamp = int(time.time())
-        refId = (_refereeDetail or {}).get('refId', 'unknown')
+        refereeId = (_refereeDetail or {}).get('refereeId', 'unknown')
         base_storage_path = os.getenv("MEDIA_STORAGE_PATH", "/run/data/media_files")
-        screenshot_path = os.path.join(base_storage_path, 'screenshots', refId, tag, f'{timestamp}.png')
+        screenshot_path = os.path.join(base_storage_path, 'screenshots', str(refereeId), tag, f'{timestamp}.png')
         validatePath(screenshot_path)
         await _page.screenshot(path=str(screenshot_path), full_page=True)
         print(f'WARNING:Screenshot saved: {screenshot_path}')

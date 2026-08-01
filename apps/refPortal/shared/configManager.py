@@ -41,7 +41,7 @@ class ConfigManager:
         if not config_dir.exists():
             raise FileNotFoundError(f'Config directory not found: {config_dir}')
         common_config = ConfigManager.safe_load_json(config_dir / 'config.common.json')
-        common_env_name: str = common_config.get('env', {}).get('app_env', 'local')
+        common_env_name: str = common_config.get('env', {}).get('app_env', 'dev')
         effective_env: str = selected_env or os.getenv('app_env', common_env_name)
         env_config = ConfigManager.safe_load_json(config_dir / f'config.{effective_env}.json')
         return ConfigManager.deep_merge_dict(common_config, env_config)
@@ -67,6 +67,39 @@ class ConfigManager:
         with cls._merged_config_lock:
             cls._merged_file_config_cache = cls._load_merged_file_config(selected_env)
             return cls._merged_file_config_cache
+
+    @staticmethod
+    def _env_value_to_str(value):
+        if isinstance(value, bool):
+            return 'True' if value else 'False'
+        if isinstance(value, (list, tuple)):
+            return ','.join(str(v) for v in value)
+        if isinstance(value, dict):
+            return json.dumps(value)
+        return str(value)
+
+    _bridged_env_keys = set()
+
+    @classmethod
+    def sync_env_to_process(cls, merged_file_config: dict = None):
+        """
+        Populate os.environ from the merged JSON config's 'env' section for any key not already
+        set in the real process environment. Legacy code across shared/rpApi/rpGw reads
+        os.getenv() directly rather than through this class, so this bridges config.common.json /
+        config.{env}.json to those call sites without rewriting them. A genuine external env var
+        (docker-compose service override, local `export` for debugging) always wins and is never
+        overwritten; a value this bridge itself wrote on a previous call is fair game to update, so
+        hot-reload (this is also called from the config file watcher) reaches those call sites too.
+        """
+        merged = merged_file_config if merged_file_config is not None else cls.get_merged_file_config()
+        env_section = merged.get('env', {}) if isinstance(merged, dict) else {}
+        for key, value in env_section.items():
+            if key in os.environ and key not in cls._bridged_env_keys:
+                continue
+            if value is None:
+                continue
+            os.environ[key] = cls._env_value_to_str(value)
+            cls._bridged_env_keys.add(key)
 
     @staticmethod
     def get_resolved_config_json_paths() -> list:
@@ -117,6 +150,7 @@ class ConfigManager:
             if log is not None:
                 log.warning(f'Config reload skipped after file change: {ex}')
             return
+        cls.sync_env_to_process(merged)
         for cb in list(cls._config_watch_subscribers):
             try:
                 cb(merged, file_path, fname)

@@ -1,10 +1,9 @@
 from select import poll
+import os
 import threading
 import time
-import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List, Callable, Tuple, TYPE_CHECKING
-from urllib.parse import quote, unquote
 import logging
 import asyncio
 import sys
@@ -18,7 +17,7 @@ from shared.db.dbClientBase import DbClientBase
 from shared.db.cacheDecorator import cacheDecorator, CacheDecorator
 import shared.helpers as helpers
 import shared.jsonHelper as jsonHelper
-from shared.enumTypes import EntityType, ActionType
+from shared.db.enumTypes import EntityType, ActionType
 
 if TYPE_CHECKING:
     # Only import for type hints, not at runtime to avoid circular import
@@ -52,6 +51,14 @@ class CacheService:
         # Redis cache keys
         self._cache_prefix = "cache:"
         self._cache_ttl_prefix = "cache_ttl:"
+
+        # appName:env as the true leading segment of every Redis key this service touches -
+        # appName namespaces this app's keys in case Redis is ever shared with another
+        # service; env sits right after it, both ahead of tenantKey since _get_cache_key's output
+        # is tenantKey:cache:entityType:... and env/appName need to come before tenantKey,
+        # not before "cache:".
+        appName = os.getenv('appName', 'refPortal')
+        self._env = f"{appName}:{getattr(self.dbClient, 'env', None) or 'unknown'}"
 
         self.pk_separator = 'AAAA'
 
@@ -235,6 +242,9 @@ class CacheService:
     def _redis_set(self, key: str, data: Dict[str, Any], ttl_seconds: int = 3600) -> bool:
         """Set data in Redis cache with TTL"""
         try:
+            if ttl_seconds < 0:
+                self.redisCacheClient.delete(key)
+                return True
             json_data = jsonHelper.save_to_json(data=data)
             self.redisCacheClient.setex(name=key, time=ttl_seconds, value=json_data)
             return True
@@ -306,7 +316,7 @@ class CacheService:
     
     def _get_cache_key(self, tenantKey: str, entityType: str, identifier: str = None) -> str:
         """Get Redis cache key for a specific cache type and identifier"""
-        key = f"{tenantKey.replace('#',':')}:{self._cache_prefix}{entityType}"
+        key = f"{self._env}:{tenantKey.replace('#',':')}:{self._cache_prefix}{entityType}"
         if identifier:
             identifier = identifier.replace('#',':')
             tokens = identifier.split(':')
@@ -315,10 +325,10 @@ class CacheService:
                     identifier = ':'.join(tokens[1:])
             return f"{key}:{identifier}"
         return f"{key}"
-    
+
     def _get_cache_ttl_key(self, tenantKey: str, entityType: str) -> str:
         """Get Redis cache TTL key for a specific cache type"""
-        key = f"{tenantKey.replace('#',':')}:{self._cache_ttl_prefix}{entityType}"
+        key = f"{self._env}:{tenantKey.replace('#',':')}:{self._cache_ttl_prefix}{entityType}"
         return f"{key}"
     
     def _redis_cache_get(self, tenantKey: str, entityType: str, identifier: str = None, keys: List[str] = None) -> Dict[str, Any]:
@@ -414,22 +424,22 @@ class CacheService:
         """Expire all dynamic data when static data changes"""
         try:
             # Get all referee games keys
-            referee_games_keys = self.redis_get_keys(f"*:{self._cache_prefix}refereeGames:*")
+            referee_games_keys = self.redis_get_keys(f"{self._env}:*:{self._cache_prefix}refereeGames:*")
             for key in referee_games_keys:
                 self.redis_delete(key)
-            
+
             # Get all referee reviews keys
-            referee_reviews_keys = self.redis_get_keys(f"*:{self._cache_prefix}refereeReviews:*")
+            referee_reviews_keys = self.redis_get_keys(f"{self._env}:*:{self._cache_prefix}refereeReviews:*")
             for key in referee_reviews_keys:
                 self.redis_delete(key)
-            
+
             # Get all tournament games keys
-            tournament_games_keys = self.redis_get_keys(f"*:{self._cache_prefix}tournamentGames:*")
+            tournament_games_keys = self.redis_get_keys(f"{self._env}:*:{self._cache_prefix}tournamentGames:*")
             for key in tournament_games_keys:
                 self.redis_delete(key)
-            
+
             # Get all game detail mappings
-            game_detail_keys = self.redis_get_keys(f"*:{self._cache_prefix}gameDetailId:*")
+            game_detail_keys = self.redis_get_keys(f"{self._env}:*:{self._cache_prefix}gameDetailId:*")
             for key in game_detail_keys:
                 self.redis_delete(key)
                 
@@ -449,14 +459,20 @@ class CacheService:
         except Exception as ex:
             self.logger.error(f"❌ Error invalidating cache for filter:", ex)
     
-    def _invalidate_cache_for_gamePk(self, gamePk: str) -> None:
+    def _invalidate_cache_for_gamePk(self, gamePk: str, tournamentGameId: Optional[int] = None) -> None:
         """Invalidate cache entries for a specific game PK"""
         try:
             # Find and invalidate all cache entries related to this game PK
+            # Note: these three patterns have no tenantKey segment/wildcard even after this env
+            # fix (pre-existing, not introduced by the env-prefix change) - real keys are always
+            # {env}:{tenantKey}:{cache_prefix}{entityType}:..., so as written this glob can only
+            # ever match a key for the literal (nonexistent) "GLOBAL"-less tenant segment. Left
+            # as-is beyond adding the env segment for consistency - fixing the missing tenant
+            # wildcard is a separate, pre-existing issue outside this change's scope.
             patterns = [
-                f"{self._cache_prefix}{EntityType.REFEREEGAMES}:*:{gamePk}",
-                f"{self._cache_prefix}{EntityType.REFEREEREVIEWS}:*:{gamePk}",
-                f"{self._cache_prefix}{EntityType.TOURNAMENTSGAMES}:*:{gamePk}"
+                f"{self._env}:{self._cache_prefix}{EntityType.REFEREEGAMES}:*:{gamePk or tournamentGameId}",
+                f"{self._env}:{self._cache_prefix}{EntityType.REFEREEREVIEWS}:*:{gamePk or tournamentGameId}",
+                f"{self._env}:{self._cache_prefix}{EntityType.TOURNAMENTSGAMES}:*:{gamePk or tournamentGameId}"
             ]
             
             for pattern in patterns:
@@ -464,9 +480,9 @@ class CacheService:
                 for key in keys:
                     self.redis_delete(key)
             
-            self.logger.debug(f"🔄 Invalidated cache entries for game PK {gamePk}")
+            self.logger.debug(f"🔄 Invalidated cache entries for game PK {gamePk or tournamentGameId}")
         except Exception as ex:
-            self.logger.error(f"❌ Error invalidating cache for game PK {gamePk}:", ex)
+            self.logger.error(f"❌ Error invalidating cache for game PK {gamePk or tournamentGameId}:", ex)
 
     def _redis_get_cache_ttl(self, tenantKey: str, entityType: str) -> int:
         """Get cache TTL from Redis"""
@@ -573,42 +589,45 @@ class CacheService:
         try:
             ttl_seconds = DbClientBase.CacheTypes.get(EntityType.REFEREES, {}).get('ttl', 3600)
             referees = {}
-            refereesGlobal = self.dbClient.getRefereeProperties(tenantKey='GLOBAL')
+            refereesGlobal = self.dbClient.getRefereeProperties()  # keyed by refereeId
             referees['GLOBAL'] = refereesGlobal
             i = 0
             cacheItems = []
-            for mobileNo, referee in refereesGlobal.items():
+            for referee in refereesGlobal.values():
+                refereeId = referee.get('refereeId')
                 i += 1
                 value = {
                     'value': referee,
                     'filters': {}
                 }
-                
-                cacheKey = self._get_cache_key(tenantKey='GLOBAL', entityType=EntityType.REFEREES, identifier=f'{mobileNo}:AAA')
+
+                # Keyed by refereeId, not mobileNo - mobile_no is nullable and multiple
+                # mobile-less referees would otherwise overwrite each other's cache entry.
+                cacheKey = self._get_cache_key(tenantKey='GLOBAL', entityType=EntityType.REFEREES, identifier=f'{refereeId}:AAA')
                 ttl_seconds = DbClientBase.CacheTypes.get(EntityType.REFEREES, {}).get('ttl', 3600)
-                
+
                 cacheItems.append({'key': cacheKey, 'value': value, 'ttl_seconds': ttl_seconds})
-            
+
             self._redis_set_batch(items=cacheItems)
 
             tenants = self.getTenants()
             for tenantKey, tenant in tenants.items():
                 cacheItems = []
-                tenantReferees = self.dbClient.getRefereeProperties(tenantKey=tenantKey)
+                tenantReferees = self.dbClient.getTenantRefereeProperties(tenantKey=tenantKey)  # keyed by refereeId
                 referees[tenantKey] = tenantReferees
 
                 i = 0
-                for mobileNo, tenantReferee in tenantReferees.items():
+                for refereeId, tenantReferee in tenantReferees.items():
                     i += 1
-                    refereeDetail = helpers.merge_nested_dicts(refereesGlobal.get(mobileNo, {}), tenantReferee)
+                    refereeDetail = helpers.merge_nested_dicts(refereesGlobal.get(refereeId, {}), tenantReferee)
                     value = {
                         'value': refereeDetail,
                         'filters': {}
                     }
 
-                    cacheKey = self._get_cache_key(tenantKey=tenantKey, entityType=EntityType.REFEREES, identifier=f'{mobileNo}:AAAA')      
+                    cacheKey = self._get_cache_key(tenantKey=tenantKey, entityType=EntityType.REFEREES, identifier=f'{refereeId}:AAAA')
                     cacheItems.append({'key': cacheKey, 'value': value, 'ttl_seconds': ttl_seconds})
-            
+
                 self._redis_set_batch(items=cacheItems)
 
             self.logger.debug(f"👥 Loaded {len(refereesGlobal)} referees")
@@ -617,66 +636,39 @@ class CacheService:
         except Exception as ex:
             self.logger.error(f"Error loading referees:", ex)
     
-    def _load_referee_games(self, tenantKey: str, refId: str, gamePk: Optional[str] = None, include_archived: bool = False, include_removed: bool = False, include_canceled: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None):
+    def _load_referee_games(self, tenantKey: str, refId: str, gamePk: Optional[str] = None, tournamentGameId: Optional[int] = None, include_archived: bool = False, include_removed: bool = False, include_canceled: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None):
         """Load referee games data from database by referee ID and optional game PK"""
         try:
-            referee_games = self.dbClient.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=gamePk, includeArchived=include_archived, includeRemoved=include_removed, includeCanceled=include_canceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
+            referee_games = self.dbClient.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=gamePk, tournamentGameId=tournamentGameId, includeArchived=include_archived, includeRemoved=include_removed, includeCanceled=include_canceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
             for gamePk, referee_game in referee_games.items():
                 # Store each game individually in Redis
-                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, data=referee_game or {}, identifier=f"{refId}:{gamePk}")
-            self.logger.info(f"✅ Loaded {len(referee_games)} referee games for referee {refId}" + (f" and game {gamePk}" if gamePk else ""))
+                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, data=referee_game or {}, identifier=f"{refId}:{gamePk or tournamentGameId}")
+            self.logger.info(f"✅ Loaded {len(referee_games)} referee games for referee {refId}" + (f" and game {gamePk or tournamentGameId}" if gamePk or tournamentGameId else ""))
             return referee_games.keys()
         except Exception as ex:
-            self.logger.error(f"Error loading referee games for {refId}" + (f" and game {gamePk}" if gamePk else "") + f":", ex)
-            if gamePk:
-                self._redis_cache_delete(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=refId, keys=gamePk)
+            self.logger.error(f"Error loading referee games for {refId}" + (f" and game {gamePk or tournamentGameId}" if gamePk or tournamentGameId else "") + f":", ex)
+            if gamePk or tournamentGameId:
+                self._redis_cache_delete(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=refId, keys=gamePk or tournamentGameId)
 
-    def _load_referee_games_new(self, tenantKey: str, mobileNo: str, gamePk: Optional[str] = None, include_archived: bool = False, include_removed: bool = False, include_canceled: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None):
-        """Load referee games data from database by referee ID and optional game PK"""
-        try:
-            referee_games = self.dbClient.getRefereeGamesNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, includeArchived=include_archived, includeRemoved=include_removed, includeCanceled=include_canceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
-            for gamePk, referee_game in referee_games.items():
-                # Store each game individually in Redis
-                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, data=referee_game or {}, identifier=f"{mobileNo}:{gamePk}")
-            self.logger.info(f"✅ Loaded {len(referee_games)} referee games for referee {mobileNo}" + (f" and game {gamePk}" if gamePk else ""))
-            return referee_games.keys()
-        except Exception as ex:
-            self.logger.error(f"Error loading referee games for {mobileNo}" + (f" and game {gamePk}" if gamePk else "") + f":", ex)
-            if gamePk:
-                self._redis_cache_delete(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=mobileNo, keys=gamePk)
-        
-    def _load_referee_reviews(self, tenantKey: str, refId: str, gamePk: Optional[str] = None, from_date: Optional[str] = None, to_date: Optional[str] = None):
+    def _load_referee_reviews(self, tenantKey: str, refId: str, gamePk: Optional[str] = None, tournamentGameId: Optional[int] = None, from_date: Optional[str] = None, to_date: Optional[str] = None):
         """Load referee reviews data from database by referee ID and optional game PK"""
         try:
-            referee_reviews = self.dbClient.getRefereeReviews(tenantKey=tenantKey, refId=refId, gamePk=gamePk, from_date=from_date, to_date=to_date)
+            referee_reviews = self.dbClient.getRefereeReviews(tenantKey=tenantKey, refId=refId, gamePk=gamePk, tournamentGameId=tournamentGameId, from_date=from_date, to_date=to_date)
             for gamePk, referee_review in referee_reviews.items():
                 # Store each review individually in Redis
-                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, data=referee_review or {}, identifier=f"{refId}:{gamePk}")
-            self.logger.info(f"✅ Loaded {len(referee_reviews)} referee reviews for referee {refId}" + (f" and game {gamePk}" if gamePk else ""))
+                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, data=referee_review or {}, identifier=f"{refId}:{gamePk or tournamentGameId}")
+            self.logger.info(f"✅ Loaded {len(referee_reviews)} referee reviews for referee {refId}" + (f" and game {gamePk or tournamentGameId}" if gamePk or tournamentGameId else ""))
             return referee_reviews.keys()
         except Exception as ex:
-            self.logger.error(f"Error loading referee reviews for {refId}" + (f" and game {gamePk}" if gamePk else "") + f":", ex)
-            if gamePk:
-                self._redis_cache_delete(entityType=EntityType.REFEREEREVIEWS, identifier=refId, keys=gamePk)
+            self.logger.error(f"Error loading referee reviews for {refId}" + (f" and game {gamePk or tournamentGameId}" if gamePk or tournamentGameId else "") + f":", ex)
+            if gamePk or tournamentGameId:
+                self._redis_cache_delete(entityType=EntityType.REFEREEREVIEWS, identifier=refId, keys=gamePk or tournamentGameId)
 
-    def _load_referee_reviews_new(self, tenantKey: str, mobileNo: str, gamePk: Optional[str] = None, from_date: Optional[str] = None, to_date: Optional[str] = None):
-        """Load referee reviews data from database by referee ID and optional game PK"""
-        try:
-            referee_reviews = self.dbClient.getRefereeReviewsNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, from_date=from_date, to_date=to_date)
-            for gamePk, referee_review in referee_reviews.items():
-                # Store each review individually in Redis
-                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, data=referee_review or {}, identifier=f"{mobileNo}:{gamePk}")
-            self.logger.info(f"✅ Loaded {len(referee_reviews)} referee reviews for referee {mobileNo}" + (f" and game {gamePk}" if gamePk else ""))
-            return referee_reviews.keys()
-        except Exception as ex:
-            self.logger.error(f"Error loading referee reviews for {mobileNo}" + (f" and game {gamePk}" if gamePk else "") + f":", ex)
-            if gamePk:
-                self._redis_cache_delete(entityType=EntityType.REFEREEREVIEWS, identifier=mobileNo, keys=gamePk)
 
-    def _load_tournamentGames(self, tenantKey: str, tournamentName: str, gamePk: Optional[str] = None, nonArchivedOnly: bool = False, filters: list = []):
+    def _load_tournamentGames(self, tenantKey: str, tournamentName: str, gamePk: Optional[str] = None, tournamentGameId: Optional[int] = None, nonArchivedOnly: bool = False, filters: list = []):
         """Load tournament games data from database by tournament name and optional game PK"""
         try:
-            result = self.dbClient.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, nonArchivedOnly=nonArchivedOnly, filters=filters)
+            result = self.dbClient.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, tournamentGameId=tournamentGameId, nonArchivedOnly=nonArchivedOnly, filters=filters)
             if not result:
                 return {}
             #self.multiTenantSupport.mapList(objType='games', refereeItems=result)
@@ -684,754 +676,38 @@ class CacheService:
             for _gamePk, _tournamentGame in tournamentGames.items():
                 # Store each game individually in Redis
                 _tournamentName = _tournamentGame.get('tournamentName')
-                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, data=_tournamentGame or {}, identifier=f"{_tournamentName}:{_gamePk}")
+                self._redis_cache_set(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, data=_tournamentGame or {}, identifier=f"{_tournamentName}:{_gamePk or tournamentGameId}")
                 
                 # Store game detail mapping
                 if False and _tournamentGame and _tournamentGame.get("id"):
                     self._redis_cache_set(tenantKey='GLOBAL', entityType='gameDetailId', data=_tournamentGame, identifier=str(_tournamentGame.get("id")))
                     #self._redis_cache_set(tenantKey='GLOBAL', entityType='gameDetailId', data={"tenantKey": tenantKey, "tournamentName": tournamentName, "gamePk": gamePk}, identifier=str(tournamentGame.get("id")))
-            self.logger.info(f"✅ Loaded {len(tournamentGames)} tournament games for tournament {tournamentName}" + (f" and game PK {gamePk}" if gamePk else ""))
-            if not gamePk:
-                try:
-                    tournament = self.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
-                    section = (tournament or {}).get('section', '')
-                    self._store_tournament_games_index(
-                        tenantKey=tenantKey,
-                        tournamentName=tournamentName,
-                        games=tournamentGames,
-                        section=section,
-                    )
-                except Exception as ex:
-                    self.logger.error(f"Error building tournament games index for {tournamentName}:", ex)
+            self.logger.info(f"✅ Loaded {len(tournamentGames)} tournament games for tournament {tournamentName}" + (f" and game PK {gamePk or tournamentGameId}" if gamePk or tournamentGameId else ""))
             return tournamentGames
         except Exception as ex:
-            self.logger.error(f"Error loading tournament games for {tournamentName}" + (f" and game PK {gamePk}" if gamePk else "") + f":", ex)
-            if gamePk:
-                self._redis_cache_delete(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, identifier=tournamentName, keys=gamePk)
+            self.logger.error(f"Error loading tournament games for {tournamentName}" + (f" and game PK {gamePk or tournamentGameId}" if gamePk or tournamentGameId else "") + f":", ex)
+            if gamePk or tournamentGameId:
+                self._redis_cache_delete(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, identifier=tournamentName, keys=gamePk or tournamentGameId)
 
-    def _norm_phone_index(self, phone) -> str:
-        return ''.join(c for c in str(phone or '') if c.isdigit())
-
-    def _raw_referees_for_index(self, gameDetail: dict) -> list:
-        arr = gameDetail.get('referees')
-        if isinstance(arr, list) and arr:
-            return arr
-        nested = gameDetail.get('nested') or {}
-        if isinstance(nested, dict) and nested:
-            return list(nested.values())
-        return []
-
-    def _ref_phone_index(self, ref) -> str:
-        if not isinstance(ref, dict):
-            return ''
-        return str(ref.get('* phone') or ref.get('phone') or ref.get('mobileNo') or '').strip()
-
-    def _ref_name_index(self, ref) -> str:
-        if not isinstance(ref, dict):
-            return ''
-        return str(ref.get('* name') or ref.get('name') or '').strip()
-
-    def _build_tournament_game_index_entry(self, gameDetail: dict, section: str = '') -> Optional[dict]:
-        if not isinstance(gameDetail, dict):
-            return None
-        state = str(gameDetail.get('state') or '').lower()
-        if state in ('removed', 'canceled'):
-            return None
-        gamePk = str(gameDetail.get('gamePk') or '').strip()
-        if not gamePk:
-            return None
-        game_date = gameDetail.get('date') or gameDetail.get('gameDate') or gameDetail.get('scheduledDate')
-        scheduled = gameDetail.get('scheduledDate') or gameDetail.get('dateTime') or gameDetail.get('date')
-        fd = gameDetail.get('fieldData')
-        fd = fd if isinstance(fd, dict) else {}
-        addr_raw = fd.get('addressDetails')
-        addr = addr_raw if isinstance(addr_raw, dict) else {}
-        field_blob = ' '.join(
-            str(x)
-            for x in (
-                gameDetail.get('field'),
-                gameDetail.get('fieldName'),
-                fd.get('name'),
-                addr.get('address'),
-            )
-            if x
-        )
-        field_label = str(gameDetail.get('field') or gameDetail.get('fieldName') or fd.get('name') or '').strip().lower()
-        date_day = str(game_date)[:10] if game_date else ''
-        referee_phones = []
-        referee_names = []
-        for ref in self._raw_referees_for_index(gameDetail):
-            phone = self._norm_phone_index(self._ref_phone_index(ref))
-            if phone:
-                referee_phones.append(phone)
-            name = self._ref_name_index(ref).lower()
-            if name:
-                referee_names.append(name)
-        return {
-            'gamePk': gamePk,
-            'tournamentName': gameDetail.get('tournamentName') or '',
-            'section': section or '',
-            'date': str(game_date) if game_date else '',
-            'scheduledDate': str(scheduled) if scheduled else '',
-            'fieldBlob': field_blob.lower(),
-            'fieldLabel': field_label,
-            'dateDay': date_day,
-            'refereePhones': referee_phones,
-            'refereeNames': referee_names,
-        }
-
-    _TOURNAMENT_GAMES_INDEX_TTL_SECONDS = 60 * 60
-
-    def _tournament_games_index_cache_kwargs(self, tenantKey: str, tournamentName: str) -> dict:
-        return {
-            'tenantKey': tenantKey,
-            'entityType': EntityType.TOURNAMENTSGAMESINDEX,
-            'tournamentName': tournamentName,
-        }
-
-    def _tournament_games_index_redis_key(self, tenantKey: str, tournamentName: str) -> str:
-        return self.getCachedKey(**self._tournament_games_index_cache_kwargs(tenantKey, tournamentName))
-
-    def _tournament_games_index_cache_exists(self, tenantKey: str, tournamentName: str) -> bool:
-        return self._redis_exists(self._tournament_games_index_redis_key(tenantKey=tenantKey, tournamentName=tournamentName))
-
-    def _get_tournament_games_index_cache(self, tenantKey: str, tournamentName: str) -> Optional[dict]:
-        if not self._tournament_games_index_cache_exists(tenantKey=tenantKey, tournamentName=tournamentName):
-            return None
-        data = self._redis_get(self._tournament_games_index_redis_key(tenantKey=tenantKey, tournamentName=tournamentName))
-        return data if isinstance(data, dict) else {}
-
-    def _set_tournament_games_index_cache(self, tenantKey: str, tournamentName: str, index: dict) -> bool:
-        stored = self._redis_set(
-            key=self._tournament_games_index_redis_key(tenantKey=tenantKey, tournamentName=tournamentName),
-            data=index or {},
-            ttl_seconds=self._TOURNAMENT_GAMES_INDEX_TTL_SECONDS,
-        )
-        if stored:
-            self._sync_tournament_field_date_lookup_indexes(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-                index=index or {},
-            )
-        return stored
-
-    def _lookup_index_segment(self, value: str) -> str:
-        return quote(str(value or '').strip().lower(), safe='')
-
-    def _field_lookup_index_redis_key(self, tenantKey: str, tournamentName: str, fieldKey: str) -> str:
-        return self.getCachedKey(
-            tenantKey=tenantKey,
-            entityType=EntityType.TOURNAMENTSGAMESINDEXBYFIELD,
-            tournamentName=tournamentName,
-            fieldKey=self._lookup_index_segment(fieldKey),
-        )
-
-    def _date_lookup_index_redis_key(self, tenantKey: str, tournamentName: str, dateDay: str) -> str:
-        return self.getCachedKey(
-            tenantKey=tenantKey,
-            entityType=EntityType.TOURNAMENTSGAMESINDEXBYDATE,
-            tournamentName=tournamentName,
-            dateDay=str(dateDay or '')[:10],
-        )
-
-    def _tournament_field_date_lookup_pattern(self, tenantKey: str, entityType: EntityType, tournamentName: str) -> str:
-        tenant_prefix = tenantKey.replace('#', ':')
-        return f"{tenant_prefix}:cacheOnly:{entityType}:{tournamentName}:*"
-
-    def _expire_tournament_field_date_lookup_keys(self, tenantKey: str, tournamentName: str) -> None:
-        for entityType in (
-            EntityType.TOURNAMENTSGAMESINDEXBYFIELD,
-            EntityType.TOURNAMENTSGAMESINDEXBYDATE,
-        ):
-            pattern = self._tournament_field_date_lookup_pattern(
-                tenantKey=tenantKey,
-                entityType=entityType,
-                tournamentName=tournamentName,
-            )
-            for key in self.redis_get_keys(pattern=pattern):
-                self.redis_delete(key)
-
-    def _set_field_date_lookup_pks(self, redis_key: str, pks: list) -> bool:
-        return self._redis_set(
-            key=redis_key,
-            data=sorted(set(str(pk) for pk in (pks or []))),
-            ttl_seconds=self._TOURNAMENT_GAMES_INDEX_TTL_SECONDS,
-        )
-
-    def _collect_field_date_lookup_entries(self, index: dict) -> tuple:
-        field_pks = {}
-        date_pks = {}
-        for gamePk, entry in (index or {}).items():
-            game_pk = str(gamePk)
-            field_label = (entry.get('fieldLabel') or '').strip().lower()
-            if field_label:
-                field_pks.setdefault(field_label, []).append(game_pk)
-            field_blob = (entry.get('fieldBlob') or '').strip().lower()
-            if field_blob and field_blob != field_label:
-                field_pks.setdefault(field_blob, []).append(game_pk)
-            date_day = (entry.get('dateDay') or '')[:10]
-            if date_day:
-                date_pks.setdefault(date_day, []).append(game_pk)
-        return field_pks, date_pks
-
-    def _sync_tournament_field_date_lookup_indexes(
-        self,
-        tenantKey: str,
-        tournamentName: str,
-        index: dict,
-        expire_query_cache: bool = True,
-    ) -> None:
-        self._expire_tournament_field_date_lookup_keys(tenantKey=tenantKey, tournamentName=tournamentName)
-        field_pks, date_pks = self._collect_field_date_lookup_entries(index=index)
-        for field_key, pks in field_pks.items():
-            self._set_field_date_lookup_pks(
-                redis_key=self._field_lookup_index_redis_key(
-                    tenantKey=tenantKey,
-                    tournamentName=tournamentName,
-                    fieldKey=field_key,
-                ),
-                pks=pks,
-            )
-        for date_day, pks in date_pks.items():
-            self._set_field_date_lookup_pks(
-                redis_key=self._date_lookup_index_redis_key(
-                    tenantKey=tenantKey,
-                    tournamentName=tournamentName,
-                    dateDay=date_day,
-                ),
-                pks=pks,
-            )
-        if expire_query_cache:
-            self.expire_tournament_games_query_cache(tenantKey=tenantKey)
-
-    def _rebuild_tournament_field_date_lookup_indexes(self, tenantKey: str, tournamentName: str) -> None:
-        index = self.getTournamentGamesIndex(
-            tenantKey=tenantKey,
-            tournamentName=tournamentName,
-            forceReload=False,
-        )
-        self._sync_tournament_field_date_lookup_indexes(
-            tenantKey=tenantKey,
-            tournamentName=tournamentName,
-            index=index,
-            expire_query_cache=False,
-        )
-
-    def _rebuild_tenant_field_date_lookup_indexes(self, tenantKey: str, tournamentNames: list) -> None:
-        for tournamentName in tournamentNames or []:
-            self._rebuild_tournament_field_date_lookup_indexes(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-            )
-
-    def _field_key_from_lookup_redis_key(self, redis_key: str) -> str:
-        field_segment = redis_key.rsplit(':', 1)[-1]
-        return unquote(field_segment).lower()
-
-    def _ensure_tournament_field_lookup_indexes(self, tenantKey: str, tournamentName: str) -> None:
-        pattern = self._tournament_field_date_lookup_pattern(
-            tenantKey=tenantKey,
-            entityType=EntityType.TOURNAMENTSGAMESINDEXBYFIELD,
-            tournamentName=tournamentName,
-        )
-        if not self.redis_get_keys(pattern=pattern):
-            self._rebuild_tournament_field_date_lookup_indexes(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-            )
-
-    def _ensure_tournament_date_lookup_indexes(self, tenantKey: str, tournamentName: str, days: list) -> None:
-        if not days:
-            return
-        missing = any(
-            not self._redis_exists(
-                self._date_lookup_index_redis_key(
-                    tenantKey=tenantKey,
-                    tournamentName=tournamentName,
-                    dateDay=day,
-                )
-            )
-            for day in days
-        )
-        if missing and self._get_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName) is not None:
-            self._rebuild_tournament_field_date_lookup_indexes(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-            )
-
-    def _normalize_query_cache_date(self, dt: datetime = None) -> str:
-        if not dt:
-            return ''
-        try:
-            return dt.date().isoformat()
-        except Exception:
-            return str(dt)[:10]
-
-    def _normalize_game_pk_list(self, gamePk) -> list:
-        if gamePk is None:
-            return []
-        if isinstance(gamePk, (set, list, tuple)):
-            items = gamePk
-        else:
-            items = [gamePk]
-        return sorted({str(pk).strip() for pk in items if pk is not None and str(pk).strip()})
-
-    def _get_cached_tournament_games_by_pk(self, tenantKey: str, tournamentName: str, pk_list: list) -> tuple:
-        games = {}
-        missing = []
-        if not pk_list:
-            return games, missing
-        redis_keys = []
-        pk_by_redis_key = {}
-        for pk in pk_list:
-            cache_key = self._get_cache_key(
-                tenantKey=tenantKey,
-                entityType=EntityType.TOURNAMENTSGAMES,
-                identifier=f"{tournamentName}:{pk}",
-            )
-            redis_keys.append(cache_key)
-            pk_by_redis_key[cache_key] = pk
-        batch = self._redis_get_batch(redis_keys)
-        for cache_key, pk in pk_by_redis_key.items():
-            data = batch.get(cache_key)
-            if isinstance(data, dict) and data:
-                games[str(pk)] = data
-            else:
-                missing.append(str(pk))
-        return games, missing
-
-    def _tournament_games_query_cache_hash(
-        self,
-        tournamentNames: list,
-        leagueName: str = None,
-        sectionFilter: str = None,
-        fromDate: datetime = None,
-        toDate: datetime = None,
-        fieldFilter: str = None,
-        refereeFilter: str = None,
-    ) -> str:
-        payload = {
-            'leagueName': leagueName or '',
-            'sectionFilter': sectionFilter or '',
-            'fromDate': self._normalize_query_cache_date(fromDate),
-            'toDate': self._normalize_query_cache_date(toDate),
-            'fieldFilter': (fieldFilter or '').strip().lower(),
-            'refereeFilter': (refereeFilter or '').strip().lower(),
-            'tournamentNames': sorted(tournamentNames or []),
-        }
-        return hashlib.md5(json.dumps(payload, sort_keys=True).encode('utf-8')).hexdigest()
-
-    def _tournament_games_query_cache_redis_key(self, tenantKey: str, query_hash: str) -> str:
-        return self.getCachedKey(
-            tenantKey=tenantKey,
-            entityType=EntityType.TOURNAMENTSGAMESINDEXQUERY,
-            queryHash=query_hash,
-        )
-
-    def _get_tournament_games_query_cache(self, tenantKey: str, query_hash: str) -> Optional[dict]:
-        key = self._tournament_games_query_cache_redis_key(tenantKey=tenantKey, query_hash=query_hash)
-        if not self._redis_exists(key):
-            return None
-        data = self._redis_get(key)
-        if not isinstance(data, dict):
-            return None
-        return {
-            tournamentName: set(str(pk) for pk in (pks or []))
-            for tournamentName, pks in data.items()
-        }
-
-    def _set_tournament_games_query_cache(self, tenantKey: str, query_hash: str, matches: dict) -> bool:
-        payload = {
-            tournamentName: sorted(set(str(pk) for pk in pks))
-            for tournamentName, pks in (matches or {}).items()
-        }
-        return self._redis_set(
-            key=self._tournament_games_query_cache_redis_key(tenantKey=tenantKey, query_hash=query_hash),
-            data=payload,
-            ttl_seconds=self._TOURNAMENT_GAMES_INDEX_TTL_SECONDS,
-        )
-
-    def expire_tournament_games_query_cache(self, tenantKey: str) -> bool:
-        try:
-            pattern = f"{tenantKey.replace('#', ':')}:cacheOnly:{EntityType.TOURNAMENTSGAMESINDEXQUERY}:*"
-            keys = self.redis_get_keys(pattern=pattern)
-            for key in keys:
-                self.redis_delete(key)
-            return True
-        except Exception as ex:
-            self.logger.error(f"Error expiring tournament games query cache tenantKey={tenantKey}:", ex)
-            return False
-
-    def _days_in_date_range(self, fromDate: datetime = None, toDate: datetime = None) -> list:
-        if not fromDate and not toDate:
-            return []
-        start = (fromDate or toDate).date()
-        end = (toDate or fromDate).date()
-        if end < start:
-            start, end = end, start
-        days = []
-        current = start
-        while current <= end:
-            days.append(current.isoformat())
-            current += timedelta(days=1)
-        return days
-
-    def _are_tournament_games_indexes_cached(self, tenantKey: str, tournamentNames: list) -> bool:
-        return all(
-            self._tournament_games_index_cache_exists(tenantKey=tenantKey, tournamentName=tournamentName)
-            for tournamentName in (tournamentNames or [])
-        )
-
-    def _query_tournament_games_from_field_date_indexes(
-        self,
-        tenantKey: str,
-        tournamentNames: list,
-        fromDate: datetime = None,
-        toDate: datetime = None,
-        fieldFilter: str = None,
-    ) -> Optional[dict]:
-        if not fieldFilter and not fromDate and not toDate:
-            return None
-        if not tournamentNames:
-            return {}
-        if not self._are_tournament_games_indexes_cached(tenantKey=tenantKey, tournamentNames=tournamentNames):
-            return None
-
-        indexes = self.getTournamentGamesIndexes(
-            tenantKey=tenantKey,
-            tournamentNames=tournamentNames,
-            forceReload=False,
-        )
-        return {
-            tournamentName: self._filter_tournament_games_index(
-                index=indexes.get(tournamentName) or {},
-                fromDate=fromDate,
-                toDate=toDate,
-                fieldFilter=fieldFilter,
-            )
-            for tournamentName in tournamentNames
-        }
-
-    def _delete_tournament_games_index_cache(self, tenantKey: str, tournamentName: str) -> bool:
-        key = self.getCachedKey(**self._tournament_games_index_cache_kwargs(tenantKey, tournamentName))
-        return self._redis_delete(key)
-
-    def _store_tournament_games_index(self, tenantKey: str, tournamentName: str, games: dict, section: str = '') -> dict:
-        index = {}
-        for _gamePk, gameDetail in (games or {}).items():
-            entry = self._build_tournament_game_index_entry(gameDetail=gameDetail, section=section)
-            if entry:
-                index[str(_gamePk)] = entry
-        self._set_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName, index=index)
-        return index
-
-    def _upsert_tournament_games_index_entry(self, tenantKey: str, tournamentName: str, gameDetail: dict, section: str = '') -> None:
-        index = self._get_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName)
-        if index is None:
-            index = {}
-        gamePk = str((gameDetail or {}).get('gamePk') or '').strip()
-        if not gamePk:
-            return
-        entry = self._build_tournament_game_index_entry(gameDetail=gameDetail, section=section)
-        if entry:
-            index[gamePk] = entry
-        elif gamePk in index:
-            del index[gamePk]
-        self._set_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName, index=index)
-
-    def _remove_tournament_games_index_entry(self, tenantKey: str, tournamentName: str, gamePk: str) -> None:
-        index = self._get_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName)
-        if index is None:
-            return
-        gamePk = str(gamePk or '').strip()
-        if gamePk and gamePk in index:
-            del index[gamePk]
-            self._set_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName, index=index)
-
-    def expire_tournament_games_index(self, tenantKey: str, tournamentName: str = None) -> bool:
-        try:
-            if tournamentName:
-                deleted = self._delete_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName)
-                self._sync_tournament_field_date_lookup_indexes(tenantKey=tenantKey, tournamentName=tournamentName, index={})
-                return deleted
-            pattern = f"{tenantKey.replace('#', ':')}:cacheOnly:{EntityType.TOURNAMENTSGAMESINDEX}:*"
-            keys = self.redis_get_keys(pattern=pattern)
-            for key in keys:
-                self.redis_delete(key)
-            for entityType in (
-                EntityType.TOURNAMENTSGAMESINDEXBYFIELD,
-                EntityType.TOURNAMENTSGAMESINDEXBYDATE,
-            ):
-                lookup_pattern = f"{tenantKey.replace('#', ':')}:cacheOnly:{entityType}:*"
-                for key in self.redis_get_keys(pattern=lookup_pattern):
-                    self.redis_delete(key)
-            self.expire_tournament_games_query_cache(tenantKey=tenantKey)
-            return True
-        except Exception as ex:
-            self.logger.error(f"Error expiring tournament games index tenantKey={tenantKey} tournamentName={tournamentName}:", ex)
-            return False
-
-    def getTournamentGamesIndex(self, tenantKey: str, tournamentName: str, forceReload: bool = False) -> dict:
-        if not forceReload:
-            cached = self._get_tournament_games_index_cache(tenantKey=tenantKey, tournamentName=tournamentName)
-            if cached is not None:
-                return cached
-        games = self.dbClient.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName) or {}
-        tournament = self.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
-        section = (tournament or {}).get('section', '')
-        return self._store_tournament_games_index(
-            tenantKey=tenantKey,
-            tournamentName=tournamentName,
-            games=games,
-            section=section,
-        )
-
-    def getTournamentGamesIndexes(self, tenantKey: str, tournamentNames: list, forceReload: bool = False) -> dict:
-        """Load tournament game indexes for many tournaments (one Redis MGET when cached)."""
-        indexes = {}
-        if not tournamentNames:
-            return indexes
-        if not forceReload:
-            redis_keys = []
-            key_to_name = {}
-            for tournamentName in tournamentNames:
-                cache_key = self._tournament_games_index_redis_key(tenantKey=tenantKey, tournamentName=tournamentName)
-                redis_keys.append(cache_key)
-                key_to_name[cache_key] = tournamentName
-            batch = self._redis_get_batch(redis_keys)
-            missing_names = []
-            for cache_key, tournamentName in key_to_name.items():
-                cached = batch.get(cache_key)
-                if cached is None:
-                    missing_names.append(tournamentName)
-                else:
-                    indexes[tournamentName] = cached if isinstance(cached, dict) else {}
-            for tournamentName in missing_names:
-                indexes[tournamentName] = self.getTournamentGamesIndex(
-                    tenantKey=tenantKey,
-                    tournamentName=tournamentName,
-                    forceReload=False,
-                )
-            return indexes
-        for tournamentName in tournamentNames:
-            indexes[tournamentName] = self.getTournamentGamesIndex(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-                forceReload=True,
-            )
-        return indexes
-
-    def _parse_index_datetime(self, value) -> Optional[datetime]:
-        if not value:
-            return None
-        try:
-            dt = datetime.fromisoformat(str(value))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-        except Exception:
-            return None
-
-    def _filter_tournament_games_index(
-        self,
-        index: dict,
-        sectionFilter: str = None,
-        fromDate: datetime = None,
-        toDate: datetime = None,
-        fieldFilter: str = None,
-        refereeMobileFilter: str = None,
-        refereeFilter: str = None,
-        now: datetime = None,
-    ) -> set:
-        if sectionFilter:
-            index = {
-                gamePk: entry
-                for gamePk, entry in (index or {}).items()
-                if (entry.get('section') or '') == sectionFilter
-            }
-        else:
-            index = index or {}
-        from_dt = fromDate.replace(tzinfo=timezone.utc) if fromDate else None
-        to_dt = toDate.replace(tzinfo=timezone.utc) if toDate else None
-        field_q = (fieldFilter or '').strip().lower()
-        referee_mobile_digits = self._norm_phone_index(refereeMobileFilter) if refereeMobileFilter else ''
-        referee_q = (refereeFilter or '').strip().lower()
-        now_dt = now or datetime.now(timezone.utc)
-        if now_dt.tzinfo is None:
-            now_dt = now_dt.replace(tzinfo=timezone.utc)
-        matched = set()
-        for gamePk, entry in index.items():
-            if from_dt or to_dt:
-                gdt = self._parse_index_datetime(entry.get('date'))
-                if not gdt:
-                    continue
-                if from_dt and gdt < from_dt:
-                    continue
-                if to_dt and gdt > to_dt:
-                    continue
-            if field_q and field_q not in (entry.get('fieldBlob') or ''):
-                continue
-            if referee_mobile_digits or referee_q:
-                started_dt = self._parse_index_datetime(entry.get('scheduledDate') or entry.get('date'))
-                game_started = bool(started_dt and started_dt <= now_dt)
-                if not game_started:
-                    continue
-                if referee_mobile_digits:
-                    phones = entry.get('refereePhones') or []
-                    if not any(
-                        phone == referee_mobile_digits or phone.endswith(referee_mobile_digits)
-                        for phone in phones
-                    ):
-                        continue
-                elif referee_q:
-                    names = entry.get('refereeNames') or []
-                    if not any(referee_q in name for name in names):
-                        continue
-            matched.add(str(gamePk))
-        return matched
-
-    def queryTenantTournamentGamesIndex(
-        self,
-        tenantKey: str,
-        tournamentNames: list,
-        leagueName: str = None,
-        sectionFilter: str = None,
-        fromDate: datetime = None,
-        toDate: datetime = None,
-        fieldFilter: str = None,
-        refereeMobileFilter: str = None,
-        refereeFilter: str = None,
-        now: datetime = None,
-        forceReload: bool = False,
-    ) -> Optional[dict]:
-        """Return {tournamentName: {gamePk, ...}} using cacheOnly field/date indexes and query cache."""
-        try:
-            query_hash = None
-            if not forceReload and not refereeMobileFilter:
-                query_hash = self._tournament_games_query_cache_hash(
-                    tournamentNames=tournamentNames,
-                    leagueName=leagueName,
-                    sectionFilter=sectionFilter,
-                    fromDate=fromDate,
-                    toDate=toDate,
-                    fieldFilter=fieldFilter,
-                    refereeFilter=refereeFilter,
-                )
-                cached_query = self._get_tournament_games_query_cache(tenantKey=tenantKey, query_hash=query_hash)
-                if cached_query is not None:
-                    return cached_query
-
-            lookup_matches = None
-            if not forceReload and (fieldFilter or fromDate or toDate):
-                lookup_matches = self._query_tournament_games_from_field_date_indexes(
-                    tenantKey=tenantKey,
-                    tournamentNames=tournamentNames,
-                    fromDate=fromDate,
-                    toDate=toDate,
-                    fieldFilter=fieldFilter,
-                )
-
-            needs_index_entries = bool(sectionFilter or refereeFilter or refereeMobileFilter)
-            indexes = None
-            if lookup_matches is None or needs_index_entries:
-                indexes = self.getTournamentGamesIndexes(
-                    tenantKey=tenantKey,
-                    tournamentNames=tournamentNames,
-                    forceReload=forceReload,
-                )
-
-            if lookup_matches is not None:
-                result = {}
-                for tournamentName in tournamentNames:
-                    candidate_pks = lookup_matches.get(tournamentName, set())
-                    if needs_index_entries:
-                        index_slice = {
-                            gamePk: entry
-                            for gamePk, entry in (indexes.get(tournamentName) or {}).items()
-                            if str(gamePk) in candidate_pks
-                        }
-                        result[tournamentName] = self._filter_tournament_games_index(
-                            index=index_slice,
-                            sectionFilter=sectionFilter,
-                            fromDate=None,
-                            toDate=None,
-                            fieldFilter=None,
-                            refereeMobileFilter=refereeMobileFilter,
-                            refereeFilter=refereeFilter,
-                            now=now,
-                        )
-                    else:
-                        result[tournamentName] = set(str(pk) for pk in candidate_pks)
-            else:
-                result = {
-                    tournamentName: self._filter_tournament_games_index(
-                        index=indexes.get(tournamentName) or {},
-                        sectionFilter=sectionFilter,
-                        fromDate=fromDate,
-                        toDate=toDate,
-                        fieldFilter=fieldFilter,
-                        refereeMobileFilter=refereeMobileFilter,
-                        refereeFilter=refereeFilter,
-                        now=now,
-                    )
-                    for tournamentName in tournamentNames
-                }
-
-            if query_hash is not None:
-                self._set_tournament_games_query_cache(
-                    tenantKey=tenantKey,
-                    query_hash=query_hash,
-                    matches=result,
-                )
-            return result
-        except Exception as ex:
-            self.logger.error(f"queryTenantTournamentGamesIndex failed tenantKey={tenantKey}:", ex)
-            return None
-
-    def queryTournamentGamesIndex(
-        self,
-        tenantKey: str,
-        tournamentName: str,
-        sectionFilter: str = None,
-        fromDate: datetime = None,
-        toDate: datetime = None,
-        fieldFilter: str = None,
-        refereeMobileFilter: str = None,
-        refereeFilter: str = None,
-        now: datetime = None,
-        forceReload: bool = False,
-    ) -> Optional[set]:
-        """Return matching gamePk values for a tournament using the lightweight index cache."""
-        try:
-            batch = self.queryTenantTournamentGamesIndex(
-                tenantKey=tenantKey,
-                tournamentNames=[tournamentName],
-                sectionFilter=sectionFilter,
-                fromDate=fromDate,
-                toDate=toDate,
-                fieldFilter=fieldFilter,
-                refereeMobileFilter=refereeMobileFilter,
-                refereeFilter=refereeFilter,
-                now=now,
-                forceReload=forceReload,
-            )
-            if batch is None:
-                return None
-            return batch.get(tournamentName, set())
-        except Exception as ex:
-            self.logger.error(
-                f"queryTournamentGamesIndex failed tenantKey={tenantKey} tournamentName={tournamentName}:",
-                ex,
-            )
-            return None
-    
     # Public access methods
     @cacheDecorator.cache(entityType=EntityType.FIELDS, actionType=ActionType.GET)
     def getFields(self, tenantKey: str, forceReload: bool = False) -> Dict[str, Any]:
         """Get fields data from cache"""
         with self._internal_lock:
             return self.dbClient.getFields(tenantKey=tenantKey)
-    
+
+    @cacheDecorator.cache(entityType=EntityType.AREAS, actionType=ActionType.GET)
+    def getAreas(self, forceReload: bool = False) -> Dict[str, Any]:
+        """Get areas data from cache (global, not tenant-scoped)"""
+        with self._internal_lock:
+            return self.dbClient.getAreas()
+
+    @cacheDecorator.cache(entityType=EntityType.NOTIFICATIONTYPES, actionType=ActionType.GET)
+    def getNotificationTypes(self, forceReload: bool = False) -> Dict[str, Any]:
+        """Get notification-type catalog data from cache (global, not tenant-scoped)"""
+        with self._internal_lock:
+            return self.dbClient.getNotificationTypes()
+
     @cacheDecorator.cache(entityType=EntityType.TOURNAMENTS, actionType=ActionType.GET)
     def getTournaments(self, tenantKey: str, forceReload: bool = False) -> Dict[str, Any]:
         """Get tournaments data from cache"""
@@ -1473,7 +749,7 @@ class CacheService:
         with self._internal_lock:
             return self.dbClient.getTenants()
     
-    #@cacheDecorator.cache(entityType=EntityType.REFEREES, actionType=ActionType.GET, identifierArgs=['mobileNo'])
+    #@cacheDecorator.cache(entityType=EntityType.REFEREES, actionType=ActionType.GET)
     def getRefereesNoCache(self) -> Dict[str, Any]:
         """Get referees data from cache"""
         with self._internal_lock:
@@ -1484,12 +760,12 @@ class CacheService:
                 referees[tenantKey] = self.getReferees(tenantKey=tenantKey, forceReload=True)
             return referees
     
-    @cacheDecorator.cache(entityType=EntityType.CLIENTIDENTIFIERS, actionType=ActionType.GET, identifierArgs=['clientIdentifier'])
+    @cacheDecorator.cache(entityType=EntityType.CLIENTIDENTIFIERS, actionType=ActionType.GET)
     def getClientIdentifier(self, clientIdentifier, from_created: datetime = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get client identifier data from database (not cached as it's user-specific)"""
         try:
             with self._internal_lock:
-                result = self.dbClient.getClientIdentifier(clientIdentifier=clientIdentifier, frmo_created=from_created)
+                result = self.dbClient.getClientIdentifier(clientIdentifier=clientIdentifier, from_created=from_created)
                 return result
         except Exception as ex:
             self.logger.error(f"❌ Error getting client identifier {clientIdentifier}:", ex)
@@ -1540,34 +816,111 @@ class CacheService:
             self.logger.error(f"❌ Error getting league table for {tournamentName}:", ex)
             return None
     
-    def getTournamentGamesArchived(self, tenantKey: str, tournamentName, gamePk=None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+    def getTournamentGamesArchived(self, tenantKey: str, tournamentName, gamePk=None, tournamentGameId=None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get archived tournament games from database (not cached as it's tournament-specific)"""
         try:
-            return self.dbClient.getTournamentGamesArchived(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
+            return self.dbClient.getTournamentGamesArchived(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, tournamentGameId=tournamentGameId)
         except Exception as ex:
             self.logger.error(f"❌ Error getting archived tournament games for {tournamentName}:", ex)
             return None
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREES, actionType=ActionType.GET, identifierArgs=['mobileNo'])
-    def getReferees(self, tenantKey: str, mobileNo: str=None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        """Get referee properties from database (not cached as it's referee-specific)"""
+    def getPublicGames(
+        self,
+        tenant_keys: list,
+        tournament_name: str = None,
+        section_filter: str = None,
+        from_date=None,
+        to_date=None,
+        field_filter: str = None,
+        referee_id: int = None,
+        referee_name: str = None,
+    ):
+        """Delegate to dbClient.getPublicGames when available (PostgreSQL optimized path)."""
+        if not hasattr(self.dbClient, 'getPublicGames'):
+            return None
         try:
-            result = self.dbClient.getRefereeProperties(tenantKey=tenantKey, mobileNo=mobileNo)
+            return self.dbClient.getPublicGames(
+                tenant_keys=tenant_keys,
+                tournament_name=tournament_name,
+                section_filter=section_filter,
+                from_date=from_date,
+                to_date=to_date,
+                field_filter=field_filter,
+                referee_id=referee_id,
+                referee_name=referee_name,
+            )
+        except Exception as ex:
+            self.logger.error('❌ Error in getPublicGames:', ex)
+            return None
+
+    def patchCarpoolForGame(self, tenantKey: str, tournamentName: str, gamePk: str = None, tournamentGameId: Optional[int] = None, carpoolData: Optional[Dict[str, Any]] = None):
+        try:
+            games = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, tournamentGameId=tournamentGameId)
+            game = (games or {}).get(gamePk)
+            if not game:
+                self.logger.warning(f"patchCarpoolForGame: game not found tenantKey={tenantKey} gamePk={gamePk} tournamentGameId={tournamentGameId}")
+                return
+            if carpoolData is None:
+                game.pop('carpool', None)
+            else:
+                game['carpool'] = carpoolData
+            self.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, tournamentGameId=tournamentGameId, value=game)
+        except Exception as ex:
+            self.logger.error(f"patchCarpoolForGame error tenantKey={tenantKey} gamePk={gamePk} tournamentGameId={tournamentGameId}:", ex)
+
+    @cacheDecorator.cache(entityType=EntityType.REFEREES, actionType=ActionType.GET)
+    def getReferees(self, tenantKey: str, mobileNo: str=None, refereeId: Optional[int]=None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+        """Get referee properties from database (not cached as it's referee-specific).
+        mobileNo is kept only for referees not yet known/created (no refereeId exists yet);
+        prefer refereeId wherever the caller can resolve it."""
+        try:
+            if tenantKey == 'GLOBAL':
+                result = self.dbClient.getRefereeProperties(mobileNo=mobileNo, refereeId=refereeId)
+            else:
+                result = self.dbClient.getTenantRefereeProperties(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId)
             return result
         except Exception as ex:
-            self.logger.error(f"❌ Error getting referee properties for {mobileNo}:", ex)
+            self.logger.error(f"❌ Error getting referee properties for {mobileNo or refereeId}:", ex)
             return None
-    
-    def getRefereeProperty(self, tenantKey: str, mobileNo: str, propertyName: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        referee = self.getReferees(tenantKey=tenantKey, mobileNo=mobileNo, forceReload=forceReload)
+
+    def resolveRefereeIdByMobile(self, mobileNo: str) -> Optional[int]:
+        """Resolve a mobileNo to its Postgres referees.id, for callers that only have a mobileNo
+        (e.g. legacy tokens, webhook-origin data) and no access to an in-memory referee index."""
+        if not mobileNo:
+            return None
+        try:
+            result = self.dbClient.getRefereeProperties(mobileNo=mobileNo)
+            referee = next(iter((result or {}).values()), None)
+            return referee.get('refereeId') if referee else None
+        except Exception as ex:
+            self.logger.error(f"❌ Error resolving refereeId for {mobileNo}:", ex)
+            return None
+
+    def resolveRefereeIdByInternalId(self, tenantKey: str, internalRefereeId) -> Optional[int]:
+        """Resolve a tenant-scoped internalRefereeId to its Postgres referees.id, for referees
+        that don't have a mobile number yet (mirrors resolveRefereeIdByMobile)."""
+        if not tenantKey or internalRefereeId is None:
+            return None
+        try:
+            return self.dbClient.resolveRefereeIdByInternalId(tenantKey=tenantKey, internalRefereeId=internalRefereeId)
+        except Exception as ex:
+            self.logger.error(f"❌ Error resolving refereeId for internalRefereeId={internalRefereeId} tenantKey={tenantKey}:", ex)
+            return None
+
+    def getRefereeProperty(self, tenantKey: str, mobileNo: str = None, refereeId: Optional[int] = None, propertyName: str = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+        referee = self.getReferees(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId, forceReload=forceReload)
         if referee:
-            return referee.get(propertyName.replace(' ', ''))
+            if propertyName and referee.get(propertyName):
+                return referee.get(propertyName.replace(' ', ''))
+            else:
+                return referee
         return None
 
-    def getCachedKey(self, **kwargs):
+    def getCacheOnlyKey(self, **kwargs):
         tenantKey = kwargs.pop('tenantKey', 'GLOBAL')
         entityType = kwargs.pop('entityType', None)
         segments = []
+        segments.append(self._env)
         segments.append(tenantKey)
         segments.append('cacheOnly')
         if entityType:
@@ -1577,8 +930,8 @@ class CacheService:
         key = key.replace('#', ':')
         return key
 
-    def getCachedKeyVal(self, **kwargs):
-        key = self.getCachedKey(**kwargs)
+    def getCacheOnlyKeyVal(self, **kwargs):
+        key = self.getCacheOnlyKey(**kwargs)
         data = self.redis_get(key=key)
         if data is None:
             return None
@@ -1596,35 +949,41 @@ class CacheService:
             data = data['value']
         return data
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEAVAILABILITY, actionType=ActionType.GET, identifierArgs=['mobileNo'])
-    def getRefereeAvailaiblity(self, mobileNo: str, from_date: datetime = None, to_date: datetime = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        """Get referee availability from database (not cached as it's referee and date-specific)"""
+    def getRefereeAvailaiblity(self, refereeId: Optional[int] = None, from_date: datetime = None, to_date: datetime = None) -> Optional[Dict[str, Any]]:
+        """Get referee availability from database - deliberately NOT decorated with @cacheDecorator.cache:
+        that decorator's cache key is scoped only by refereeId (see EntityType.REFEREEAVAILABILITY's
+        partitionKeys in dbClientBase.py), with no entityKeys for from_date/to_date - so any two calls
+        for the same referee with different date ranges within the 60-minute TTL would silently return
+        whichever range was cached first, regardless of what was actually requested (this bit hard once
+        week-to-week navigation started making back-to-back calls with different ranges)."""
         try:
-            return self.dbClient.getRefereeAvailaiblity(mobileNo=mobileNo, from_date=from_date, to_date=to_date)
+            result = self.dbClient.getRefereeAvailaiblity(refereeId=refereeId, from_date=from_date, to_date=to_date)
+            return result
         except Exception as ex:
-            self.logger.error(f"❌ Error getting referee availability for {mobileNo}:", ex)
+            self.logger.error(f"❌ Error getting referee availability for {refereeId}:", ex)
             return None
-    
-    @cacheDecorator.cache(entityType=EntityType.REFEREETEMPLATES, actionType=ActionType.GET, identifierArgs=['mobileNo'])
-    def getRefereeTemplates(self, tenantKey: str, mobileNo, action:str = None, msgSid:Optional[str] = None, status:Optional[str] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, from_updated: Optional[datetime] = None, to_updated: Optional[datetime] = None, forceReload: bool = False, **kwargs) -> Optional[List[Dict[str, Any]]]:
+
+    @cacheDecorator.cache(entityType=EntityType.REFEREETEMPLATES, actionType=ActionType.GET)
+    def getRefereeTemplates(self, tenantKey: str, refereeId: Optional[int] = None, action:str = None, msgSid:Optional[str] = None, status:Optional[str] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, from_updated: Optional[datetime] = None, to_updated: Optional[datetime] = None, forceReload: bool = False, **kwargs) -> Optional[List[Dict[str, Any]]]:
         """Get referee templates from database (not cached as it's mobile-specific)"""
         try:
-            result = self.dbClient.getRefereeTemplates(tenantKey=tenantKey, mobileNo=mobileNo, action=action, msgSid=msgSid, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
-            return result   
+            result = self.dbClient.getRefereeTemplates(tenantKey=tenantKey, refereeId=refereeId, action=action, msgSid=msgSid, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
+            return result
         except Exception as ex:
-            self.logger.error(f"❌ Error getting referee templates for {mobileNo}:", ex)
+            self.logger.error(f"❌ Error getting referee templates for {refereeId}:", ex)
             return None
-    
-    @cacheDecorator.cache(entityType=EntityType.REFEREEMESSAGES, actionType=ActionType.GET, identifierArgs=['mobileNo', 'direction'])
-    def getRefereeMessages(self, mobileNo:str, direction:str, msgSid:Optional[str] = None, recentDays:Optional[int] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, forceReload: bool = False) -> Optional[List[Dict[str, Any]]]:
+
+    @cacheDecorator.cache(entityType=EntityType.REFEREEMESSAGES, actionType=ActionType.GET)
+    def getRefereeMessages(self, mobileNo:Optional[str] = None, refereeId: Optional[int] = None, direction:str = None, msgSid:Optional[str] = None, recentDays:Optional[int] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, forceReload: bool = False) -> Optional[List[Dict[str, Any]]]:
         """Get referee messages from database (not cached as it's mobile-specific)"""
         try:
-            return self.dbClient.getRefereeMessages(mobileNo=mobileNo, direction=direction, msgSid=msgSid, recentDays=recentDays, from_created=from_created, to_created=to_created)
+            result = self.dbClient.getRefereeMessages(mobileNo=mobileNo, refereeId=refereeId, direction=direction, msgSid=msgSid, recentDays=recentDays, from_created=from_created, to_created=to_created)
+            return result
         except Exception as ex:
-            self.logger.error(f"❌ Error getting referee messages for {mobileNo}:{direction} {ex}")
+            self.logger.error(f"❌ Error getting referee messages for {mobileNo or refereeId}:{direction} {ex}")
             return None
         
-    @cacheDecorator.cache(entityType=EntityType.MESSAGES, actionType=ActionType.GET, identifierArgs=['msgSid'])
+    @cacheDecorator.cache(entityType=EntityType.MESSAGES, actionType=ActionType.GET)
     def getMessage(self, msgSid, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get message from database (not cached as it's message-specific)"""
         try:
@@ -1634,7 +993,7 @@ class CacheService:
             self.logger.error(f"❌ Error getting message {msgSid}:", ex)
             return None
     
-    @cacheDecorator.cache(entityType=EntityType.KEYVAL, actionType=ActionType.GET, identifierArgs=['key'])
+    @cacheDecorator.cache(entityType=EntityType.KEYVAL, actionType=ActionType.GET)
     def getKeyVal(self, key, forceReload: bool = False) -> Optional[Any]:
         """Get key-value from database (not cached as it's key-specific)"""
         try:
@@ -1644,238 +1003,130 @@ class CacheService:
             self.logger.error(f"❌ Error getting key-value for {key}:", ex)
             return None
     
-    @cacheDecorator.cache(entityType=EntityType.POSITIONUPDATES, actionType=ActionType.GET, identifierArgs=['mobileNo'])
+    @cacheDecorator.cache(entityType=EntityType.POSITIONUPDATES, actionType=ActionType.GET)
     def getPositionUpdates(self, mobileNo):
         with self._internal_lock:
-            return self.dbClient.getPositionUpdates(mobileNo=mobileNo)
+            result = self.dbClient.getPositionUpdates(mobileNo=mobileNo)
+            return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREELOCATIONS, actionType=ActionType.GET, identifierArgs=['mobileNo'])
+    @cacheDecorator.cache(entityType=EntityType.REFEREELOCATIONS, actionType=ActionType.GET)
     def getRefereeLocations(self, mobileNo, timestamp:int=None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         with self._internal_lock:
-            return self.dbClient.getRefereeLocations(mobileNo=mobileNo, timestamp=timestamp)
+            result = self.dbClient.getRefereeLocations(mobileNo=mobileNo, timestamp=timestamp)
+            return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFERENCEIDS, actionType=ActionType.GET, identifierArgs=['target'])
-    def getReferenceId(self, target: str, id: str = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+    @cacheDecorator.cache(entityType=EntityType.REFERENCEIDS, actionType=ActionType.GET)
+    def getReferenceId(self, target: str, target_id: str = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get reference ID from database (not cached as it's reference-specific)"""
         try:
-            result = self.dbClient.getReferenceId(target=target, id=id)
+            result = self.dbClient.getReferenceId(target=target, target_id=target_id)
             return result
         except Exception as ex:
-            self.logger.error(f"❌ Error getting reference ID for {target}:{id}:", ex)
+            self.logger.error(f"❌ Error getting reference ID for {target}:{target_id}:", ex)
             return None
 
-    @cacheDecorator.cache(entityType=EntityType.NOTIFICATIONS, actionType=ActionType.GET, identifierArgs=['target', 'id'])
-    def getNotifications(self, tenantKey: str, target: str, id: str = None, notificationType: str = None, to:str = None, timestamp: int = None, status: str = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, from_updated: Optional[datetime] = None, to_updated: Optional[datetime] = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+    @cacheDecorator.cache(entityType=EntityType.NOTIFICATIONS, actionType=ActionType.GET)
+    def getNotifications(self, tenantKey: str, target: str, target_id: int = ..., notificationType: str = None, target_to=None, status: str = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, from_updated: Optional[datetime] = None, to_updated: Optional[datetime] = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get notifications from database (not cached as it's notification-specific)"""
         try:
-            return self.dbClient.getNotifications(tenantKey=tenantKey, target=target, id=id, notificationType=notificationType, to=to, timestamp=timestamp, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
+            result = self.dbClient.getNotifications(tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType, target_to=target_to, status=status, from_created=from_created, to_created=to_created, from_updated=from_updated, to_updated=to_updated)
+            return result
         except Exception as ex:
-            self.logger.error(f"❌ Error getting notifications for {target}:{id}:{notificationType}:{timestamp}:", ex)
+            self.logger.error(f"❌ Error getting notifications for {target}:{target_id}:{notificationType}:", ex)
             return None
 
-    #@cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.COUNT, identifierArgs=['refId'])
-    def countRefereeGames(self, tenantKey: str, refId: str = None, includeArchived: bool = False, includeRemoved: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, expr: Callable = None) -> int:
-        games = self.getRefereeGames(tenantKey=tenantKey, refId=refId, includeArchived=includeArchived, includeRemoved=includeRemoved, from_date=from_date, to_date=to_date)
+    #@cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.COUNT)
+    def countRefereeGames(self, tenantKey: str, refId: str = None, refereeId: Optional[int] = None, includeArchived: bool = False, includeRemoved: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, expr: Callable = None) -> int:
+        games = self.getRefereeGames(tenantKey=tenantKey, refId=refId, refereeId=refereeId, includeArchived=includeArchived, includeRemoved=includeRemoved, from_date=from_date, to_date=to_date)
         filteredGames = [game for game in games.values() if expr(game)] if expr else list(games.values())
         return len(filteredGames)
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.GET, identifierArgs=['refId'])
-    def getRefereeGames(self, tenantKey: str, refId: str, gamePk: Optional[str] = None, includeArchived: bool = False, includeRemoved: bool = False, includeCanceled: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, forceReload: bool = False, **kwargs) -> Dict[str, Any]:
-        """Get referee games data from cache by referee ID and optional game PK"""
+    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.GET)
+    def getRefereeGames(self, tenantKey: str, refId: Optional[str] = None, mobileNo: Optional[str] = None, refereeId: Optional[int] = None, gamePk: Optional[str] = None, tournamentGameId: Optional[int] = None, includeArchived: bool = False, includeRemoved: bool = False, includeCanceled: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, forceReload: bool = False, **kwargs) -> Dict[str, Any]:
+        """Get referee games data from cache by referee ID (legacy, DynamoDB-only), mobileNo (referee
+        identity in transition, e.g. tmpRefId merges), or global referees.id, and optional game PK"""
         with self._internal_lock:
-            referee_games = self.dbClient.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=gamePk, includeArchived=includeArchived, includeRemoved=includeRemoved, includeCanceled=includeCanceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
-            return referee_games
-            if gamePk:
-                if forceReload or not self._is_cache_valid(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=f"{refId}:{gamePk}"):
-                    self._load_referee_games(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
-                return self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=f"{refId}:{gamePk}")
-            else:
-                # Load all games with filters
-                gamePks = self._load_referee_games(tenantKey=tenantKey, refId=refId, include_archived=includeArchived, include_removed=includeRemoved, include_canceled=includeCanceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
-                
-                # Get all games from Redis
-                games = {}
-                for gamePk in gamePks:
-                    game_data = self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=f"{refId}:{gamePk}")
-                    if game_data and self._should_include_game(game=game_data, includeArchived=includeArchived, includeRemoved=includeRemoved, includeCanceled=includeCanceled, from_date=from_date, to_date=to_date):
-                        games = games | {gamePk: game_data}
-                
-                return games
-
-    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.GET, identifierArgs=['mobileNo'])
-    def getRefereeGamesNew(self, tenantKey: str, mobileNo: str, gamePk: Optional[str] = None, includeArchived: bool = False, includeRemoved: bool = False, includeCanceled: bool = False, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, from_created: Optional[datetime] = None, to_created: Optional[datetime] = None, forceReload: bool = False, **kwargs) -> Dict[str, Any]:
-        """Get referee games data from cache by referee ID and optional game PK"""
-        with self._internal_lock:
-            referee_games = self.dbClient.getRefereeGamesNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, includeArchived=includeArchived, includeRemoved=includeRemoved, includeCanceled=includeCanceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
-            return referee_games
-            if gamePk:
-                if forceReload or not self._is_cache_valid(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=f"{mobileNo}:{gamePk}"):
-                    self._load_referee_games_new(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-                return self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=f"{mobileNo}:{gamePk}")
-            else:
-                # Load all games with filters
-                gamePks = self._load_referee_games_new(tenantKey=tenantKey, mobileNo=mobileNo, include_archived=includeArchived, include_removed=includeRemoved, include_canceled=includeCanceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
-                
-                # Get all games from Redis
-                games = {}
-                for gamePk in gamePks:
-                    game_data = self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEGAMES, identifier=f"{mobileNo}:{gamePk}")
-                    if game_data and self._should_include_game(game=game_data, includeArchived=includeArchived, includeRemoved=includeRemoved, includeCanceled=includeCanceled, from_date=from_date, to_date=to_date):
-                        games = games | {gamePk: game_data}
-                
-                return games
-
-    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.SET, identifierArgs=['refId'])
-    def setRefereeGame(self, tenantKey, refId, gamePk, value):
+            result = self.dbClient.getRefereeGames(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, tournamentGameId=tournamentGameId, includeArchived=includeArchived, includeRemoved=includeRemoved, includeCanceled=includeCanceled, from_date=from_date, to_date=to_date, from_created=from_created, to_created=to_created)
+            return result
+            
+    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.SET)
+    def setRefereeGame(self, tenantKey, value, refId=None, mobileNo=None, refereeId=None, gamePk=None, tournamentGameId=None):
         """Proxy for dbClient.setRefereeGame with cache invalidation"""
-        result = self.dbClient.setRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=gamePk, value=value)
+        result = self.dbClient.setRefereeGame(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, tournamentGameId=tournamentGameId, value=value)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def setRefereeGameNew(self, tenantKey, mobileNo, gamePk, value):
-        """Proxy for dbClient.setRefereeGame with cache invalidation"""
-        result = self.dbClient.setRefereeGameNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, value=value)
-        return result
-
-    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.GET, identifierArgs=['refId'])
-    def getRefereeReviews(self, tenantKey: str, refId: str, gamePk: Optional[str] = None, season: Optional[str] = None, from_date: Optional[str] = None, to_date: Optional[str] = None, forceReload: bool = False) -> Dict[str, Any]:
-        """Get referee reviews data from cache by referee ID and optional game PK"""
+    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.GET)
+    def getRefereeReviews(self, tenantKey: str, refId: Optional[str] = None, mobileNo: Optional[str] = None, refereeId: Optional[int] = None, gamePk: Optional[str] = None, tournamentGameId: Optional[int] = None, season: Optional[str] = None, from_date: Optional[str] = None, to_date: Optional[str] = None, forceReload: bool = False) -> Dict[str, Any]:
+        """Get referee reviews data from cache by referee ID (legacy, DynamoDB-only), mobileNo (referee
+        identity in transition, e.g. tmpRefId merges), or global referees.id, and optional game PK"""
         with self._internal_lock:
-            referee_reviews = self.dbClient.getRefereeReviews(tenantKey=tenantKey, refId=refId, gamePk=gamePk, from_date=from_date, to_date=to_date)
-            return referee_reviews
-            if gamePk:
-                if forceReload or not self._is_cache_valid(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, identifier=f"{refId}:{gamePk}"):
-                    self._load_referee_reviews(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
-                return self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, identifier=f"{refId}:{gamePk}")
-            else:
-                # Load all reviews with filters
-                gamePks = self._load_referee_reviews(tenantKey=tenantKey, refId=refId, from_date=from_date, to_date=to_date)
-                
-                # Get all reviews from Redis
-                reviews = {}
-                for gamePk in gamePks:
-                    review_data = self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, identifier=f"{refId}:{gamePk}")
-                    if review_data:
-                        reviews = reviews | {gamePk: review_data}
+            return self.dbClient.getRefereeReviews(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, tournamentGameId=tournamentGameId, from_date=from_date, to_date=to_date)
 
-                return reviews
-
-    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.GET, identifierArgs=['mobileNo'])
-    def getRefereeReviewsNew(self, tenantKey: str, mobileNo: str, gamePk: Optional[str] = None, season: Optional[str] = None, from_date: Optional[str] = None, to_date: Optional[str] = None, forceReload: bool = False) -> Dict[str, Any]:
-        """Get referee reviews data from cache by referee ID and optional game PK"""
-        with self._internal_lock:
-            referee_reviews = self.dbClient.getRefereeReviewsNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, from_date=from_date, to_date=to_date)
-            return referee_reviews
-            if gamePk:
-                if forceReload or not self._is_cache_valid(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, identifier=f"{mobileNo}:{gamePk}"):
-                    self._load_referee_reviews_new(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-                return self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, identifier=f"{mobileNo}:{gamePk}")
-            else:
-                # Load all reviews with filters
-                gamePks = self._load_referee_reviews_new(tenantKey=tenantKey, mobileNo=mobileNo, from_date=from_date, to_date=to_date)
-                
-                # Get all reviews from Redis
-                reviews = {}
-                for gamePk in gamePks:
-                    review_data = self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.REFEREEREVIEWS, identifier=f"{mobileNo}:{gamePk}")
-                    if review_data:
-                        reviews = reviews | {gamePk: review_data}
-
-                return reviews
-
-    #@cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.COUNT, identifierArgs=['tournamentName'])
+    #@cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.COUNT)
     def countTournamentGames(self, tenantKey: str, tournamentName: str = None, nonArchivedOnly: bool = False, expr: Callable = None) -> int:
         games = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, nonArchivedOnly=nonArchivedOnly)
         filteredGames = [game for game in games.values() if expr(game)] if expr else list(games.values())
         return len(filteredGames)
 
-    @cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.GET, identifierArgs=['tournamentName'])
-    def getTournamentGames(self, tenantKey: str, tournamentName: str = None, gamePk: Optional = None, nonArchivedOnly: bool = False, forceReload: bool = False, filters: list = []) -> Dict[str, Any]:
+    @cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.GET)
+    def getTournamentGames(self, tenantKey: Optional[str] = None, tournamentGameId: Optional[int] = None, tournamentName: str = None, gamePk: Optional = None, gameId: Optional[str] = None, nonArchivedOnly: bool = False, forceReload: bool = False, filters: list = []) -> Dict[str, Any]:
         """Get tournament games data from cache by tournament name and optional game PK"""
         with self._internal_lock:
-            pk_list = self._normalize_game_pk_list(gamePk)
-            if pk_list:
-                if not forceReload:
-                    games, missing = self._get_cached_tournament_games_by_pk(
-                        tenantKey=tenantKey,
-                        tournamentName=tournamentName,
-                        pk_list=pk_list,
-                    )
-                    if not missing:
-                        return games
-                    db_pk = missing[0] if len(missing) == 1 else missing
-                    loaded = self._load_tournamentGames(
-                        tenantKey=tenantKey,
-                        tournamentName=tournamentName,
-                        gamePk=db_pk,
-                        nonArchivedOnly=nonArchivedOnly,
-                        filters=filters,
-                    ) or {}
-                    games.update({str(k): v for k, v in loaded.items()})
-                    return games
-                loaded = self._load_tournamentGames(
-                    tenantKey=tenantKey,
-                    tournamentName=tournamentName,
-                    gamePk=pk_list[0] if len(pk_list) == 1 else pk_list,
-                    nonArchivedOnly=nonArchivedOnly,
-                    filters=filters,
-                )
-                return loaded or {}
-
-            if not forceReload and self._is_cache_valid(
-                tenantKey=tenantKey,
-                entityType=EntityType.TOURNAMENTSGAMES,
-                identifier=tournamentName,
-            ):
-                pattern = f"{self._get_cache_key(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, identifier=tournamentName)}:*"
-                redis_keys = self.redis_get_keys(pattern=pattern)
-                if redis_keys:
-                    batch = self._redis_get_batch(redis_keys)
-                    games = {}
-                    for cache_key, data in batch.items():
-                        if not isinstance(data, dict) or not data:
-                            continue
-                        ident = cache_key.rsplit(':', 1)[-1]
-                        if ':' in ident:
-                            pk = ident.rsplit(':', 1)[-1]
-                        else:
-                            pk = str(data.get('gamePk') or ident)
-                        games[str(pk)] = data
-                    if games:
-                        return games
-
-            return self.dbClient.getTournamentGames(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-                gamePk=gamePk,
-                nonArchivedOnly=nonArchivedOnly,
-                filters=filters,
-            )
+            result = self.dbClient.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, tournamentGameId=tournamentGameId, gamePk=gamePk, gameId=gameId, nonArchivedOnly=nonArchivedOnly, filters=filters)
+            return result
+            if gamePk:
+                if forceReload or not self._is_cache_valid(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, identifier=tournamentName, keys=gamePk):
+                    self._load_tournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
+                return self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, identifier=tournamentName, keys=gamePk)
+            else:
+                # Load all games with filters
+                tournamentGames = self._load_tournamentGames(tenantKey=tenantKey, tournamentName=tournamentName, nonArchivedOnly=nonArchivedOnly, filters=filters)
+                
+                # Get all games from Redis
+                games = {}
+                for _gamePk, _tournamentGame in tournamentGames.items():
+                    _tournamentName = _tournamentGame.get('tournamentName')
+                    game_data = self._redis_cache_get(tenantKey=tenantKey, entityType=EntityType.TOURNAMENTSGAMES, identifier=f"{_tournamentName}:{_gamePk}")
+                    if game_data:
+                        games = games | {_gamePk: game_data}
+                
+                return games
     
-    #@cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.GET, identifierArgs=['tournament_name'])
-    def getGameDetail(self, tenantKey: str, game: dict, forceReload: bool = False) -> Dict[str, Any]:
-        """Get tournament games data from cache by tournament name and optional game PK"""
+    #@cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.GET)
+    def getGameDetail(self, game: dict, forceReload: bool = False) -> Dict[str, Any]:
+        """Get tournament games data from cache by tournament name and optional game PK.
+        If game already carries an embedded 'gameDetail' (e.g. postgresClient's referee_games_v /
+        referee_reviews_v-backed getRefereeGames/getRefereeReviews already joined it in), return
+        that directly and skip the extra query. tenantKey is read from game itself rather than
+        taken as a separate parameter - every caller already has it there, and a mismatched
+        explicit tenantKey would silently look up the wrong tenant's data."""
+        if not forceReload and isinstance(game, dict) and game.get('gameDetail'):
+            return game['gameDetail']
         with self._internal_lock:
+            tenantKey = game.get('tenantKey')
             tournament_name = game.get('tournamentName')
             gamePk = game.get('gamePk')
-            if tournament_name and gamePk:
-                gameDetail = self.getTournamentGames(tenantKey=tenantKey, tournamentName=game.get('tournamentName'), gamePk=game.get('gamePk'), forceReload=forceReload)
+            tournamentGameId = game.get('tournamentGameId')
+            if tournament_name and (gamePk or tournamentGameId):
+                gameDetail = self.getTournamentGames(tenantKey=tenantKey, tournamentName=tournament_name, gamePk=gamePk, tournamentGameId=tournamentGameId, forceReload=forceReload)
                 if gameDetail:
-                    return gameDetail
+                    # getTournamentGames (via @cacheDecorator.cache) already returns a single
+                    # unwrapped game dict when both tournamentName+gamePk fully match an entity
+                    # key (the common case here) - only unwrap again if it's still a {key: dict}
+                    # collection (e.g. a partition-only match with multiple/no gamePk filter).
+                    if isinstance(gameDetail, dict) and ('gamePk' in gameDetail or 'tournamentGameId' in gameDetail):
+                        return gameDetail
+                    return helpers.singleDictValue(gameDetail)
             return None
     
-    #@cacheDecorator.cache(entityType=EntityType.REFERENCEIDS, actionType=ActionType.GET, identifierArgs=['gameId'])
     def getGameDetailById(self, gameId: str, forceReload: bool = False) -> Dict[str, Any]:
-        """Get tournament games data from cache by tournament name and optional game PK"""
-        with self._internal_lock:
-            #game_detail = self._redis_cache_get(tenantKey='GLOBAL', entityType='gameDetailId', identifier=gameId)
-            #if not game_detail:
-            referenceValue = self.getReferenceId(target=str(EntityType.TOURNAMENTSGAMES), id=gameId)
-            if not referenceValue:
-                return None
-            return self.getGameDetail(tenantKey=referenceValue.get('tenantKey'), game=referenceValue, forceReload=forceReload)
-            #return game_detail
-    
+        """Resolve a game by its short string identifier or by a real tournamentGameId - both are
+        matched directly against tournament_games (tries tournament_game_id and the game_id
+        column - see postgresClient.getTournamentGames/setTournamentGame). No longer goes through
+        the reference_ids indirection."""
+        result = self.getTournamentGames(gameId=gameId, forceReload=forceReload)
+        return helpers.singleDictValue(result) if result else None
+
     # Cache management methods
     def reload_all(self) -> bool:
         """Reload all cached data from database"""
@@ -1957,7 +1208,7 @@ class CacheService:
         """Get current cache status and statistics"""
         with self._internal_lock:
             # Get all cache keys from Redis
-            cache_keys = self.redis_get_keys(f"{tenantKey.replace('#',':')}:{self._cache_prefix}:*")
+            cache_keys = self.redis_get_keys(f"{self._env}:{tenantKey.replace('#',':')}:{self._cache_prefix}:*")
             cache_types = set()
             
             for key in cache_keys:
@@ -1973,7 +1224,7 @@ class CacheService:
             
             for entityType in cache_types:
                 # Get cache size (count of keys for this type)
-                type_keys = self.redis_get_keys(pattern=f"{tenantKey.replace('#',':')}:{self._cache_prefix}{entityType}:*")
+                type_keys = self.redis_get_keys(pattern=f"{self._env}:{tenantKey.replace('#',':')}:{self._cache_prefix}{entityType}:*")
                 status['cache_sizes'][entityType] = len(type_keys)
                 
                 # Get TTL setting
@@ -2001,13 +1252,40 @@ class CacheService:
             return age if age >= 0 else None
     
     # Utility methods for common operations
-    def get_field_by_name(self, tenantKey: str, fieldName: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        """Get specific field by name"""
+    def get_field_by_name(self, tenantKey: str, fieldName: str, forceReload: bool = False, game: dict = None) -> Optional[Dict[str, Any]]:
+        """Get specific field by name. If game already carries an embedded 'field' (e.g.
+        postgresClient's referee_games_v/referee_reviews_v-backed getRefereeGames/getRefereeReviews
+        already joined it in), return that directly and skip the extra query."""
+        if not forceReload and isinstance(game, dict) and game.get('field'):
+            return game['field']
         fields = self.getFields(tenantKey=tenantKey, forceReload=forceReload)
         return fields.get(fieldName, {})
-    
-    def get_tournament_by_name(self, tenantKey: str, tournamentName: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        """Get specific tournament by name"""
+
+    def get_area_by_name(self, areaName: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+        """Get a specific area (global, not tenant-scoped) by name."""
+        areas = self.getAreas(forceReload=forceReload)
+        return areas.get(areaName, {})
+
+    def get_area_by_id(self, areaId, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+        """Get a specific area (global, not tenant-scoped) by id - areas are keyed by name
+        in the cache (like fields/documents/rules), so this scans the small areas dict."""
+        if areaId is None:
+            return {}
+        areaId = int(areaId)
+        areas = self.getAreas(forceReload=forceReload)
+        return next((a for a in areas.values() if a.get('id') == areaId), {})
+
+    def get_notification_type_by_key(self, typeKey: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+        """Get a specific notification type (global, not tenant-scoped) by its type_key."""
+        types = self.getNotificationTypes(forceReload=forceReload)
+        return types.get(typeKey, {})
+
+    def get_tournament_by_name(self, tenantKey: str, tournamentName: str, forceReload: bool = False, game: dict = None) -> Optional[Dict[str, Any]]:
+        """Get specific tournament by name. If game already carries an embedded 'tournament'
+        (e.g. postgresClient's referee_games_v/referee_reviews_v-backed getRefereeGames/
+        getRefereeReviews already joined it in), return that directly and skip the extra query."""
+        if not forceReload and isinstance(game, dict) and game.get('tournament'):
+            return game['tournament']
         tournaments = self.getTournaments(tenantKey=tenantKey, forceReload=forceReload)
         return tournaments.get(tournamentName, {})
     
@@ -2028,8 +1306,12 @@ class CacheService:
         roles = self.getRoles(tenantKey=tenantKey, forceReload=forceReload)
         return roles.get(roleName, {})
     
-    def get_tenant_by_key(self, tenantKey: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        """Get specific tenant by key"""
+    def get_tenant_by_key(self, tenantKey: str, forceReload: bool = False, game: dict = None) -> Optional[Dict[str, Any]]:
+        """Get specific tenant by key. If game already carries an embedded 'tenant' (e.g.
+        postgresClient's referee_games_v/referee_reviews_v-backed getRefereeGames/getRefereeReviews
+        already joined it in), return that directly and skip the extra query."""
+        if not forceReload and isinstance(game, dict) and game.get('tenant'):
+            return game['tenant']
         tenants = self.getTenants(forceReload=forceReload)
         return tenants.get(tenantKey, {})
     
@@ -2054,7 +1336,7 @@ class CacheService:
         """Get detailed cache statistics"""
         with self._internal_lock:
             # Get all cache types from Redis
-            all_keys = self.redis_get_keys(pattern=f"*:{self._cache_prefix}*")
+            all_keys = self.redis_get_keys(pattern=f"{self._env}:*:{self._cache_prefix}*")
             cache_types = set()
             for key in all_keys:
                 # Extract cache type from key
@@ -2069,7 +1351,7 @@ class CacheService:
             }
             
             for entityType in cache_types:
-                type_keys = self.redis_get_keys(pattern=f"*:{self._cache_prefix}{entityType}:*")
+                type_keys = self.redis_get_keys(pattern=f"{self._env}:*:{self._cache_prefix}{entityType}:*")
                 stats['cache_details'][entityType] = {
                     'entry_count': len(type_keys),
                     'age_seconds': self.get_cache_age(entityType),
@@ -2127,7 +1409,7 @@ class CacheService:
         results = {}
         if gamePks is None:
             # Delete all referee games for this referee
-            pattern = f"{tenantKey.replace('#',':')}:{self._cache_prefix}{EntityType.REFEREEGAMES}:{refId}:*"
+            pattern = f"{self._env}:{tenantKey.replace('#',':')}:{self._cache_prefix}{EntityType.REFEREEGAMES}:{refId}:*"
             keys = self.redis_get_keys(pattern)
             for key in keys:
                 self.redis_delete(key)
@@ -2142,7 +1424,7 @@ class CacheService:
         results = {}
         if gamePks is None:
             # Delete all referee reviews for this referee
-            pattern = f"{tenantKey.replace('#',':')}:{self._cache_prefix}{EntityType.REFEREEREVIEWS}:{refId}:*"
+            pattern = f"{self._env}:{tenantKey.replace('#',':')}:{self._cache_prefix}{EntityType.REFEREEREVIEWS}:{refId}:*"
             keys = self.redis_get_keys(pattern)
             for key in keys:
                 self.redis_delete(key)
@@ -2152,35 +1434,13 @@ class CacheService:
                 results[gamePk] = self.expire_referee_review(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
         return results
     
-    def expire_multiple_tournamentGames(self, tenantKey: str, tournamentName: str, gamePks: Optional[List[str]] = None) -> Dict[str, bool]:
-        """Mark multiple tournament games as expired and remove from cache"""
-        results = {}
-        if gamePks is None:
-            # Delete all tournament games for this tournament
-            pattern = f"{tenantKey.replace('#',':')}:{self._cache_prefix}tournamentGames:{tournamentName}:*"
-            keys = self.redis_get_keys(pattern=pattern)
-            for key in keys:
-                self.redis_delete(key)
-            self.expire_tournament_games_index(tenantKey=tenantKey, tournamentName=tournamentName)
-            self.logger.debug(f"🗑️ Expired all tournament games for tournament {tournamentName}")
-        else:
-            for gamePk in gamePks:
-                results[gamePk] = self.expire_tournament_game(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
-        return results
-    
-    def get_referee_game_by_pk(self, tenantKey: str, refId: str, gamePk: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+    def get_referee_game_by_pk(self, tenantKey: str, refId: Optional[str] = None, mobileNo: Optional[str] = None, refereeId: Optional[int] = None, gamePk: str = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get specific referee game by PK"""
-        referee_game = self.getRefereeGames(tenantKey=tenantKey, refId=refId, gamePk=gamePk, forceReload=forceReload)
-        return referee_game
+        return self.getRefereeGames(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, forceReload=forceReload)
 
-    def get_referee_game_by_pk_new(self, tenantKey: str, mobileNo: str, gamePk: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
-        """Get specific referee game by PK"""
-        referee_game = self.getRefereeGamesNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, forceReload=forceReload)
-        return referee_game
-
-    def get_referee_review_by_pk(self, tenantKey: str, refId: str, gamePk: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
+    def get_referee_review_by_pk(self, tenantKey: str, refId: Optional[str] = None, mobileNo: Optional[str] = None, refereeId: Optional[int] = None, gamePk: str = None, forceReload: bool = False) -> Optional[Dict[str, Any]]:
         """Get specific referee review by PK"""
-        referee_review = self.getRefereeReviews(tenantKey=tenantKey, refId=refId, gamePk=gamePk, forceReload=forceReload)
+        referee_review = self.getRefereeReviews(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, forceReload=forceReload)
         return referee_review
     
     def get_tournament_game_by_pk(self, tenantKey: str, tournamentName: str, gamePk: str, forceReload: bool = False) -> Optional[Dict[str, Any]]:
@@ -2201,18 +1461,6 @@ class CacheService:
             self.logger.error(f"❌ Error reloading data for referee {refId}" + (f" and game PK {gamePk}" if gamePk else "") + f":", ex)
             return False
     
-    def reload_referee_data_new(self, tenantKey: str, mobileNo: str, gamePk: Optional[str] = None) -> bool:
-        """Reload all data for a specific referee and optional game PK"""
-        try:
-            self.logger.info(f"🔄 Reloading data for referee {mobileNo}" + (f" and game PK {gamePk}" if gamePk else "") + "...")
-            with self._internal_lock:
-                self._load_referee_games_new(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-                #self._load_referee_reviews(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
-            self.logger.info(f"✅ Referee {mobileNo}" + (f" and game PK {gamePk}" if gamePk else "") + " data reloaded successfully")
-            return True
-        except Exception as ex:
-            self.logger.error(f"❌ Error reloading data for referee {mobileNo}" + (f" and game PK {gamePk}" if gamePk else "") + f":", ex)
-            return False
 
     def reload_tournament_data(self, tenantKey: str, tournamentName: str, gamePk: Optional[str] = None) -> bool:
         """Reload all data for a specific tournament and optional game PK"""
@@ -2306,7 +1554,21 @@ class CacheService:
         """Proxy for dbClient.setField with cache invalidation"""
         result = self.dbClient.setField(tenantKey=tenantKey, fieldName=fieldName, value=value)
         return result
-    
+
+    @cacheDecorator.cache(entityType=EntityType.AREAS, actionType=ActionType.SET)
+    def setArea(self, areaName, value):
+        """Proxy for dbClient.setArea with cache invalidation (global, not tenant-scoped).
+        Upserts by area_name (its unique key), matching setField/setDocument/setRule."""
+        result = self.dbClient.setArea(areaName=areaName, value=value)
+        return result
+
+    @cacheDecorator.cache(entityType=EntityType.NOTIFICATIONTYPES, actionType=ActionType.SET)
+    def setNotificationType(self, typeKey, value):
+        """Proxy for dbClient.setNotificationType with cache invalidation (global, not tenant-scoped).
+        Upserts by type_key (its unique key), matching setArea."""
+        result = self.dbClient.setNotificationType(typeKey=typeKey, value=value)
+        return result
+
     @cacheDecorator.cache(entityType=EntityType.RULES, actionType=ActionType.SET)
     def setRule(self, tenantKey, ruleName, value):
         """Proxy for dbClient.setRule with cache invalidation"""
@@ -2331,37 +1593,29 @@ class CacheService:
         result = self.dbClient.setTournament(tenantKey=tenantKey, tournamentName=tournamentName, value=value)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.LEAGUETABLES, actionType=ActionType.SET, identifierArgs=['tournamentName'])
+    @cacheDecorator.cache(entityType=EntityType.LEAGUETABLES, actionType=ActionType.SET)
     def setLeagueTable(self, tenantKey, tournamentName, value):
         """Proxy for dbClient.setLeagueTable with cache invalidation"""
         result = self.dbClient.setLeagueTable(tenantKey=tenantKey, tournamentName=tournamentName, value=value)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.SET, identifierArgs=['tournamentName'])
-    def setTournamentGame(self, tenantKey, tournamentName, gamePk, value):
+    @cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.SET)
+    def setTournamentGame(self, tenantKey, tournamentName, gamePk, value, tournamentGameId: Optional[int] = None):
         """Proxy for dbClient.setTournamentGame with cache invalidation"""
-        result = self.dbClient.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, value=value)
-        try:
-            tournament = self.get_tournament_by_name(tenantKey=tenantKey, tournamentName=tournamentName)
-            section = (tournament or {}).get('section', '')
-            self._upsert_tournament_games_index_entry(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-                gameDetail=value,
-                section=section,
-            )
-        except Exception as ex:
-            self.logger.error(f"setTournamentGame index update failed tournamentName={tournamentName} gamePk={gamePk}:", ex)
+        return self.dbClient.setTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, tournamentGameId=tournamentGameId, value=value)
+
+    @cacheDecorator.cache(entityType=EntityType.REFEREES, actionType=ActionType.SET)
+    def setReferee(self, tenantKey, value, mobileNo=None, refereeId=None, **kwargs):
+        """Proxy for dbClient.setRefereeProperties with cache invalidation.
+        mobileNo is kept only for referees not yet known/created (no refereeId exists yet)."""
+        if tenantKey == 'GLOBAL':
+            result = self.dbClient.setRefereeProperties(mobileNo=mobileNo, refereeId=refereeId, value=value)
+        else:
+            result = self.dbClient.setTenantRefereeProperties(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId, value=value)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREES, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def setReferee(self, tenantKey, mobileNo, value, **kwargs):
-        """Proxy for dbClient.setRefereeProperties with cache invalidation"""
-        result = self.dbClient.setRefereeProperties(tenantKey=tenantKey, mobileNo=mobileNo, value=value)
-        return result
-
-    def setRefereeProperty(self, tenantKey, mobileNo, value, propertyName=None, **kwargs):
-        referee = self.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
+    def setRefereeProperty(self, tenantKey, value, mobileNo=None, refereeId=None, propertyName=None, **kwargs):
+        referee = self.getReferees(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId)
         if not referee:
             return
         if propertyName:
@@ -2370,12 +1624,12 @@ class CacheService:
             for _propertyName, _value in value.items():
                 if _propertyName:
                     referee[_propertyName.replace(' ', '')] = _value
-        result = self.setReferee(tenantKey=tenantKey, mobileNo=mobileNo, value=referee)
+        result = self.setReferee(tenantKey=tenantKey, mobileNo=mobileNo, refereeId=refereeId, value=referee)
 
-    def setCachedKeyVal(self, **kwargs):
+    def setCacheOnlyKeyVal(self, **kwargs):
         value = kwargs.pop('value', None)
         ttlSeconds = kwargs.pop('ttlSeconds', 60 * 60 * 24)
-        key = self.getCachedKey(**kwargs)
+        key = self.getCacheOnlyKey(**kwargs)
         if value:
             if not isinstance(value, dict):
                 value = {'value': value}
@@ -2383,97 +1637,71 @@ class CacheService:
         result = self.redis_set(key=key, data=value, ttl_seconds=ttlSeconds)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEAVAILABILITY, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def setRefereeAvailaiblity(self, mobileNo: str, value):
+    @cacheDecorator.cache(entityType=EntityType.REFEREEAVAILABILITY, actionType=ActionType.SET)
+    def setRefereeAvailaiblity(self, refereeId: Optional[int] = None, value=None):
         """Proxy for dbClient.setRefereeAvailaiblity with cache invalidation"""
-        result = self.dbClient.setRefereeAvailaiblity(mobileNo=mobileNo, value=value)
+        result = self.dbClient.setRefereeAvailaiblity(refereeId=refereeId, value=value)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.CLIENTIDENTIFIERS, actionType=ActionType.SET, identifierArgs=['clientIdentifier'])
-    def setClientIdentifier(self, clientIdentifier, sessionIdentifier, pushSubscription=None, mobileNo=None, userAgent=None, platform=None, status=None):
+    @cacheDecorator.cache(entityType=EntityType.CLIENTIDENTIFIERS, actionType=ActionType.SET)
+    def setClientIdentifier(self, clientIdentifier, sessionIdentifier, pushSubscription=None, mobileNo=None, refereeId=None, userAgent=None, platform=None, status=None):
         """Proxy for dbClient.setClientIdentifier with cache invalidation"""
-        result = self.dbClient.setClientIdentifier(clientIdentifier=clientIdentifier, sessionIdentifier=sessionIdentifier, pushSubscription=pushSubscription, mobileNo=mobileNo, userAgent=userAgent, platform=platform, status=status)
+        result = self.dbClient.setClientIdentifier(clientIdentifier=clientIdentifier, sessionIdentifier=sessionIdentifier, pushSubscription=pushSubscription, mobileNo=mobileNo, refereeId=refereeId, userAgent=userAgent, platform=platform, status=status)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.SET, identifierArgs=['tournamentName', 'gamePk'])
-    def deleteTournamentGame(self, tenantKey, tournamentName, gamePk):
+    @cacheDecorator.cache(entityType=EntityType.TOURNAMENTSGAMES, actionType=ActionType.SET)
+    def deleteTournamentGame(self, tenantKey, tournamentName, gamePk=None, tournamentGameId=None):
         """Proxy for dbClient.deleteTournamentGame with cache invalidation"""
-        self.dbClient.deleteTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk)
-        try:
-            self._remove_tournament_games_index_entry(
-                tenantKey=tenantKey,
-                tournamentName=tournamentName,
-                gamePk=gamePk,
-            )
-        except Exception as ex:
-            self.logger.error(f"deleteTournamentGame index update failed tournamentName={tournamentName} gamePk={gamePk}:", ex)
-    
-    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.SET, identifierArgs=['refId'])
-    def deleteRefereeGame(self, tenantKey, refId, gamePk):
+        self.dbClient.deleteTournamentGame(tenantKey=tenantKey, tournamentName=tournamentName, gamePk=gamePk, tournamentGameId=tournamentGameId)
+
+    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.SET)
+    def deleteRefereeGame(self, tenantKey, refId=None, mobileNo=None, refereeId=None, gamePk=None, tournamentGameId=None):
         """Proxy for dbClient.removeRefereeGame with cache invalidation"""
-        result = self.dbClient.removeRefereeGame(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
-        return result
-    
-    @cacheDecorator.cache(entityType=EntityType.REFEREEGAMES, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def deleteRefereeGameNew(self, tenantKey, mobileNo, gamePk):
-        """Proxy for dbClient.removeRefereeGame with cache invalidation"""
-        result = self.dbClient.removeRefereeGameNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
+        result = self.dbClient.removeRefereeGame(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, tournamentGameId=tournamentGameId)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.SET, identifierArgs=['refId'])
-    def setRefereeReview(self, tenantKey, refId, gamePk, value):
+    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.SET)
+    def setRefereeReview(self, tenantKey, value, refId=None, mobileNo=None, refereeId=None, gamePk=None, tournamentGameId=None):
         """Proxy for dbClient.setRefereeReview with cache invalidation"""
-        result = self.dbClient.setRefereeReview(tenantKey=tenantKey, refId=refId, gamePk=gamePk, value=value)
+        result = self.dbClient.setRefereeReview(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, tournamentGameId=tournamentGameId, value=value)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def setRefereeReviewNew(self, tenantKey, mobileNo, gamePk, value):
-        """Proxy for dbClient.setRefereeReview with cache invalidation"""
-        result = self.dbClient.setRefereeReviewNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk, value=value)
-        return result
-
-    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.SET, identifierArgs=['refId'])
-    def removeRefereeReview(self, tenantKey, refId, gamePk):
+    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.SET)
+    def removeRefereeReview(self, tenantKey, refId=None, mobileNo=None, refereeId=None, gamePk=None, tournamentGameId=None):
         """Proxy for dbClient.removeRefereeReview with cache invalidation"""
-        result = self.dbClient.removeRefereeReview(tenantKey=tenantKey, refId=refId, gamePk=gamePk)
+        result = self.dbClient.removeRefereeReview(tenantKey=tenantKey, refId=refId, mobileNo=mobileNo, refereeId=refereeId, gamePk=gamePk, tournamentGameId=tournamentGameId)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREEREVIEWS, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def removeRefereeReviewNew(self, tenantKey, mobileNo, gamePk):
-        """Proxy for dbClient.removeRefereeReview with cache invalidation"""
-        result = self.dbClient.removeRefereeReviewNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=gamePk)
-        return result
-
-    @cacheDecorator.cache(entityType=EntityType.REFEREETEMPLATES, actionType=ActionType.SET, identifierArgs=['mobileNo'])
-    def setRefereeTemplate(self, tenantKey, mobileNo, msgSid, value):
+    @cacheDecorator.cache(entityType=EntityType.REFEREETEMPLATES, actionType=ActionType.SET)
+    def setRefereeTemplate(self, tenantKey, msgSid=None, value=None, refereeId: Optional[int] = None):
         """Proxy for dbClient.setRefereeTemplate with cache invalidation"""
-        result = self.dbClient.setRefereeTemplate(tenantKey=tenantKey, mobileNo=mobileNo, msgSid=msgSid, value=value)
+        result = self.dbClient.setRefereeTemplate(tenantKey=tenantKey, msgSid=msgSid, value=value, refereeId=refereeId)
         return result
-    
-    @cacheDecorator.cache(entityType=EntityType.REFEREEMESSAGES, actionType=ActionType.SET, identifierArgs=['mobileNo', 'direction'])
-    def setRefereeMessage(self, mobileNo:str, direction:str, msgSid:str, value:dict):
+
+    @cacheDecorator.cache(entityType=EntityType.REFEREEMESSAGES, actionType=ActionType.SET)
+    def setRefereeMessage(self, mobileNo:Optional[str] = None, direction:str = None, msgSid:str = None, value:dict = None, refereeId: Optional[int] = None):
         """Proxy for dbClient.setRefereeMessage with cache invalidation"""
-        result = self.dbClient.setRefereeMessage(mobileNo=mobileNo, direction=direction, msgSid=msgSid, value=value)
+        result = self.dbClient.setRefereeMessage(mobileNo=mobileNo, direction=direction, msgSid=msgSid, value=value, refereeId=refereeId)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.MESSAGES, actionType=ActionType.SET, identifierArgs=['msgSid'])
+    @cacheDecorator.cache(entityType=EntityType.MESSAGES, actionType=ActionType.SET)
     def setMessage(self, msgSid, value):
         """Proxy for dbClient.setMessage with cache invalidation"""
         result = self.dbClient.setMessage(msgSid=msgSid, value=value)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.KEYVAL, actionType=ActionType.SET, identifierArgs=['key'])
+    @cacheDecorator.cache(entityType=EntityType.KEYVAL, actionType=ActionType.SET)
     def setKeyVal(self, key, value):
         """Proxy for dbClient.setKeyVal with cache invalidation"""
         result = self.dbClient.setKeyVal(key=key, value=value)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.POSITIONUPDATES, actionType=ActionType.SET, identifierArgs=['mobileNo', 'timestamp'])
+    @cacheDecorator.cache(entityType=EntityType.POSITIONUPDATES, actionType=ActionType.SET)
     def setPositionUpdate(self, mobileNo:str, timestamp:str, value:dict):
         result = self.dbClient.setPositionUpdate(mobileNo=mobileNo, timestamp=timestamp, value=value)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.REFEREELOCATIONS, actionType=ActionType.SET, identifierArgs=['mobileNo', 'timestamp'])
+    @cacheDecorator.cache(entityType=EntityType.REFEREELOCATIONS, actionType=ActionType.SET)
     def setRefereeLocation(self, mobileNo:str, timestamp:int, value:dict):
         result = self.dbClient.setRefereeLocation(mobileNo=mobileNo, timestamp=timestamp, value=value)
         return result
@@ -2484,22 +1712,25 @@ class CacheService:
         result = self.dbClient.setInvocation(tenantKey=tenantKey, invocationId=invocationId, value=value)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.REFERENCEIDS, actionType=ActionType.SET, identifierArgs=['target'])
-    def setReferenceId(self, target: str, id: str, value):
+    @cacheDecorator.cache(entityType=EntityType.REFERENCEIDS, actionType=ActionType.SET)
+    def setReferenceId(self, target: str, target_id: str, value):
         """Proxy for dbClient.setReferenceId with cache invalidation"""
-        result = self.dbClient.setReferenceId(target=target, id=id, value=value)
+        result = self.dbClient.setReferenceId(target=target, target_id=target_id, value=value)
         return result
 
-    @cacheDecorator.cache(entityType=EntityType.NOTIFICATIONS, actionType=ActionType.SET, identifierArgs=['target', 'id'])
-    def setNotification(self, tenantKey: str, target: str, id: str, notificationType:str, to:str, timestamp: int, value, **kwargs):
-        """Proxy for dbClient.setNotifications with cache invalidation"""
-        id = helpers.resolve_notification_item_id(id, target)
+    @cacheDecorator.cache(entityType=EntityType.NOTIFICATIONS, actionType=ActionType.SET)
+    def setNotification(self, tenantKey: str, target: str, target_id: int, notificationType:str, target_to, value, **kwargs):
+        """Proxy for dbClient.setNotifications with cache invalidation.
+        The @cacheDecorator.cache(..., ActionType.SET) wrapper expects (value, invalidated) back
+        and, since NOTIFICATIONS has partitionKeys=['target','target_id'], expires the whole
+        target:target_id partition on a successful write - so getNotifications() reads no longer
+        need forceReload=True to see this write."""
         if isinstance(value, dict):
-            value['id'] = id
+            value['target_id'] = target_id
             value['target'] = target
             value['notificationType'] = notificationType
             value['tenantKey'] = tenantKey
-        result = self.dbClient.setNotifications(tenantKey=tenantKey, target=target, id=id, notificationType=notificationType, to=to, timestamp=timestamp, value=value)
+        result = self.dbClient.setNotifications(tenantKey=tenantKey, target=target, target_id=target_id, notificationType=notificationType, target_to=target_to, value=value)
         return result
 
     def setCollectedItems(self, tenantKey, objType, mobileNo, value):
@@ -2507,7 +1738,7 @@ class CacheService:
         with self._internal_lock:
             self._redis_cache_set(tenantKey=tenantKey, entityType=entityType, data=value or {}, identifier=f'{objType}:{mobileNo}')
 
-    #@cacheDecorator.cache(entityType=EntityType.COLLECTEDITEMS, actionType=ActionType.COUNT, identifierArgs=['objType'])
+    #@cacheDecorator.cache(entityType=EntityType.COLLECTEDITEMS, actionType=ActionType.COUNT)
     def countCollectedItems(self, tenantKey: str, objType: str) -> int:
         keys = self._redis_cache_get_keys(tenantKey=tenantKey, entityType=EntityType.COLLECTEDITEMS, identifier=f'{objType}:*')
         return len(keys)
@@ -2517,22 +1748,22 @@ class CacheService:
         with self._internal_lock:
             return self._redis_cache_get(tenantKey=tenantKey, entityType=entityType, identifier=f'{objType}:{mobileNo or "*"}')
 
-    @cacheDecorator.cache(entityType=EntityType.POLLS, actionType=ActionType.GET, identifierArgs=['pollId'])
+    @cacheDecorator.cache(entityType=EntityType.POLLS, actionType=ActionType.GET)
     def getPolls(self, pollId=None) -> dict:
         with self._internal_lock:
             return self.dbClient.getPolls(pollId=pollId)
     
-    @cacheDecorator.cache(entityType=EntityType.POLLVOTES, actionType=ActionType.GET, identifierArgs=['pollId', 'mobileNo'])
+    @cacheDecorator.cache(entityType=EntityType.POLLVOTES, actionType=ActionType.GET)
     def getPollVotes(self, pollId, mobileNo=None, questionId=None) -> dict:
         with self._internal_lock:
             return self.dbClient.getPollVotes(pollId=pollId, mobileNo=mobileNo, questionId=questionId)
     
-    @cacheDecorator.cache(entityType=EntityType.POLLS, actionType=ActionType.SET, identifierArgs=['pollId'])
+    @cacheDecorator.cache(entityType=EntityType.POLLS, actionType=ActionType.SET)
     def setPoll(self, pollId, value) -> bool:
         result = self.dbClient.setPoll(pollId=pollId, value=value)
         return result
     
-    @cacheDecorator.cache(entityType=EntityType.POLLVOTES, actionType=ActionType.SET, identifierArgs=['pollId', 'mobileNo', 'questionId'])
+    @cacheDecorator.cache(entityType=EntityType.POLLVOTES, actionType=ActionType.SET)
     def setPollVote(self, pollId, mobileNo, questionId, value) -> bool:
         result = self.dbClient.setPollVote(pollId=pollId, mobileNo=mobileNo, questionId=questionId, value=value)
         return result
@@ -2548,138 +1779,4 @@ if __name__ == '__main__':
     cacheService = container.cache_service()
     multiTenantSupport = container.multi_tenant_support()
 
-    tenantKey = 'IL#football#2024-25'
-    referees = cacheService.getReferees(tenantKey=tenantKey, mobileNo=None)
-    #referees = {referees['mobileNo']: referees}
-    for mobileNo, referee in referees.items():
-        if not referee.get('refId'):
-            continue
-        items = cacheService.getRefereeGames(tenantKey=tenantKey, refId=referee['refId'])
-        if not items:
-            continue
-        for item in items.values():
-            mappedItem = multiTenantSupport.mapItem(tenantKey=tenantKey, objType='games', obj=item)
-            cacheService.setRefereeGame(tenantKey=tenantKey, refId=item['refId'], gamePk=item['gamePk'], value=mappedItem)
-            cacheService.setRefereeGameNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=item['gamePk'], value=mappedItem)
-
-        items = cacheService.getRefereeReviews(tenantKey=tenantKey, refId=referee['refId'])
-        if not items:
-            continue
-        for item in items.values():
-            mappedItem = multiTenantSupport.mapItem(tenantKey=tenantKey, objType='reviews', obj=item)
-            cacheService.setRefereeReview(tenantKey=tenantKey, refId=item['refId'], gamePk=item['gamePk'], value=mappedItem)
-            cacheService.setRefereeReviewNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=item['gamePk'], value=mappedItem)
-
-    exit(0)
-    tour = cacheService.get_tournament_by_name(tenantKey='IL#handball#2025-26', tournamentName='ליגה נערות')
-    cacheService.setRefereeProperty(tenantKey='GLOBAL', mobileNo='+972547799979', value=False, propertyName='forceUseGreenApi')
-    result = cacheService.getRefereeGames(tenantKey='IL#football#2025-26', refId=None, gamePk=['aaa', 'bbb'], from_date=datetime.now() - timedelta(days=7), forceReload=True)
-    print(result)
-    exit(0)
-    handleUsers = container.handle_users()
-    messagingService = container.messaging_service()
-
-    tenantKey = 'IL#handball#2025-26'
-    templates = cacheService.getRefereeTemplates(tenantKey=tenantKey, mobileNo=None, status='deferred', from_created=helpers.localNow() - timedelta(days=7))
-    templatesMobileNos = list(set([template['mobileNo'] for template in templates.values()]))
-    templatesMobileNos = ['+972524721664', '+972537211970']
-    templatesMobileNos.sort()
-    for mobileNo in templatesMobileNos:
-        globalReferee = cacheService.getReferees(tenantKey='GLOBAL', mobileNo=mobileNo)
-        tenantReferee = cacheService.getReferees(tenantKey=tenantKey, mobileNo=mobileNo)
-        decryptedPassword = handleUsers.decryptPassword(tenantReferee.get('password', ''))
-        if decryptedPassword:
-            continue
-        msg = f'אהלן {globalReferee.get('name', '')}, המערכת זיהתת שניסית להשתמש בשירותיה לביצוע פעולות אוטומטיות אבל לא הצליחה לבצע אותם מכיוון שלא עידכנת סיסמא דרך האפליקציה, לאחר עדכון הסיסמא תוכל להמשיך ולהשתמש בשירותים האוטומטיים של המערכת ובהצלחה.'
-        send = False
-        if send:
-            msgSid = asyncio.run(messagingService.sendMessage(to=mobileNo, message=msg))
-        pass
-    exit(0)
-    
-    pendingGames = cacheService.getRefereeGames(tenantKey='IL#handball#2025-26', refId=None, includeArchived=False, includeRemoved=False, includeCanceled=False, from_date=helpers.localNow().date().isoformat())
-    gamePks = list(set(game['gamePk'] for game in pendingGames.values()))
-    gamePks.sort()
-    i = 0
-    total = 0
-    for gamePk in gamePks:
-        notifications = cacheService.getNotifications(tenantKey='IL#handball#2025-26', target='refereeGames', id=gamePk, notificationType='removedItem', to=None, status='sent')
-        sentNotificationsToday = [notification for notification in notifications.values() if notification.get('sentDate').date() == helpers.localNow().date()]
-        for notification in sentNotificationsToday:
-            timeToSent = notification.get('sentDate') - notification.get('created')
-            if timeToSent.total_seconds() > 12 * 60 * 60:
-                i += 1
-            pass
-    
-    exit(0)
-
-    '''
-        if False and gamePk != 'לאומית גבריםהפועל "קולסקי" פתח תקוה  הפועל "יוסי אברהמי" ערד1036839':
-            continue
-        for target in ['refereeGames', 'tournamentGames']:
-            notifications = cacheService.getNotifications(tenantKey='IL#handball#2025-26', target=target, id=gamePk, notificationType=None, to=None, status='created')
-            total += len(notifications)
-            notificationGroups = set([(notification.get('notificationType'), notification.get('to')) for notification in notifications.values()])
-            for notificationGroup in notificationGroups:
-                notificationType, to = notificationGroup
-                notificationsPerGroup = [notification for notification in notifications.values() if notification.get('notificationType') == notificationType and notification.get('to') == to]
-                sentNotifications = cacheService.getNotifications(tenantKey='IL#handball#2025-26', target=target, id=gamePk, notificationType=notificationType, to=to, status='sent')
-                if False and len(notificationsPerGroup) <= 1:
-                    continue
-                deleteFrom = 0 if len(sentNotifications) > 0 else 1
-                for notification in notificationsPerGroup[deleteFrom:]:
-                    i += 1
-                    notification['status'] = 'deleted'
-                    cacheService.setNotification(tenantKey='IL#handball#2025-26', target=target, id=gamePk, notificationType=notificationType, to=to, timestamp=notification['timestamp'], value=notification)
-    print(i)
-    print(total)
-    exit(0)
-    '''
-    cacheService.setField(tenantKey='IL#football#2025-26', fieldName='טריאדור', value={'addressDetails': {'latitude': 31.768318, 'longitude': 35.213711}})
-    cacheService.get_field_by_name(tenantKey='IL#football#2025-26', fieldName='פתח תקוה סירקין אימונים 3')
-    tenants = cacheService.getTenants()
-    for tenantKey, tenant in tenants.items():
-        tournaments = cacheService.getTournaments(tenantKey=tenantKey)
-        for tournamentName, tournament in tournaments.items():
-            games = cacheService.getTournamentGames(tenantKey=tenantKey, tournamentName=tournamentName)
-            for gamePk, game in games.items():
-                if game.get('removed', False) == True:
-                    game['state'] = 'removed'
-                elif game.get('canceled', False) == True:
-                    game['state'] = 'canceled'
-                elif game.get('archived', False) == True:
-                    game['state'] = 'archived'
-                else:
-                    game['state'] = 'active'
-            
-
-    res = cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo='+972547799979', propertyName='2FA_PortalCode')
-    cacheService.setCachedKeyVal(tenantKey='GLOBAL', mobileNo='+972547799979', value='abcdef', propertyName='2FA_PortalCode')
-    res = cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo='+972547799979', propertyName='2FA_PortalCode')
-    pass
-
-    getCollectedItems = cacheService.getCollectedItems(tenantKey='IL#handball#2025-26', objType='games', mobileNo='+972547799979')
-    countCollectedItems = cacheService.countCollectedItems(tenantKey='IL#handball#2025-26', objType='games')
-
-    pendingGames = cacheService.getRefereeGames(tenantKey='IL#football#2025-26', refId='43679', from_date=datetime.now().isoformat())
-    for game in pendingGames.values():
-        gameDetail = cacheService.getGameDetail(tenantKey='IL#football#2025-26', game=game)
-        if 'הכח' in gameDetail.get('gameTitle'):
-            gameDetail['chatGroupId'] = '120363403511212950@g.us'
-            cacheService.setTournamentGame(tenantKey='IL#football#2025-26', tournamentName=gameDetail.get('tournamentName'), gamePk=gameDetail.get('gamePk'), value=gameDetail)
-    countCollectedItems = cacheService.countCollectedItems(tenantKey='IL#handball#2025-26', objType='games')
-    pendingGamesCount = cacheService.countTournamentGames(tenantKey='IL#handball#2025-26', expr=(lambda x: x['date'] >= datetime.now() and x.get('state', 'active') != 'archived'))
-    todayGamesCount = cacheService.countTournamentGames(tenantKey='IL#handball#2025-26', expr=(lambda x: x['date'].date() == datetime.now().date() and x.get('state', 'active') != 'archived'))
-    refereeGamesCount = cacheService.countRefereeGames(tenantKey='IL#handball#2025-26', refId='100', expr=(lambda x: x.get('state', 'active') != 'archived'))
-    #service.setRefereeTemplate(tenantKey='IL#football#2025-26', mobileNo='+972547799979', msgSid='1234567890', value={'status': 'stam', 'created': datetime.now()})
-    sections = cacheService.getSections(tenantKey='IL#football#2025-26')
-    for sectionName, section in sections.items():
-        if 'sendRefereeGameUpdateReminder' in section:
-            del section['sendRefereeGameUpdateReminder']
-        if 'יל' in sectionName or 'טר' in sectionName:
-            section['skipRefereeGameUpdateReminder'] = False
-        else:
-            section['skipRefereeGameUpdateReminder'] = True
-        cacheService.setSection(tenantKey='IL#football#2025-26', sectionName=sectionName, value=section)
-        print(sectionName, section)
     exit(0)

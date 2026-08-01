@@ -99,7 +99,7 @@ class Logger():
         return None
     
     def log(self, level, message, **kwargs):
-        extra = {}
+        extra = kwargs.get('extra') or {}
         refereeDetail = kwargs.get('refereeDetail') or kwargs.get('refereeData')
         if not refereeDetail:
             mobileNo = kwargs.get('mobileNo')
@@ -168,7 +168,9 @@ class Logger():
 
             self.logger.error(msg=message, extra=extra)
 
-    def debug(self, message, **kwargs):
+    def debug(self, message, ex=None, **kwargs):
+        if ex:
+            message += f': {ex}'
         self.log('debug', message, **kwargs)
 
     def info(self, message, ex=None, **kwargs):

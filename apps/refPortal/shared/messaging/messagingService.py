@@ -28,9 +28,12 @@ from shared.messaging.manyChatClient import ManychatClient
 from shared.messaging.metaClient import MetaClient
 from shared.messaging.telegramClient import TelegramClient
 from shared.messaging.mqttClient import MqttClient
+from shared.messaging.apnsClient import ApnsClient
 from shared.db import CacheService
+from shared.db.repositories import TenantRepository
 from shared.logger import Logger
 from shared.configManager import ConfigManager
+from shared.db.models.enums import NotificationTypeKey
 
 if TYPE_CHECKING:
     from shared.commonHelper import CommonHelper
@@ -63,28 +66,30 @@ class MessagingService():
     META_DELIVERY_MAX_META_ATTEMPTS = 3
 
     def __init__(
-            self, 
-            logger:Logger, 
+            self,
+            logger:Logger,
             cacheService:CacheService,
             commonHelper:'CommonHelper',
             referees_data:tuple,
-            activeClient:str, 
-            twilioClient:TwilioClient=None, 
-            greenApiClient:GreenApiClient=None, 
-            metaClient:MetaClient=None, 
-            manychatClient:ManychatClient=None, 
+            activeClient:str,
+            twilioClient:TwilioClient=None,
+            greenApiClient:GreenApiClient=None,
+            metaClient:MetaClient=None,
+            manychatClient:ManychatClient=None,
             telegramClient:TelegramClient=None,
-            useMessageTemplates:bool=False, 
+            useMessageTemplates:bool=False,
             messageTemplates:dict=None,
-            config:dict=None):
+            config:dict=None,
+            tenantRepository:TenantRepository=None):
 
         self.config = config or {}
         self.app = ConfigManager.get_config_value(self.config, 'app')
         self.logger = Logger(log2Console=True)
         self.cacheService = cacheService
+        self.tenantRepository = tenantRepository
         self.commonHelper = commonHelper
 
-        (_, _, self.refereesByMobile, _, _) = referees_data
+        (_, _, _, _, _, _, self.refereesById, self.refereesByInternalId) = referees_data
 
         self.adminMobile = ConfigManager.get_config_value(self.config, 'adminMobile')
         self.apiServiceUrlBase = ConfigManager.get_config_value(self.config, 'apiServiceUrlBase')
@@ -163,8 +168,10 @@ class MessagingService():
             self.onBoardingRegistrationMessageTemplate = self.messageTemplates.get('onBoardingRegistration')
             self.openWindowMessageTemplate = self.messageTemplates.get('openWindow')
             self.gamePortalCodeMessageTemplate = self.messageTemplates.get('gamePortalCode')
+            self.loginOtpMessageTemplate = self.messageTemplates.get('loginOtp')
 
         self.vapidPrivateKey = helpers.get_secret('vapid_private_key')
+        self.apnsClient = ApnsClient(logger=self.logger, config=self.config)
         self.mqttPublish = ConfigManager.get_config_bool(self.config, 'mqttPublish', True)
         self.mqttClient = MqttClient(
             ConfigManager.get_config_value(
@@ -262,9 +269,9 @@ class MessagingService():
         if not self.useMeta or not self.metaClient:
             return
         lock_prop = f'metaDeliveryRetryLock:{wamid}'
-        if self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=to_number, propertyName=lock_prop):
+        if self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=to_number, propertyName=lock_prop):
             return
-        self.cacheService.setCachedKeyVal(
+        self.cacheService.setCacheOnlyKeyVal(
             tenantKey='GLOBAL',
             mobileNo=to_number,
             propertyName=lock_prop,
@@ -300,7 +307,7 @@ class MessagingService():
 
             await self._meta_retry_send_greenapi(dest, body, title, preview)
             err0 = errors[0] if errors else {}
-            self.cacheService.setCachedKeyVal(
+            self.cacheService.setCacheOnlyKeyVal(
                 tenantKey='GLOBAL',
                 mobileNo=to_number,
                 propertyName='failedMessageToMeta',
@@ -313,7 +320,7 @@ class MessagingService():
                 ttlSeconds=60 * 60 * 24,
             )
         finally:
-            self.cacheService.setCachedKeyVal(
+            self.cacheService.setCacheOnlyKeyVal(
                 tenantKey='GLOBAL',
                 mobileNo=to_number,
                 propertyName=lock_prop,
@@ -327,6 +334,12 @@ class MessagingService():
         pass
 
     async def incomingWebhookCheckWindow(self, source:str, fromMobileNo:str, request:Request):
+        # App-originated chat (see incomingWebhookFromApp) has no provider client to verify
+        # against - it's already JWT-authenticated before it ever reaches here - and no WhatsApp
+        # messaging-window concept applies to it either.
+        if source == 'app':
+            return True
+
         sourceClient = None
         if source == 'twilio':
             sourceClient = self.twilioClient
@@ -340,13 +353,13 @@ class MessagingService():
         isIncomingMessage = await sourceClient.isIncomingMessage(request=request)
         if isIncomingMessage:
             localNow = helpers.localNow()
-            self.cacheService.setCachedKeyVal(tenantKey='GLOBAL', mobileNo=fromMobileNo, propertyName='24HoursWindowStarts', value=localNow, ttlSeconds=24*60*60)
+            self.cacheService.setCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=fromMobileNo, propertyName='24HoursWindowStarts', value=localNow, ttlSeconds=24*60*60)
 
         return isIncomingMessage
     
     def checkIf24HoursWindowIsOpen(self, mobileNo):
         localNow = helpers.localNow()
-        window24HoursStarts = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='24HoursWindowStarts') or False
+        window24HoursStarts = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='24HoursWindowStarts') or False
         if window24HoursStarts:
             return True
         
@@ -355,7 +368,7 @@ class MessagingService():
             lastMessage = next(iter(recentMessages.values()))
             ttlSeconds = int((localNow - lastMessage['created']).total_seconds())
             if ttlSeconds < 24 * 60 * 60:
-                self.cacheService.setCachedKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='24HoursWindowStarts', value=lastMessage['created'], ttlSeconds=24*60*60-ttlSeconds)
+                self.cacheService.setCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='24HoursWindowStarts', value=lastMessage['created'], ttlSeconds=24*60*60-ttlSeconds)
                 return True
         
         return False
@@ -504,6 +517,27 @@ class MessagingService():
         )
         return msgSid
 
+    async def sendLoginOtpMessage(self, toMobile, code):
+        # Not routed through sendGamePortalCodeMessage's generic template path: an AUTHENTICATION-
+        # category template's COPY_CODE button requires its own "button"/"copy_code" component
+        # (with the code repeated as a coupon_code parameter) alongside the body parameter, which
+        # generateTemplatePayload doesn't build. Within an open session window we skip the
+        # approved-template wording entirely and just send the code as plain text.
+        windowIsOpen = self.checkIf24HoursWindowIsOpen(mobileNo=toMobile)
+        if windowIsOpen:
+            return self.metaClient.sendMessage(to=toMobile, message=f"קוד האימות שלך למערכת RefereeX: {code}")
+
+        components = [
+            {"type": "body", "parameters": [{"type": "text", "text": code}]},
+            {"type": "button", "sub_type": "copy_code", "index": "0", "parameters": [{"type": "coupon_code", "coupon_code": code}]}
+        ]
+        return self.metaClient.sendTemplateMessage(
+            to=toMobile,
+            templateName=self.loginOtpMessageTemplate,
+            languageCode="he",
+            components=components,
+        )
+
     async def sendNewGameNotification(self, refereeGame, title, refId, toMobile, toName, sendAt=None, skipPushNotification=False):
         newgame = self.newGameMessageTemplate      
         tenantKey = refereeGame['tenantKey']
@@ -514,13 +548,16 @@ class MessagingService():
         gameDumps = jsonHelper.save_to_json(refereeGame)
         msgSid = str(uuid.uuid4())[:8]
 
-        gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
-        tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'])
+        gameDetail = self.cacheService.getGameDetail(game=refereeGame)
+        if not gameDetail:
+            self.logger.warning(f'sendNewGameNotification: no gameDetail resolved for game, skipping', refereeDetail=globalRefereeDetails)
+            return None, []
+        tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'], game=refereeGame)
         includeReferees = True
         includeReviewer = False
         if tournament:
-            rule = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament['rules'])
-            includeReviewer = rule.get('includeReviewer', False)
+            rule = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules'))
+            includeReviewer = rule.include_reviewer if rule else False
 
         icsFileUrl = f'{self.apiServiceUrlBase}api/file/{gameDetail["id"]}'
         self.logger.info(f'sendNewGameNotification icsFileUrl={icsFileUrl}')
@@ -541,7 +578,7 @@ class MessagingService():
             'role': f"{refereeGame.get('role')}{'*' if len(gameDetail.get('referees')) > 1 else ''}",
             'round': gameDetail.get('round'),
             'week': gameDetail.get('fixture'),
-            'field': gameDetail.get('field'),
+            'field': gameDetail.get('fieldName'),
             'status': refereeGame.get('status'),
             'referees': refereesText,
             #'comment': gameDetail.get('gameComment'),
@@ -566,8 +603,8 @@ class MessagingService():
 
         elif (self.activeClient == 'meta'):
             useGreenApi = False
-            failedMessageToMeta = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=toMobile, propertyName='failedMessageToMeta')
-            if failedMessageToMeta and failedMessageToMeta.get('errorCode') in ['131026', '131000']:
+            failedMessageToMeta = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=toMobile, propertyName='failedMessageToMeta')
+            if failedMessageToMeta and failedMessageToMeta.get('errorCode') in ['131026', '131000', '130472']:
                 useGreenApi = True
             if useGreenApi:
                 message = f"{title}\n{self.dataDic['games']['generate'](tenantKey=tenantKey, gameDetail=refereeGame | gameDetail, includeReferees=False)}"
@@ -602,7 +639,8 @@ class MessagingService():
         sentPushMsgIds = []
         if not skipPushNotification:
             sentPushMsgIds = self.sendPushNotification(
-                to=toMobile, title=pushTitle, body=message, url=icsFileUrl, section='games', gameId=gameDetail['id']
+                to=toMobile, title=pushTitle, body=message, url=icsFileUrl, section='games', gameId=gameDetail['id'],
+                category='NEW_GAME_ASSIGNMENT'
             )
             refereeGame['newPushMsgIds'] = sentPushMsgIds
 
@@ -623,8 +661,11 @@ class MessagingService():
             tenantKey = refereeGame['tenantKey']
             if message:
                 message += '\n\n'
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeGame)
-            tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'])
+            gameDetail = self.cacheService.getGameDetail(game=refereeGame)
+            if not gameDetail:
+                self.logger.warning(f'sendGameUpdateNotification: no gameDetail resolved for game {gamePk}, skipping')
+                continue
+            tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'], game=refereeGame)
             useGreenApi = self.checkSendGreenApiMessages(to=toMobile)
             includeReferees = True
             includeReviewer = False
@@ -632,8 +673,8 @@ class MessagingService():
             if gameRemoval:
                 includeReferees = False
             elif tournament:
-                rule = self.cacheService.get_rule_by_name(tenantKey=tenantKey, ruleName=tournament['rules'])
-                includeReviewer = rule.get('includeReviewer', False)
+                rule = self.tenantRepository.get_rule(tenant_key=tenantKey, rule_name=tournament.get('rules'))
+                includeReviewer = rule.include_reviewer if rule else False
 
             icsFileUrl = f'{self.apiServiceUrlBase}api/file/{gameDetail["id"]}'
 
@@ -649,7 +690,7 @@ class MessagingService():
                 'role': f"{refereeGame.get('role')}{'*' if len(gameDetail.get('referees')) > 1 else ''}",
                 'round': gameDetail.get('round'),
                 'week': gameDetail.get('fixture'),
-                'field': gameDetail.get('field'),
+                'field': gameDetail.get('fieldName'),
                 'status': refereeGame.get('status'),
                 'referees': self.commonHelper.generateGameReferees(tenantKey=tenantKey, gameDetail=gameDetail, includeReferees=includeReferees, includeReviewer=includeReviewer) or '...',
                 'fileId': gameDetail["id"]
@@ -703,7 +744,7 @@ class MessagingService():
 
         for gamePk, refereeReview in reviews.items():
             tenantKey = refereeReview['tenantKey']
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeReview)
+            gameDetail = self.cacheService.getGameDetail(game=refereeReview)
             message = self.dataDic['reviews']['generate'](tenantKey=tenantKey, gameDetail=refereeReview)
 
             if self.useMessageTemplates and newreview and self.useTwilio:
@@ -752,7 +793,7 @@ class MessagingService():
 
         for gamePk, refereeReview in reviews.items():
             tenantKey = refereeReview['tenantKey']
-            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=refereeReview)
+            gameDetail = self.cacheService.getGameDetail(game=refereeReview)
             message = self.dataDic['reviews']['generate'](tenantKey=tenantKey, gameDetail=refereeReview)
 
             if self.useMessageTemplates and reviewsupdate and self.useTwilio:
@@ -867,8 +908,8 @@ class MessagingService():
         else:
             return False
 
-        messageAcceptanceLimitation = globalRefereeDetail.get('messageAcceptanceLimitation', True)
-        localTime = datetime.now(ZoneInfo(ConfigManager.get_config_value(self.config, 'TZ', 'Asia/Jerusalem')))
+        messageAcceptanceLimitation = helpers.to_bool(globalRefereeDetail.get('messageAcceptanceLimitation'), default=True)
+        localTime = helpers.localNow()
         localHour = localTime.hour
         availableFromHour = int(globalRefereeDetail.get('availableFromHour', '7'))
         availableToHour = int(globalRefereeDetail.get('availableToHour', '21'))
@@ -933,7 +974,7 @@ class MessagingService():
             self.logger.error(f'setRefereeMessage error', ex)
             return None
 
-    async def sendMessageToList(self, to, message:str, title:str=None, previewUrl:bool=False, forceUseGreenApi:bool=False, skipPushNotification:bool=False, replyToMessageId:str=None, performOpenWindowCheck:bool=False, internalMsgId:str=None, gameId:str=None, pushSection:str=None) -> tuple[str, list]:
+    async def sendMessageToList(self, to, message:str, title:str=None, previewUrl:bool=False, forceUseGreenApi:bool=False, skipPushNotification:bool=False, replyToMessageId:str=None, performOpenWindowCheck:bool=False, internalMsgId:str=None, gameId:str=None, pushSection:str=None, pushCategory:str=None, leaveByTime:str=None) -> tuple[str, list]:
         msgSid = None
         localNow = helpers.localNow()
         mobileNos = to['activeGroupMobileNumbers'] if isinstance(to, dict) and 'activeGroupMobileNumbers' in to else (to if isinstance(to, list) else [to])
@@ -948,13 +989,13 @@ class MessagingService():
             for mobileNo in mobileNos:
                 windowIsOpen = self.checkIf24HoursWindowIsOpen(mobileNo=mobileNo)
                 if windowIsOpen == False:
-                    lastOpenWindowMessageSent = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='openWindowMessageSent')
+                    lastOpenWindowMessageSent = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='openWindowMessageSent')
                     if not lastOpenWindowMessageSent: #12 hours
-                        openWindowNotification = self.cacheService.getNotifications(tenantKey='GLOBAL', target='refereeGames', notificationType='openWindow', id='NONGAME', to=mobileNo, status='created')
+                        openWindowRefereeId = self.cacheService.resolveRefereeIdByMobile(mobileNo)
+                        openWindowNotification = self.cacheService.getNotifications(tenantKey='GLOBAL', target='refereeGames', notificationType=NotificationTypeKey.openWindow, target_id=None, target_to=openWindowRefereeId, status='created')
                         if not openWindowNotification:
-                            timestamp = int(time.time())
                             notification = {'contextDate': 'created', 'status': 'created'}
-                            self.cacheService.setNotification(tenantKey='GLOBAL', target='refereeGames', notificationType='openWindow', id='NONGAME', to=mobileNo, timestamp=timestamp, value=notification)
+                            self.cacheService.setNotification(tenantKey='GLOBAL', target='refereeGames', notificationType=NotificationTypeKey.openWindow, target_id=None, target_to=openWindowRefereeId, value=notification)
                             mobileNosToSkip.append(mobileNo)
                         continue
                     elif (localNow - lastOpenWindowMessageSent).total_seconds() < 60 * 10: #10 minutes
@@ -974,13 +1015,14 @@ class MessagingService():
                 urls = helpers.extract_urls(message)
                 url = urls[0] if urls else None
                 if internalMsgId:
-                    sentPushMsgIdsForMobile = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', target=mobileNo, notificationType='push', id=internalMsgId, to=mobileNo, timestamp=0) or []
+                    sentPushMsgIdsForMobile = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', target=mobileNo, notificationType='push', target_id=internalMsgId, to=mobileNo, timestamp=0) or []
                 if not sentPushMsgIdsForMobile:
                     sentPushMsgIdsForMobile = self.sendPushNotification(
-                        to=mobileNo, title=title or 'הודעה נשלחה', body=message, url=url, section=pushSection
+                        to=mobileNo, title=title or 'הודעה נשלחה', body=message, url=url, section=pushSection,
+                        gameId=gameId, category=pushCategory, leaveByTime=leaveByTime
                     )
                     if internalMsgId:
-                        self.cacheService.setCachedKeyVal(tenantKey='GLOBAL', target=mobileNo, notificationType='push', id=internalMsgId, to=mobileNo, timestamp=0, value=sentPushMsgIdsForMobile, ttlSeconds=60 * 60 * 24)
+                        self.cacheService.setCacheOnlyKeyVal(tenantKey='GLOBAL', target=mobileNo, notificationType='push', target_id=internalMsgId, to=mobileNo, timestamp=0, value=sentPushMsgIdsForMobile, ttlSeconds=60 * 60 * 24)
                     sentPushMsgIds.extend(sentPushMsgIdsForMobile)
                     if sentPushMsgIdsForMobile:
                         self.setRefereeMessage(mobileNo=mobileNo, direction='TO', title=title, message=message, previewUrl=previewUrl, sendAt=helpers.localNow(), forceUseGreenApi=forceUseGreenApi, skipPushNotification=skipPushNotification, msgSid=sentPushMsgIdsForMobile[0], source='push')
@@ -990,7 +1032,7 @@ class MessagingService():
             if self.useGreenApi and (forceUseGreenApi and self.checkSendGreenApiMessages(to=mobileNo) or forceUseGreenApi):
                 useGreenApi = True
             else:
-                failedMessageToMeta = self.cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='failedMessageToMeta')
+                failedMessageToMeta = self.cacheService.getCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=mobileNo, propertyName='failedMessageToMeta')
                 if failedMessageToMeta and failedMessageToMeta.get('errorCode') in [131026, 131000]:
                     useGreenApi = True
 
@@ -1032,10 +1074,10 @@ class MessagingService():
 
         return msgSid, sentPushMsgIds
 
-    async def sendMessage(self, to, message:str, title:str=None, previewUrl:bool=False, sendAt:str=None, forceUseGreenApi:bool=False, skipPushNotification:bool=False, replyToMessageId:str=None, performOpenWindowCheck:bool=False, returnSentPushMsgIds:bool=False, internalMsgId:str=None, gameId:str=None, pushSection:str=None):
+    async def sendMessage(self, to, message:str, title:str=None, previewUrl:bool=False, sendAt:str=None, forceUseGreenApi:bool=False, skipPushNotification:bool=False, replyToMessageId:str=None, performOpenWindowCheck:bool=False, returnSentPushMsgIds:bool=False, internalMsgId:str=None, gameId:str=None, pushSection:str=None, pushCategory:str=None, leaveByTime:str=None):
         msgSid = None
         sentPushMsgIds = []
-        if self.useGreenApi and isinstance(to, dict) and 'chatGroupId' in to:
+        if self.useGreenApi and isinstance(to, dict) and to.get('chatGroupId'):
             msgSid = await self.greenApiSendMessage(to=to['chatGroupId'], message=message, previewUrl=previewUrl)
         else:
             (msgSid, sentPushMsgIds) = await self.sendMessageToList(
@@ -1049,6 +1091,8 @@ class MessagingService():
                 internalMsgId=internalMsgId,
                 gameId=gameId,
                 pushSection=pushSection,
+                pushCategory=pushCategory,
+                leaveByTime=leaveByTime,
             )
         mobileNos = to['activeGroupMobileNumbers'] if isinstance(to, dict) and 'activeGroupMobileNumbers' in to else (to if isinstance(to, list) else [to])
         if msgSid and len(mobileNos) > 0:
@@ -1139,7 +1183,7 @@ class MessagingService():
             # Fallback to default
             return ConfigManager.get_config_value(self.config, 'PWA_BASE_URL')
 
-    def sendPushNotification(self, to:str, title:str=None, body:str=None, url:str=None, tag:str=None, actions:list=None, requireInteraction:bool=True, silent:bool=False, vibrate:list=None, dir:str=None, lang:str=None, critical:bool=False, section:str=None, clientIdentifier:str=None, gameId:str=None) -> list:# This is the user's subscription object, obtained from their browser
+    def sendPushNotification(self, to:str, title:str=None, body:str=None, url:str=None, tag:str=None, actions:list=None, requireInteraction:bool=True, silent:bool=False, vibrate:list=None, dir:str=None, lang:str=None, critical:bool=False, section:str=None, clientIdentifier:str=None, gameId:str=None, category:str=None, leaveByTime:str=None) -> list:# This is the user's subscription object, obtained from their browser
         # and stored in your database.
         refereeDetail = self.cacheService.getReferees(tenantKey='GLOBAL', mobileNo=to)
         if clientIdentifier:
@@ -1186,10 +1230,38 @@ class MessagingService():
             if not value or not value.get('pushSubscription'):
                 continue
             pushSubscription = value.get('pushSubscription')
+            platform = value.get('platform')
+
+            if platform == 'ios' and isinstance(pushSubscription, str) and pushSubscription not in ('EXPIRED_PUSH_SUBSCRIPTION', 'MISSING_PUSH_SUBSCRIPTION'):
+                msgId = f'PN{str(uuid.uuid4())[:8]}'
+                result = self.apnsClient.send(deviceToken=pushSubscription, title=title, body=body, gameId=gameId, section=section, category=category, leaveByTime=leaveByTime)
+                if result.get('success'):
+                    self.logger.info(f"APNs notification sent successfully {clientIdentifier}")
+                    success_count += 1
+                    sentPushMsgIds.append(msgId)
+                    self.msgLogger.info({
+                        'origin': 'system',
+                        'type': 'sendPushNotification',
+                        'to': to,
+                        'toName': refereeDetail.get('name'),
+                        'clientIdentifier': clientIdentifier,
+                        'pushSubscription': pushSubscription,
+                        'title': title,
+                        'body': body,
+                        'url': url,
+                        'msgId': msgId,
+                        'gameId': gameId,
+                    })
+                else:
+                    self.logger.warning(f"❌ APNs error for {clientIdentifier}")
+                    if result.get('expired'):
+                        self.cacheService.setClientIdentifier(clientIdentifier=clientIdentifier, sessionIdentifier=value.get('sessionIdentifier'), pushSubscription='EXPIRED_PUSH_SUBSCRIPTION')
+                    error_count += 1
+                continue
+
             if not pushSubscription or isinstance(pushSubscription, str):
                 continue
             userAgent = value.get('userAgent')
-            platform = value.get('platform')
 
             vapid_audience = self.get_vapid_audience_from_subscription(pushSubscription=pushSubscription)
             vapid_claims['aud'] = vapid_audience
@@ -1345,7 +1417,7 @@ class MessagingService():
             'tag': tag,
         }
 
-    def validatePushSubscription(self, pushSubscription: dict) -> dict:
+    def validatePushSubscription(self, pushSubscription: any) -> dict:
         """
         Validate if a push subscription is still valid by attempting to send a test notification.
         
@@ -1447,19 +1519,19 @@ class MessagingService():
     async def sendNewGameNotificationForWaiting(self, referees):
         title = '*שיבוץ חדש*'
         for refId, refereeDetail in referees.items():
-            games = self.cacheService.getRefereeGames(refId=refId)
+            games = self.cacheService.getRefereeGames(refereeId=refereeDetail.get('refereeId'), refId=refId)
             for gamePk, refereeGame in games.items():
                 if refereeGame['status'] != 'מאושר':
                     title = '*שיבוץ מחכה לאישור*'
                     msgSid, sentPushMsgIds = await self.sendNewGameNotification(refereeGame=refereeGame, title=title, refId=refId, toMobile=refereeDetail["mobileNo"], toName=refereeDetail["name"])
                     refereeGame['newMessageSid'] = msgSid
                     refereeGame['newPushMsgIds'] = sentPushMsgIds
-                    self.cacheService.setRefereeGame(refId=refId, gamePk=gamePk, value=refereeGame)
+                    self.cacheService.setRefereeGame(refereeId=refereeDetail.get('refereeId'), refId=refId, gamePk=gamePk, value=refereeGame)
 
     def sendInteractiveMessage(self, to: str, question: str, promptButtons: dict, interactiveType: str='button', customData: dict={}, header=None, replyToMessageId=None, sendAt=None):
         msgSid = self.metaClient.sendInteractiveMessageWrapper(toMobile=to, question=question, promptButtons=promptButtons, interactiveType=interactiveType, header=header, replyToMessageId=replyToMessageId, sendAt=sendAt)
         if msgSid and customData:
-            self.cacheService.setReferenceId(target='msgSid', id=msgSid, value=customData)
+            self.cacheService.setReferenceId(target='msgSid', target_id=msgSid, value=customData)
         return msgSid
 
     async def sendBotContact(self, to):
@@ -1519,9 +1591,8 @@ class MessagingService():
                         #noticeDetails = f'ניתן להצטרף לקבוצה של המשחק {gameDetail["tenantKey"]}-{gameDetail["tournamentName"]}-{gameDetail["gameTitle"]} באמצעות הקישור הבא: {gameDetail["groupInviteLink"]}'
                         msgSid = await self.greenApiSendMessage(to=mobileNo, message=f'{noticeTitle}\n{noticeDetails}', previewUrl=False)
                     else:
-                        timestamp = int(time.time())
                         notification = {'contextDate': 'created', 'status': 'created'}
-                        self.cacheService.setNotification(tenantKey=gameDetail['tenantKey'], target='refereeGames', id=gameDetail['gamePk'], notificationType='joinChatGroup', to=chatId, timestamp=timestamp, value=notification)
+                        self.cacheService.setNotification(tenantKey=gameDetail['tenantKey'], target='refereeGames', target_id=gameDetail.get('id') or gameDetail['gamePk'], notificationType=NotificationTypeKey.joinChatGroup, target_to=chatId, value=notification)
 
             if False and len(groupData['participants']) < len(referees):
                 message = f'אהלן {currentGroupParticipants[chatId]}, שובצת למשחק {groupName}, לצרכי המשחק נפתחה קבוצת WhatsApp שאליה ניתן להצטרף על ידי הקישור הבא: {groupData["groupInviteLink"]}'
@@ -1631,10 +1702,10 @@ if __name__ == '__main__':
     #service = MessagingService(logger=logging.getLogger(), cacheService=cacheService, refereesByMobile={'+972547799979': {'name': 'Guy', 'mobileNo': '+972547799979'}}, activeClient='meta', metaClient=MetaClient(logger=logging.getLogger(), cacheService=cacheService, fromMobile='+972547799979', useClient=True, apiVersion='v24.0', fromPhoneNumberId='120702945000013', whatsappBusinessAccountId='120702945000013'))
     service = container.messaging_service()
     cacheService = container.cache_service()
-    #msgSid = service.sendPushNotification(to='+972547799979', title='test title', body='test body', clientIdentifier='4549f243-c3c4-4096-a03f-e67be20dfd4f')
+    #msgSid = service.sendPushNotification(to='+972547799979', title='test title', body='test body', clientIdentifier='732E0E17-B650-4283-97F8-F300958D647B')
     #failedMessageToMeta = cacheService.getCachedKeyVal(tenantKey='GLOBAL', mobileNo='+972547799979', propertyName='failedMessageToMeta')
     #print(failedMessageToMeta)
-
+    exit(0)
     gameDetail = cacheService.get_tournament_game_by_pk(tenantKey='IL#football#2025-26', tournamentName='ליגת נערים ב\' מרכז', gamePk='ליגת נערים ב\' מרכזמ.ס. איחוד דרום השרון "צו פיוס"  מכבי השקמה חן צפון "צו פיוס"22')
     print(gameDetail)
     msgSid = asyncio.run(service.sendMessage(to=gameDetail, message='test message', title='test title'))

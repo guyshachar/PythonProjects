@@ -14,16 +14,18 @@ from shared.logger import Logger
 from shared.handleUsers import HandleUsers
 from shared.messaging import MessagingService
 from shared.db import CacheService
+from shared.db.repositories import TenantRepository
 
 class HandleRefereeData():
-    def __init__(self, logger:Logger, cacheService:CacheService, commonHelper:CommonHelper, messagingService:MessagingService, handleUsers:HandleUsers, referees_data:tuple):
+    def __init__(self, logger:Logger, cacheService:CacheService, commonHelper:CommonHelper, messagingService:MessagingService, handleUsers:HandleUsers, referees_data:tuple, tenantRepository:TenantRepository=None):
         # Configure logging
         self.logger = logger
         self.cacheService = cacheService
         self.commonHelper = commonHelper
         self.messagingService = messagingService
         self.handleUsers = handleUsers
-        (self.globalRefereesByMobile, self.refereesByRefId, self.refereesByMobile, self.refereesByGuid, self.globalRefereesByName) = referees_data
+        self.tenantRepository = tenantRepository
+        (self.globalRefereesByMobile, self.refereesByRefId, self.refereesByMobile, self.refereesByGuid, self.globalRefereesByName, self.globalRefereesById, self.refereesById, self.refereesByInternalId) = referees_data
 
         self.fileVersion = os.getenv('fileVersion') or 'v'
 
@@ -61,7 +63,7 @@ class HandleRefereeData():
                 raise ValueError(f'REPLICA_SLOT must be in range [1, {app_replicas}], got {replica_slot}')
 
             partition = [str(digit) for digit in range(10) if digit % app_replicas == replica_slot - 1]
-            self.logger.debug(f'resolveRefIdsPartition from replicas APP_REPLICAS: {app_replicas} REPLICA_SLOT: {replica_slot} refIdsPartition: {partition}')
+            self.logger.info(f'resolveRefIdsPartition from replicas APP_REPLICAS: {app_replicas} REPLICA_SLOT: {replica_slot} refIdsPartition: {partition}')
             return partition
 
         except (TypeError, ValueError) as ex:
@@ -70,27 +72,20 @@ class HandleRefereeData():
             self.logger.info(f'resolveRefIdsPartition from fallback refIdsPartition: {fallback_partition}')
             return fallback_partition
 
-    def getRefereeGames(self, tenantKey, mobileNo, **filters) -> dict:
+    def getRefereeGames(self, tenantKey, refereeId=None, **filters) -> dict:
         games = {}
+        if not refereeId:
+            return games
         for tenantKey in tenantKey if isinstance(tenantKey, list) else [tenantKey]:
-            refereeDetail = self.refereesByMobile.get(tenantKey, {}).get(mobileNo)
-            if refereeDetail:
-                if refereeDetail.get('refId'):
-                    games = games | self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=refereeDetail['refId'], **filters)
-                else:
-                    games = games | self.cacheService.getRefereeGamesNew(tenantKey=tenantKey, mobileNo=mobileNo, **filters)
-        
+            games = games | self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=refereeId, **filters)
         return games
 
-    def getRefereeReviews(self, tenantKey, mobileNo, **filters) -> dict:
+    def getRefereeReviews(self, tenantKey, refereeId=None, **filters) -> dict:
         reviews = {}
+        if not refereeId:
+            return reviews
         for tenantKey in tenantKey if isinstance(tenantKey, list) else [tenantKey]:
-            refereeDetail = self.refereesByMobile.get(tenantKey, {}).get(mobileNo)
-            if refereeDetail.get('refId'):
-                reviews = reviews | self.cacheService.getRefereeReviews(tenantKey=tenantKey, refId=refereeDetail['refId'], **filters)
-            else:
-                reviews = reviews | self.cacheService.getRefereeReviewsNew(tenantKey=tenantKey, mobileNo=mobileNo, **filters)
-        
+            reviews = reviews | self.cacheService.getRefereeReviews(tenantKey=tenantKey, refereeId=refereeId, **filters)
         return reviews
 
     def enrichRefereeItems(self, refereeItems):
@@ -100,23 +95,38 @@ class HandleRefereeData():
             items = refereeItems.values()
         
         for item in items:
-            gameDetail = self.cacheService.getGameDetail(tenantKey=item['tenantKey'], game=item)
+            gameDetail = self.cacheService.getGameDetail(game=item)
             item['gameDetail'] = gameDetail
         
+    def _rekeyByGamePk(self, items: dict) -> dict:
+        """getRefereeGames/getRefereeReviews return dicts keyed by the Postgres row id
+        (referee_game_id/review_id), but currentList (scraper-built) is keyed by the real
+        gamePk string. Re-key by gamePk (from the embedded gameDetail) so compareItems can
+        actually diff prevList against currentList - falls back to the row-id key for any
+        item missing a resolvable gamePk rather than silently dropping it."""
+        rekeyed = {}
+        for rowId, item in (items or {}).items():
+            gamePk = (item.get('gameDetail') or {}).get('gamePk') or rowId
+            rekeyed[gamePk] = item
+        return rekeyed
+
     async def getRefereeData(self, tenantKey, objType, refereeData):
         if objType not in refereeData or 'prevList' not in refereeData[objType] or not refereeData[objType]['prevList']:
-            
+
             try:
                 if objType not in refereeData:
                     refereeData[objType] = {}
 
                 if objType == 'games':
-                    refereeGames = self.getRefereeGames(tenantKey=tenantKey, mobileNo=refereeData['mobileNo'], includeArchived=True, includeRemoved=True, from_date=refereeData[objType]['fromDate'], to_date=refereeData[objType]['toDate'], forceReload=True)
-                    refereeData[objType]['prevList'] = refereeGames
+                    refereeGames = self.getRefereeGames(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'), includeArchived=True, includeRemoved=True, from_date=refereeData[objType]['fromDate'], to_date=refereeData[objType]['toDate'], forceReload=True)
+                    refereeData[objType]['prevList'] = self._rekeyByGamePk(refereeGames)
                 else:
-                    refereeData[objType]['prevList'] = self.getRefereeReviews(tenantKey=tenantKey, mobileNo=refereeData['mobileNo'], from_date=refereeData[objType]['fromDate'], to_date=refereeData[objType]['toDate'], forceReload=True)
+                    refereeReviews = self.getRefereeReviews(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'), from_date=refereeData[objType]['fromDate'], to_date=refereeData[objType]['toDate'], forceReload=True)
+                    refereeData[objType]['prevList'] = self._rekeyByGamePk(refereeReviews)
+
+                refereeData[objType]['currentList'] = helpers.safeClone(refereeData[objType]['prevList'])
                 
-                refereeData[objType]['fileDateTime'] = self.cacheService.getRefereeProperty(tenantKey=tenantKey, mobileNo=refereeData['mobileNo'], propertyName=f'fileDateTime_{objType}')
+                refereeData[objType]['fileDateTime'] = self.cacheService.getRefereeProperty(tenantKey=tenantKey, refereeId=refereeData.get('refereeId'), propertyName=f'fileDateTime_{objType}')
             except Exception as ex:
                 self.logger.error(f'getRefereeData', ex)
         
@@ -128,9 +138,9 @@ class HandleRefereeData():
             items = None
             now = helpers.localNow()
             if objType == 'games':
-                items = self.getRefereeGames(tenantKey=globalRefereeDetail['activeTenantKeys'], mobileNo=mobileNo, from_date=now)
+                items = self.getRefereeGames(tenantKey=globalRefereeDetail['activeTenantKeys'], refereeId=globalRefereeDetail.get('refereeId'), from_date=now)
             else:
-                items = self.getRefereeReviews(tenantKey=globalRefereeDetail['activeTenantKeys'], mobileNo=mobileNo)
+                items = self.getRefereeReviews(tenantKey=globalRefereeDetail['activeTenantKeys'], refereeId=globalRefereeDetail.get('refereeId'))
             data = f"רשימת {self.dataDic[objType]['title']}:"
             if len(items) == 0:
                 data = f'{data}\nריקה'
@@ -141,12 +151,12 @@ class HandleRefereeData():
                 includeReferees = True
                 includeReviewer = False
                 if objType == 'games':
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=item.get('tenantKey'), game=item)
+                    gameDetail = self.cacheService.getGameDetail(game=item)
                     if shortResponse == False:
-                        tournament = self.cacheService.get_tournament_by_name(tenantKey=item.get('tenantKey'), tournamentName=gameDetail['tournamentName'])
+                        tournament = self.cacheService.get_tournament_by_name(tenantKey=item.get('tenantKey'), tournamentName=gameDetail['tournamentName'], game=item)
                         if tournament:
-                            rule = self.cacheService.get_rule_by_name(tenantKey=item.get('tenantKey'), ruleName=tournament['rules'])
-                            if rule.get('includeReviewer', False) == True:
+                            rule = self.tenantRepository.get_rule(tenant_key=item.get('tenantKey'), rule_name=tournament.get('rules'))
+                            if rule and rule.include_reviewer:
                                 includeReviewer = True
                     else:
                         includeReferees = False
@@ -164,8 +174,8 @@ class HandleRefereeData():
         if self.openWindowReminder < 0:
             return True
 
-        prevLastMessageTime = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', mobileNo=refereeDetail['mobileNo'], propertyName='lastMessageTime')
-        prevLastReminderTime = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', mobileNo=refereeDetail['mobileNo'], propertyName='lastReminderTime')
+        prevLastMessageTime = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', refereeId=refereeDetail.get('refereeId'), propertyName='lastMessageTime')
+        prevLastReminderTime = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', refereeId=refereeDetail.get('refereeId'), propertyName='lastReminderTime')
         (windowIsOpen, lastMessageTime, timeElapsed) = self.messagingService.checkIf24HoursWindowIsOpen(mobileNo=refereeDetail['mobileNo'])
         if windowIsOpen == False:
             self.logger.warning(f'24 hours window is closed, last message time {timeElapsed}', refereeDetail=refereeDetail)
@@ -185,8 +195,8 @@ class HandleRefereeData():
                 lastMessageTime2 = lastMessageTime
                 lastReminderTime2 = now
 
-        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', mobileNo=refereeDetail['mobileNo'], value=lastMessageTime, propertyName='lastMessageTime')
-        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', mobileNo=refereeDetail['mobileNo'], value=lastReminderTime, propertyName='lastReminderTime')
+        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', refereeId=refereeDetail.get('refereeId'), value=lastMessageTime, propertyName='lastMessageTime')
+        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', refereeId=refereeDetail.get('refereeId'), value=lastReminderTime, propertyName='lastReminderTime')
         
         return windowIsOpen
 
@@ -194,11 +204,11 @@ class HandleRefereeData():
         try:
             self.activeRefereeByRefId = {}
             self.activeRefereeByMobileNos = {}
-            activeTenantKeys = [ tenantKey for tenantKey, tenant in self.cacheService.getTenants().items() if tenant.get('active') == True ]
+            activeTenantKeys = [ tenantKey for tenantKey, tenant in self.tenantRepository.get_tenants().items() if tenant.active ]
             self.activeRefereesByMobile = {}
             for tenantKey in activeTenantKeys:
-                tenant = self.cacheService.getTenants().get(tenantKey)
-                tenantActiveStatus = tenant.get('activeStatus')
+                tenant = self.tenantRepository.get_tenant(tenant_key=tenantKey)
+                tenantActiveStatus = tenant.active_status if tenant else None
                 activeTenantRefereeDetails = { refereeDetail['refId']: refereeDetail for refereeDetail in self.refereesByMobile.get(tenantKey, {}).values() if refereeDetail.get('refId') and (tenantActiveStatus == 'all' or refereeDetail.get('status') == tenantActiveStatus) and (str(refereeDetail['refId'])[-1:] in self.refIdsPartition or str(refereeDetail['refId'])[-2:] in self.refIdsPartition)}
                 activeTenantMobileNos = { mobileNo: refereeDetail for mobileNo, refereeDetail in self.refereesByMobile.get(tenantKey, {}).items() if refereeDetail.get('refId') and (tenantActiveStatus == 'all' or refereeDetail.get('status') == tenantActiveStatus) and (str(refereeDetail['refId'])[-1:] in self.refIdsPartition or str(refereeDetail['refId'])[-2:] in self.refIdsPartition) }
                 self.activeRefereesByMobile = { **activeTenantMobileNos, **self.activeRefereesByMobile }
@@ -256,8 +266,8 @@ class HandleRefereeData():
                     gamesReferees.append(f'{gamePk}-{refPk}')
 
                     game = refereeData['games']['currentList'][gamePk]
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=game)
-                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'])
+                    gameDetail = self.cacheService.getGameDetail(game=game)
+                    tournament = self.cacheService.get_tournament_by_name(tenantKey=tenantKey, tournamentName=gameDetail['tournamentName'], game=game)
                     if tournament:
                         section = tournament['section']
                         if section:
@@ -386,7 +396,7 @@ class HandleRefereeData():
             if refereeData and refereeData.get('games'):
                 for gamePk in refereeData['games']['currentList']:
                     game = refereeData['games']['currentList'][gamePk]
-                    gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=game)
+                    gameDetail = self.cacheService.getGameDetail(game=game)
                     gameId = gameDetail['id'] if gameDetail else str(uuid.uuid4())
                     gamesEvents.append(
                         {
@@ -395,7 +405,7 @@ class HandleRefereeData():
                             'start': gameDetail['date'].isoformat(),
                             'end': (gameDetail['date'] + timedelta(hours=2)).isoformat(),
                             'extendedProps': {
-                                'location': gameDetail['field'] if gameDetail.get('field') else '',
+                                'location': gameDetail['fieldName'] if gameDetail.get('fieldName') else '',
                                 'description': ''
                             }
                         })
@@ -416,23 +426,24 @@ class HandleRefereeData():
                 return None
             else:
                 bestMatchName = bestMatch[0]
-        self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=refereeDetail['mobileNo'], propertyName='refereeRefereeName', value=bestMatchName)
+        self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=refereeDetail.get('refereeId'), propertyName='refereeRefereeName', value=bestMatchName)
         bestMatchRole = gameReferees[bestMatchName]
         return bestMatchRole
 
     def findMostRelevantGameField(self, tenantKeys, mobileNo, latitude, longitude, retry:int):
         now = helpers.localNow()
-        refereeGames = self.getRefereeGames(tenantKey=tenantKeys, mobileNo=mobileNo, includeArchived=True, from_date=now - timedelta(days=7), to_date=now + timedelta(days=2))
+        refereeId = self.globalRefereesByMobile.get(mobileNo, {}).get('refereeId')
+        refereeGames = self.getRefereeGames(tenantKey=tenantKeys, refereeId=refereeId, includeArchived=True, from_date=now - timedelta(days=7), to_date=now + timedelta(days=2))
         sortedGames = sorted(refereeGames.values(), key=lambda refereeGame: refereeGame.get('date'), reverse=True)
         results = []
         minDistance = None
         mostRelevantField = None
         mostRelevantGame = None
         for game in sortedGames:
-            gameDetail = self.cacheService.getGameDetail(tenantKey=game['tenantKey'], game=game)
-            field = self.cacheService.get_field_by_name(tenantKey=game['tenantKey'], fieldName=gameDetail['field'])
-            if field and field.get('addressDetails') and field.get('addressDetails').get('coordinates'):
-                coordinates = field.get('addressDetails').get('coordinates')
+            gameDetail = self.cacheService.getGameDetail(game=game)
+            field = self.tenantRepository.get_field(tenant_key=game['tenantKey'], field_name=gameDetail['fieldName'], game=game)
+            if field and field.address_details and field.address_details.get('coordinates'):
+                coordinates = field.address_details.get('coordinates')
                 if coordinates.get('lat') and coordinates.get('lng'):
                     distance = helpers.calculate_distance_between_coordinates(lat1=coordinates.get('lat'), lng1=coordinates.get('lng'), lat2=latitude, lng2=longitude, unit='km')
                     results.append({ 'gamePk': game['gamePk'], 'distance': distance, 'field': field, 'game': game })
@@ -445,19 +456,19 @@ class HandleRefereeData():
             mostRelevantGame = sortedResults[retry]['game']
         return mostRelevantField, mostRelevantGame, retry + 1 < len(sortedResults)
 
-    def findMostRelevantGames(self, tenantKeys, mobileNo, start:int=0, limit:int=1):
+    def findMostRelevantGames(self, tenantKeys, refereeId, start:int=0, limit:int=1):
         endOfDay = helpers.localNow().replace(hour=23, minute=59, second=59, microsecond=0).replace(tzinfo=None)
-        refereeGames = self.getRefereeGames(tenantKey=tenantKeys, mobileNo=mobileNo, includeArchived=True, from_date=endOfDay - timedelta(days=14), to_date=endOfDay)
+        refereeGames = self.getRefereeGames(tenantKey=tenantKeys, refereeId=refereeId, includeArchived=True, from_date=endOfDay - timedelta(days=14), to_date=endOfDay)
         sortedGames = sorted(refereeGames.values(), key=lambda refereeGame: refereeGame.get('date'), reverse=True)
         games = []
         for game in sortedGames[start:start+limit]:
-            gameDetail = self.cacheService.getGameDetail(tenantKey=game['tenantKey'], game=game)
+            gameDetail = self.cacheService.getGameDetail(game=game)
             if gameDetail:
                 if not gameDetail.get('id'):
                     gameDetail['id'] = str(uuid.uuid4())[:8]
                     res = self.cacheService.setTournamentGame(tenantKey=game['tenantKey'], tournamentName=gameDetail['tournamentName'], gamePk=gameDetail['gamePk'], value=gameDetail)
                     gameDetail = res[0]
-                games.append({ 'gameId': gameDetail['id'], 'gamePk': gameDetail['gamePk'], 'gameDetail': gameDetail })
+                games.append({ 'gameId': gameDetail['id'], 'gamePk': gameDetail['gamePk'], 'gameDetail': gameDetail, 'game': game })
 
         return games
 
@@ -478,7 +489,7 @@ class HandleRefereeData():
                                 continue
 
                             game = refereeData['games']['currentList'][gamePk]
-                            gameDetail = self.cacheService.getGameDetail(tenantKey=tenantKey, game=game)
+                            gameDetail = self.cacheService.getGameDetail(game=game)
                             refereesMobileNos = [ refDetail['* phone'] for refDetail in gameDetail['referees'] ]
 
                             refereeRole = self.findRefereeRole(tenantKey=tenantKey, refereeDetail=refereeDetail, gameReferees=gameDetail.get('referees'))
@@ -487,7 +498,7 @@ class HandleRefereeData():
 
                         if updated:
                             refereeData['games']['prevList'] = {}
-                            self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=refereeData['refId'], gamePk=gamePk, value=game)
+                            self.cacheService.setRefereeGame(tenantKey=tenantKey, refereeId=refereeDetail.get('refereeId'), refId=refereeData['refId'], gamePk=gamePk, value=game)
 
         except Exception as ex:
             pass
@@ -528,7 +539,8 @@ class HandleRefereeData():
         toDate = fromDate + timedelta(days=31)
         toDate = toDate.replace(day=1, hour=23, minute=59, second=59, microsecond=999999)
         toDate = toDate + timedelta(days=-1)
-        refereeGames = self.getRefereeGames(tenantKey=[tenantKey], mobileNo=mobileNo, includeArchived=True, from_date=fromDate, to_date=toDate)
+        refereeId = self.refereesByMobile.get(tenantKey, {}).get(mobileNo, {}).get('refereeId')
+        refereeGames = self.getRefereeGames(tenantKey=[tenantKey], refereeId=refereeId, includeArchived=True, from_date=fromDate, to_date=toDate)
         for refereeGame in refereeGames.values():
             approveTime = refereeGame.get('approvedDate') - refereeGame.get('created') if refereeGame.get('approvedDate') else None
             declineTime = refereeGame.get('declinedDate') - refereeGame.get('created') if refereeGame.get('declinedDate') else None
@@ -564,33 +576,33 @@ class HandleRefereeData():
         jsonHelper.save_to_file(refereeGamesData, './data/refereeGamesData.json')
 
     async def convertRefereeGamesReviewsToMobileNo(self):
-        tenantKeys = self.cacheService.getTenants().keys()
+        tenantKeys = self.tenantRepository.get_tenants().keys()
         for tenantKey in tenantKeys:
             referees = self.refereesByMobile.get(tenantKey, {})
             for mobileNo, referee in referees.items():
-                refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=referee['refId'], forceReload=True, includeArchived=True, includeRemoved=True, includeCanceled=True)
+                refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=referee.get('refereeId'), refId=referee['refId'], forceReload=True, includeArchived=True, includeRemoved=True, includeCanceled=True)
                 for refereeGame in refereeGames.values():
                     if refereeGame.get('refId'):
                         del refereeGame['refId']
-                    self.cacheService.setRefereeGameNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=refereeGame['gamePk'], value=refereeGame)
-                refereeReviews = self.cacheService.getRefereeReviews(tenantKey=tenantKey, refId=referee['refId'], forceReload=True)
+                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refereeId=referee.get('refereeId'), gamePk=refereeGame['gamePk'], value=refereeGame)
+                refereeReviews = self.cacheService.getRefereeReviews(tenantKey=tenantKey, refereeId=referee.get('refereeId'), refId=referee['refId'], forceReload=True)
                 for refereeReview in refereeReviews.values():
                     if refereeReview.get('refId'):
                         del refereeReview['refId']
-                    self.cacheService.setRefereeReviewNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=refereeReview['gamePk'], value=refereeReview)
+                    self.cacheService.setRefereeReview(tenantKey=tenantKey, refereeId=referee.get('refereeId'), gamePk=refereeReview['gamePk'], value=refereeReview)
 
     async def updateRefereesPortalAllow(self):
-        tenantKeys = self.cacheService.getTenants().keys()
+        tenantKeys = self.tenantRepository.get_tenants().keys()
         for tenantKey in tenantKeys:
             referees = self.refereesByMobile[tenantKey]
             for mobileNo, referee in referees.items():
                 if not referee.get('status'):
-                    self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value='inactive', propertyName='status')
+                    self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=referee.get('refereeId'), value='inactive', propertyName='status')
                 if referee.get('status') != 'active':
                     portalAllow = False
                 else:
                     portalAllow = True
-                self.cacheService.setRefereeProperty(tenantKey=tenantKey, mobileNo=mobileNo, value=portalAllow, propertyName='portalAllow')
+                self.cacheService.setRefereeProperty(tenantKey=tenantKey, refereeId=referee.get('refereeId'), value=portalAllow, propertyName='portalAllow')
 
     async def fixDuplicateTournamentGames(self, tenantKey):
         tournaments = self.cacheService.getTournaments(tenantKey=tenantKey, forceReload=True)
@@ -610,10 +622,7 @@ class HandleRefereeData():
         for mobileNo, referee in referees.items():
             if False and mobileNo != 'tmpRefId:283594':
                 continue
-            if referee.get('refId'):
-                refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refId=referee['refId'], forceReload=True, includeArchived=True, includeRemoved=True, includeCanceled=True)
-            else:
-                refereeGames = self.cacheService.getRefereeGamesNew(tenantKey=tenantKey, mobileNo=mobileNo, forceReload=True, includeArchived=True, includeRemoved=True, includeCanceled=True)
+            refereeGames = self.cacheService.getRefereeGames(tenantKey=tenantKey, refereeId=referee.get('refereeId'), forceReload=True, includeArchived=True, includeRemoved=True, includeCanceled=True)
             for refereeGame in refereeGames.values():
                 if refereeGame.get('tournamentName'):
                     continue
@@ -631,10 +640,7 @@ class HandleRefereeData():
                     toUpdate = True
                 if not toUpdate:
                     continue
-                if referee.get('refId'):
-                    self.cacheService.setRefereeGame(tenantKey=tenantKey, refId=referee['refId'], gamePk=refereeGame['gamePk'], value=refereeGame)
-                else:
-                    self.cacheService.setRefereeGameNew(tenantKey=tenantKey, mobileNo=mobileNo, gamePk=refereeGame['gamePk'], value=refereeGame)
+                self.cacheService.setRefereeGame(tenantKey=tenantKey, refereeId=referee.get('refereeId'), gamePk=refereeGame['gamePk'], value=refereeGame)
 
 if __name__ == '__main__':
     from shared.appContainer import AppContainer

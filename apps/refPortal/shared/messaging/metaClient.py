@@ -24,7 +24,7 @@ class MetaClient(MessagingClientBase):
     to send text and template messages.
     """
 
-    def __init__(self, logger:Logger, cacheService:CacheService, apiVersion:str, fromPhoneNumberId: str, whatsappBusinessAccountId: str, fromMobile:str, useClient:bool=False):
+    def __init__(self, logger:Logger, cacheService:CacheService, apiVersion:str, fromPhoneNumberId: str, whatsappBusinessAccountId: str, fromMobile:str, metaBaseUrl:str=None, apiServiceUrlBase:str=None, useClient:bool=False, formattedName:str=None):
         """
         Initializes the API wrapper with necessary credentials.
 
@@ -42,10 +42,11 @@ class MetaClient(MessagingClientBase):
         self.accessToken = accessToken
         self.fromPhoneNumberId = fromPhoneNumberId
         self.whatsappBusinessAccountId = whatsappBusinessAccountId
-        self.meta_base_url = os.getenv('metaBaseUrl')
+        self.meta_base_url = metaBaseUrl
         self.metaApiUrl = f"{self.meta_base_url}{apiVersion}"
 
-        self.apiServiceUrlBase = os.getenv('apiServiceUrlBase')
+        self.apiServiceUrlBase = apiServiceUrlBase
+        self.formattedName = formattedName
 
         self.incomingApiGuid = helpers.get_secret('incoming_api_guid')
         # Store your App Secret securely, e.g., as an environment variable
@@ -330,7 +331,7 @@ class MetaClient(MessagingClientBase):
         }
         if components:
             payload["template"]["components"] = components
-            
+
         response = self._sendPostRequest(payload=payload, replyToMessageId=replyToMessageId, returnMsgSid=returnMsgSid)
         self.logger.info(f"Meta sendTemplateMessage to: {to}, response: {response}")
         self.cacheService.setRefereeMessage(mobileNo=to, direction='TO', msgSid=response, value=payload)
@@ -714,7 +715,10 @@ class MetaClient(MessagingClientBase):
         """
         Handles incoming messages and verifies their authenticity using the request signature.
         """
-        if '127.0.0.1' in str(request.url.hostname) or 'api-dev.refereex.com' in str(request.url.hostname):
+        if ('127.0.0.1' in str(request.url.hostname) 
+            or 'api-dev.refereex.com' in str(request.url.hostname)
+            or 'api-test.refereex.com' in str(request.url.hostname)
+            or 'api-beta.refereex.com' in str(request.url.hostname)):
             return
 
         x_hub_signature_256 = request.headers.get('X-Hub-Signature-256')
@@ -751,9 +755,10 @@ class MetaClient(MessagingClientBase):
     def sendBotContact(self, to:str, replyToMessageId:str=None):
         from .messagingService import _adjustMobileNo
         adjustedTo = _adjustMobileNo(mobileNo=to)
-        formattedName = os.getenv('formattedName')
-        msgSid = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', mobileNo=adjustedTo, propertyName=formattedName)
-        
+        formattedName = self.formattedName
+        refereeId = self.cacheService.resolveRefereeIdByMobile(adjustedTo)
+        msgSid = self.cacheService.getRefereeProperty(tenantKey='GLOBAL', refereeId=refereeId, propertyName=formattedName)
+
         if msgSid:
             return msgSid
         
@@ -767,7 +772,7 @@ class MetaClient(MessagingClientBase):
             url=os.getenv('url'),
             replyToMessageId=replyToMessageId
         )
-        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', mobileNo=adjustedTo, value=msgSid, propertyName=formattedName)
+        self.cacheService.setRefereeProperty(tenantKey='GLOBAL', refereeId=refereeId, value=msgSid, propertyName=formattedName)
 
     def sendNewGameNotification(self, toMobile, bodyParameters, gameDetail, sendTemplate, templateName, sendAt=None):
         gameId = gameDetail.get('id')
@@ -801,7 +806,7 @@ class MetaClient(MessagingClientBase):
             )
         
         if msgSid:
-            self.cacheService.setReferenceId(target='msgSid', id=msgSid, value=customData)
+            self.cacheService.setReferenceId(target='msgSid', target_id=msgSid, value=customData)
         return msgSid
 
     def sendGamePortalCodeMessage(self, toMobile, bodyParameters, sendTemplate, templateName, sendAt=None):
@@ -925,7 +930,7 @@ class MetaClient(MessagingClientBase):
                     message['billable'] = billable
                     message['pricing_model'] = pricing_model
                     message['category'] = category
-                    self.cacheService.setCachedKeyVal(tenantKey='GLOBAL', mobileNo=to_number, propertyName='failedMessageToMeta', value=None, ttlSeconds=-1)
+                    self.cacheService.setCacheOnlyKeyVal(tenantKey='GLOBAL', mobileNo=to_number, propertyName='failedMessageToMeta', value=None, ttlSeconds=-1)
                     self.logger.info(f'Message sent to {to_number}, billable={billable}, pricing_model={pricing_model}, category={category}')
                 self.cacheService.setRefereeMessage(mobileNo=to_number, direction='TO', msgSid=current_message_sid, value=message)
             return {"status": "handled"}, 200, 'application/json'

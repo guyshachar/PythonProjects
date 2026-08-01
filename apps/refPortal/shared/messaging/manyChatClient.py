@@ -628,7 +628,7 @@ if __name__ == "__main__":
         botFields = [
             {
                 "field_name": "apiServiceBase",
-                "field_value": f"{os.getenv('apiServiceUrlBase').lstrip('https://')}"
+                "field_value": f"{(os.getenv('apiServiceUrlBase') or '').lstrip('https://')}"
             },
             {
                 "field_name": "incomingApiGuid",
@@ -640,7 +640,7 @@ if __name__ == "__main__":
             customUserFields = [
                 {
                     "field_name": "apiServiceBase1",
-                    "field_value": f"{os.getenv('apiServiceUrlBase').lstrip('https://')}"
+                    "field_value": f"{(os.getenv('apiServiceUrlBase') or '').lstrip('https://')}"
                 },
                 {
                     "field_name": "incomingApiGuid1",
