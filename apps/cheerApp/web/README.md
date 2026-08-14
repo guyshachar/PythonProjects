@@ -46,6 +46,22 @@ reference it from a published show's `assets[]`.
 Open it in several tabs/devices at once (with different `qr` tokens) to
 eyeball cross-device sync and per-zone cue scoping.
 
+## Language (English / Hebrew)
+
+The join-flow UI (status text, the join button, page title) is
+bilingual — see `src/i18n.js`. Resolution order: `?lang=en|he` in the
+URL (lets a join link force a language) → the user's saved default
+(EN/עב buttons top-right, persisted to `localStorage`) → the browser's
+own language → English. Hebrew also flips `<html dir>` to `rtl`, which
+is what actually reflows the layout (status text alignment, the
+switcher swapping sides) — see `applyLangToDocument()`'s comment for why
+that one line does most of the work instead of per-element RTL CSS.
+
+Only the flow authored in `main.js` is translated; lower-level
+diagnostic errors from `timeSync.js`/`assetStore.js`/`apiClient.js`
+(e.g. a sha256 mismatch) stay in English — see `i18n.js`'s header
+comment for the reasoning.
+
 ## Files
 
 - `src/timeSync.js` — SNTP-style offset estimation + periodic resync.
@@ -55,6 +71,7 @@ eyeball cross-device sync and per-zone cue scoping.
 - `src/assetStore.js` — pre-fetches, sha256-verifies, and primes every
   show asset before the CueEngine starts (docs/ARCHITECTURE.md §5).
 - `src/wakeLock.js` — Screen Wake Lock for the show's duration.
+- `src/i18n.js` — en/he strings + language detection/persistence/RTL.
 - `src/main.js` — join flow: URL params → event → sync → checkin → show
   → asset pre-fetch → tap-to-join gate → CueEngine.
 

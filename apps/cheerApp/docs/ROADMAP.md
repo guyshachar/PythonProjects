@@ -35,7 +35,10 @@
   testing in a real browser (a bare page load, no click, throws
   `NotAllowedError` on the first video/audio cue).
   "Bring to foreground" guard + Wake Lock — **done** (`web/src/wakeLock.js`,
-  `CueEngine`'s `onVisibilityChange`).
+  `CueEngine`'s `onVisibilityChange`). Language (English/Hebrew), user-
+  settable default with RTL layout for Hebrew — **done** (`web/src/i18n.js`,
+  see `web/README.md` "Language"); not an originally-planned Phase 1
+  item, added on request.
 - Admin console (minimal): author a show as JSON with schema validation
   and a timeline preview; visual drag-and-drop editor is a later
   nice-to-have, not required to run a real show.

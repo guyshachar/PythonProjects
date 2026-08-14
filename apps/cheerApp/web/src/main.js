@@ -3,6 +3,7 @@ import { TimeSync } from "./timeSync.js";
 import { CueEngine, flashRenderer, colorRenderer, imageRenderer, videoRenderer, mediaRenderer } from "./cueEngine.js";
 import { WakeLockKeeper } from "./wakeLock.js";
 import { AssetStore } from "./assetStore.js";
+import { SUPPORTED_LANGS, applyLangToDocument, detectLang, saveLang, t } from "./i18n.js";
 
 // Real join flow: open this page as
 //   index.html?event=<eventId>&qr=<qrToken>
@@ -30,8 +31,36 @@ const SHOW_POLL_INTERVAL_MS = 5000;
 const stage = document.getElementById("stage");
 const statusEl = document.getElementById("status");
 
+// Language: applied before anything else runs, so RTL layout (Hebrew)
+// and the join button's text are correct from first paint, not just
+// after async setup. See i18n.js for the en/he→default resolution order.
+const lang = detectLang();
+applyLangToDocument(lang);
+document.title = t(lang, "pageTitle");
+document.getElementById("joinBtn").textContent = t(lang, "joinBtn");
+initLangSwitch(lang);
+setStatus(t(lang, "loading"));
+
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+/** Wires the EN/עב buttons: picking one saves it as the user's default
+ * (this feature's actual ask) and reloads with ?lang= set explicitly,
+ * preserving event/qr — simplest correct way to re-render every
+ * already-emitted status string in the new language. */
+function initLangSwitch(currentLang) {
+  for (const btn of document.querySelectorAll("#langSwitch button")) {
+    const btnLang = btn.dataset.lang;
+    btn.setAttribute("aria-pressed", String(btnLang === currentLang));
+    if (!SUPPORTED_LANGS.includes(btnLang)) continue;
+    btn.addEventListener("click", () => {
+      saveLang(btnLang);
+      const url = new URL(window.location.href);
+      url.searchParams.set("lang", btnLang);
+      window.location.href = url.toString();
+    });
+  }
 }
 
 function getParams() {
@@ -87,7 +116,7 @@ async function main() {
   const { eventId, qrToken } = getParams();
   if (!eventId) {
     removeJoinGate();
-    setStatus("No event specified — open this page via your event's join link (?event=...).");
+    setStatus(t(lang, "noEvent"));
     return;
   }
 
@@ -95,10 +124,10 @@ async function main() {
 
   const api = new ApiClient(API_BASE);
 
-  setStatus("Joining event…");
+  setStatus(t(lang, "joiningEvent"));
   const event = await api.getEvent(eventId); // throws (and aborts main()) if the event doesn't exist
 
-  setStatus(`Joined "${event.name}" — syncing clock…`);
+  setStatus(t(lang, "joined", event.name));
   const timeSync = new TimeSync(`${API_BASE}/time`);
   const timeSyncStarted = timeSync.start();
 
@@ -110,25 +139,23 @@ async function main() {
     } catch {
       // Unrecognized/expired QR token — fall back to ALL rather than
       // blocking the join; the fan still sees whole-venue cues.
-      setStatus("QR code not recognized for this event — continuing without a zone.");
+      setStatus(t(lang, "qrNotRecognized"));
     }
   }
 
   await timeSyncStarted;
-  setStatus(`Zone: ${zoneId} — synced (±${Math.round(timeSync.confidenceMs)}ms) — waiting for the show…`);
+  setStatus(t(lang, "syncedWaitingShow", zoneId, Math.round(timeSync.confidenceMs)));
 
-  const show = await waitForShow(api, eventId, () =>
-    setStatus(`Zone: ${zoneId} — synced — waiting for the producer to publish the show…`)
-  );
+  const show = await waitForShow(api, eventId, () => setStatus(t(lang, "waitingForPublish", zoneId)));
 
   const assetStore = new AssetStore();
-  setStatus(`Zone: ${zoneId} — downloading show assets…`);
+  setStatus(t(lang, "downloadingAssets", zoneId));
   await assetStore.preload(show.assets, (done, total) => {
-    if (total > 0) setStatus(`Zone: ${zoneId} — downloading show assets (${done}/${total})…`);
+    if (total > 0) setStatus(t(lang, "downloadingAssetsProgress", zoneId, done, total));
   });
   attachMediaElements(assetStore, show.assets);
 
-  setStatus(`Zone: ${zoneId} — ready. Tap to join the show.`);
+  setStatus(t(lang, "readyTap", zoneId));
   await tapped;
   removeJoinGate();
 
@@ -150,22 +177,22 @@ async function main() {
       if (hidden) {
         wasBackgrounded = true;
       } else if (wasBackgrounded) {
-        setStatus("You were backgrounded — some cues may have been missed. Keep CheerApp open and foregrounded.");
+        setStatus(t(lang, "backgroundedWarning"));
       }
     },
   });
 
   const startAtMs = Date.parse(show.startAtUtc);
-  const foregroundReminder = "Keep this screen on and CheerApp in the foreground.";
+  const foregroundReminder = t(lang, "foregroundReminder");
   let countdownTimer = null;
   const updateCountdown = () => {
     const untilStartMs = startAtMs - timeSync.serverNow();
     if (untilStartMs <= 0) {
-      setStatus(`Zone: ${zoneId} — show is live. ${foregroundReminder}`);
+      setStatus(t(lang, "showLive", zoneId, foregroundReminder));
       clearInterval(countdownTimer);
       return;
     }
-    setStatus(`Zone: ${zoneId} — show starts in ${Math.ceil(untilStartMs / 1000)}s. ${foregroundReminder}`);
+    setStatus(t(lang, "showStartsIn", zoneId, Math.ceil(untilStartMs / 1000), foregroundReminder));
   };
   countdownTimer = setInterval(updateCountdown, 1000);
   updateCountdown();
@@ -183,6 +210,6 @@ async function main() {
 
 main().catch((err) => {
   removeJoinGate();
-  setStatus(`Error: ${err.message}`);
+  setStatus(t(lang, "errorPrefix", err.message));
   console.error(err);
 });

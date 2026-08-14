@@ -7,11 +7,22 @@
   <style>
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
     #stage { position: fixed; inset: 0; background: #000; transition: background 40ms linear; }
-    #status {
-      position: fixed; top: 0; left: 0; right: 0; padding: 10px 14px;
+    #topBar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1;
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
       font: 13px/1.4 -apple-system, system-ui, sans-serif; color: #0f0;
-      background: rgba(0,0,0,0.6); z-index: 1;
+      background: rgba(0,0,0,0.6);
     }
+    /* RTL note: flexbox's row direction follows the container's `dir`
+       automatically, so #status/#langSwitch swap sides for Hebrew with
+       no extra CSS — see i18n.js's applyLangToDocument(). */
+    #status { flex: 1 1 auto; min-width: 0; }
+    #langSwitch { display: flex; gap: 6px; flex: 0 0 auto; }
+    #langSwitch button {
+      font: inherit; color: #0f0; background: transparent; border: 1px solid #0f0;
+      border-radius: 4px; padding: 2px 8px; cursor: pointer;
+    }
+    #langSwitch button[aria-pressed="true"] { background: #0f0; color: #000; }
     #joinGate {
       position: fixed; top: 40px; left: 0; right: 0; bottom: 0; z-index: 2;
       display: flex; align-items: center; justify-content: center; background: #000;
@@ -24,7 +35,13 @@
   </style>
 </head>
 <body>
-  <div id="status">Loading…</div>
+  <div id="topBar">
+    <div id="status">Loading…</div>
+    <div id="langSwitch">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="he">עב</button>
+    </div>
+  </div>
   <div id="stage"></div>
   <div id="joinGate"><button id="joinBtn">Tap to join the show</button></div>
   <script type="module" src="./src/main.js"></script>
