@@ -15,9 +15,11 @@
   `backend/README.md` "Database". Still open: asset upload + CDN, show
   publish/validate against `shared/show.schema.json` (validation itself
   is already wired in `main.py`, asset upload is not).
-- Web client: join-by-link/QR flow, QR zone check-in, asset pre-fetch via
-  service worker, full Cue Engine (flash-as-strobe, color, image, video,
-  audio), "bring to foreground" guard, Wake Lock.
+- Web client: join-by-link/QR flow, QR zone check-in — **done**
+  (`web/src/main.js`, `apiClient.js`); asset pre-fetch via service worker
+  still open (blocks real image/video/audio cues — flash/color work now).
+  "Bring to foreground" guard + Wake Lock — **done** (`web/src/wakeLock.js`,
+  `CueEngine`'s `onVisibilityChange`).
 - Admin console (minimal): author a show as JSON with schema validation
   and a timeline preview; visual drag-and-drop editor is a later
   nice-to-have, not required to run a real show.

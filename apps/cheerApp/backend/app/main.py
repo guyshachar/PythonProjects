@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from jsonschema import Draft202012Validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +29,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CheerApp API", version="0.1.0", lifespan=lifespan)
+
+# Wide open for now — the web client is served from a different origin
+# (its own static server / future CDN) with no auth yet to scope this to.
+# Tighten to specific origins once there's a real deployment target and/or
+# auth lands (docs/ROADMAP.md Phase 1).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/time", response_model=TimeResponse)
