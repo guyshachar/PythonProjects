@@ -10,9 +10,11 @@
 
 ## Phase 1 — Web MVP
 
-- Backend: real persistence (reuse this monorepo's existing DB layer
-  conventions — Redis/DynamoDB per `shared/`), asset upload + CDN, show
-  publish/validate against `shared/show.schema.json`.
+- Backend: real persistence — **done**, Postgres via SQLAlchemy + Alembic
+  (`backend/app/db.py`, `db_models.py`, `repository.py`); see
+  `backend/README.md` "Database". Still open: asset upload + CDN, show
+  publish/validate against `shared/show.schema.json` (validation itself
+  is already wired in `main.py`, asset upload is not).
 - Web client: join-by-link/QR flow, QR zone check-in, asset pre-fetch via
   service worker, full Cue Engine (flash-as-strobe, color, image, video,
   audio), "bring to foreground" guard, Wake Lock.

@@ -1,24 +1,33 @@
-"""CheerApp backend — prototype FastAPI service.
-
-See ../README.md for the endpoint contract and cheerApp/docs/ for design.
-Not wired into RefPortal's shared/ DI container on purpose — see README.
+"""CheerApp backend — FastAPI service backed by Postgres (see app/db.py,
+app/repository.py). Not wired into any other product's DI container on
+purpose — see ../README.md.
 """
 from __future__ import annotations
 
 import json
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from jsonschema import Draft202012Validator
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import repository as repo
+from app.db import engine, get_session
 from app.models import CheckinRequest, CheckinResponse, Event, Show, TimeResponse
-from app.store import store
-
-app = FastAPI(title="CheerApp API", version="0.1.0")
 
 _SCHEMA_PATH = Path(__file__).resolve().parents[2] / "shared" / "show.schema.json"
 _show_validator = Draft202012Validator(json.loads(_SCHEMA_PATH.read_text()))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await engine.dispose()
+
+
+app = FastAPI(title="CheerApp API", version="0.1.0", lifespan=lifespan)
 
 
 @app.get("/time", response_model=TimeResponse)
@@ -33,22 +42,25 @@ def get_time() -> TimeResponse:
     return TimeResponse(t1=t1, t2=t2)
 
 
-@app.post("/events", response_model=Event)
-def create_event(event: Event) -> Event:
-    return store.put_event(event)
+@app.post("/events", response_model=Event, status_code=201)
+async def create_event(event: Event, session: AsyncSession = Depends(get_session)) -> Event:
+    try:
+        return await repo.put_event(session, event)
+    except repo.EventAlreadyExists:
+        raise HTTPException(status_code=409, detail=f"event {event.eventId!r} already exists")
 
 
 @app.get("/events/{event_id}", response_model=Event)
-def get_event(event_id: str) -> Event:
-    event = store.get_event(event_id)
+async def get_event(event_id: str, session: AsyncSession = Depends(get_session)) -> Event:
+    event = await repo.get_event(session, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="event not found")
     return event
 
 
 @app.post("/events/{event_id}/shows", response_model=Show)
-def publish_show(event_id: str, show: Show) -> Show:
-    if not store.get_event(event_id):
+async def publish_show(event_id: str, show: Show, session: AsyncSession = Depends(get_session)) -> Show:
+    if not await repo.get_event(session, event_id):
         raise HTTPException(status_code=404, detail="event not found")
     if show.eventId != event_id:
         raise HTTPException(status_code=400, detail="show.eventId does not match URL")
@@ -59,20 +71,20 @@ def publish_show(event_id: str, show: Show) -> Show:
             status_code=422,
             detail=[f"{'/'.join(str(p) for p in e.path)}: {e.message}" for e in errors],
         )
-    return store.put_show(show)
+    return await repo.put_show(session, show)
 
 
 @app.get("/events/{event_id}/show", response_model=Show)
-def get_show(event_id: str) -> Show:
-    show = store.get_show(event_id)
+async def get_show(event_id: str, session: AsyncSession = Depends(get_session)) -> Show:
+    show = await repo.get_show(session, event_id)
     if not show:
         raise HTTPException(status_code=404, detail="no published show for this event")
     return show
 
 
 @app.post("/events/{event_id}/checkin", response_model=CheckinResponse)
-def checkin(event_id: str, body: CheckinRequest) -> CheckinResponse:
-    zone_id = store.resolve_qr_token(event_id, body.qrToken)
+async def checkin(event_id: str, body: CheckinRequest, session: AsyncSession = Depends(get_session)) -> CheckinResponse:
+    zone_id = await repo.resolve_qr_token(session, event_id, body.qrToken)
     if not zone_id:
         raise HTTPException(status_code=404, detail="unrecognized QR token for this event")
     return CheckinResponse(zoneId=zone_id)

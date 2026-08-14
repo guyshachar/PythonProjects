@@ -58,6 +58,7 @@ class Show(BaseModel):
     startAtUtc: datetime
     assets: list[Asset] = Field(default_factory=list)
     cues: list[Cue] = Field(default_factory=list)
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CheckinRequest(BaseModel):
