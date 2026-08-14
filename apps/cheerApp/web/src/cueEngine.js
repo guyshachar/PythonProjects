@@ -197,7 +197,12 @@ export function imageRenderer(rootEl, assetUrlFor) {
   };
 }
 
-/** Assumes the <video>/<audio> element was pre-loaded ahead of showtime. */
+/**
+ * Audio cues — headless, no on-screen element. Assumes the <audio> was
+ * pre-loaded and primed ahead of showtime (assetStore.js), not fetched
+ * here: fetching at fire time is exactly the live network dependency
+ * docs/ARCHITECTURE.md §5 rules out.
+ */
 export function mediaRenderer(mediaElFor) {
   return (cue) => {
     const el = mediaElFor(cue.params.assetId);
@@ -209,6 +214,31 @@ export function mediaRenderer(mediaElFor) {
     return () => {
       clearTimeout(handle);
       el.pause();
+    };
+  };
+}
+
+/**
+ * Video cues — same pre-loaded-element assumption as mediaRenderer, plus
+ * showing/hiding the (already-in-the-DOM, initially transparent) <video>
+ * element itself for the cue's duration.
+ */
+export function videoRenderer(mediaElFor) {
+  return (cue) => {
+    const el = mediaElFor(cue.params.assetId);
+    if (!el) return undefined;
+    el.currentTime = 0;
+    if ("volume" in cue.params) el.volume = cue.params.volume;
+    el.style.opacity = "1";
+    el.play().catch((err) => console.warn("CueEngine: video play() failed", err));
+    const hide = () => {
+      el.style.opacity = "0";
+      el.pause();
+    };
+    const handle = setTimeout(hide, cue.durationMs);
+    return () => {
+      clearTimeout(handle);
+      hide();
     };
   };
 }

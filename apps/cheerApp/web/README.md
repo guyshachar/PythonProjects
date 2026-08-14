@@ -31,8 +31,17 @@ http://localhost:8080/?event=<eventId>&qr=<qrToken>
 signage (`POST /events` returns each zone's `qrToken`); omit it to join
 as zone `"ALL"` for testing. The page then: fetches the event, starts
 clock sync, resolves your zone via `/checkin` if a QR token was given,
-polls `/show` until the producer publishes one, and runs the real
-`CueEngine` against it — status text tracks progress through each step.
+polls `/show` until the producer publishes one, downloads and primes
+every asset the show references, then waits for a tap ("Tap to join the
+show") before running the real `CueEngine` against it — status text
+tracks progress through each step. The tap is required, not cosmetic:
+browsers refuse to autoplay audio/video with sound before a user
+gesture, so without it every video/audio cue would silently fail to
+play (see `docs/ARCHITECTURE.md` §5).
+
+To try image/video/audio cues, drop a file into `../backend/assets_store/`
+(dev-only static host — see `../backend/README.md` "Assets") and
+reference it from a published show's `assets[]`.
 
 Open it in several tabs/devices at once (with different `qr` tokens) to
 eyeball cross-device sync and per-zone cue scoping.
@@ -43,17 +52,22 @@ eyeball cross-device sync and per-zone cue scoping.
 - `src/cueEngine.js` — two-stage cue scheduler + default effect renderers
   (flash-as-strobe, color, image, video/audio) + backgrounding handling.
 - `src/apiClient.js` — thin fetch wrapper for the backend's REST contract.
+- `src/assetStore.js` — pre-fetches, sha256-verifies, and primes every
+  show asset before the CueEngine starts (docs/ARCHITECTURE.md §5).
 - `src/wakeLock.js` — Screen Wake Lock for the show's duration.
 - `src/main.js` — join flow: URL params → event → sync → checkin → show
-  → CueEngine, wiring status text and the foreground/Wake Lock guard.
+  → asset pre-fetch → tap-to-join gate → CueEngine.
 
 ## Known gaps (tracked in `../docs/ROADMAP.md` Phase 1)
 
-- **No asset pre-fetch/CDN yet** — only `flash`/`color` cues render for
-  real. `image`/`video`/`audio` cues currently just log a missing-
-  renderer warning (no assets to fetch/prime yet).
+- **No real asset upload/CDN** — `backend/assets_store/` is a dev-only
+  static host, not production infrastructure.
 - **No admin UI** — publishing a show means `curl`-ing the backend
   directly (see `../backend/README.md`).
 - **No re-poll after initial show fetch** — if a producer *republishes*
   a show after a fan has already joined and started scheduling against
   the first one, that fan won't pick up the change until they reload.
+- **No per-device audio/video latency compensation** — cues fire via a
+  plain `play()` at the synced instant; see `docs/SYNC_DESIGN.md` §5's
+  "Current web implementation status" for what's still aspirational
+  there (warm-up latency measurement, Web Audio API scheduling).

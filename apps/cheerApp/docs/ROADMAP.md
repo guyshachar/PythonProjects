@@ -12,12 +12,28 @@
 
 - Backend: real persistence — **done**, Postgres via SQLAlchemy + Alembic
   (`backend/app/db.py`, `db_models.py`, `repository.py`); see
-  `backend/README.md` "Database". Still open: asset upload + CDN, show
-  publish/validate against `shared/show.schema.json` (validation itself
-  is already wired in `main.py`, asset upload is not).
+  `backend/README.md` "Database". Show publish validates against
+  `shared/show.schema.json` **and** cross-checks every cue's `assetId`
+  actually exists in `show.assets` (`main.py`'s `publish_show`) — a
+  dangling reference is caught at publish time, not discovered live at
+  showtime. Still open: real asset upload + CDN — for now producers drop
+  files into `backend/assets_store/`, served by a dev-only static mount
+  (`main.py`'s `/assets`), not a production pipeline.
 - Web client: join-by-link/QR flow, QR zone check-in — **done**
-  (`web/src/main.js`, `apiClient.js`); asset pre-fetch via service worker
-  still open (blocks real image/video/audio cues — flash/color work now).
+  (`web/src/main.js`, `apiClient.js`). Asset pre-fetch — **done**
+  (`web/src/assetStore.js`): every asset is downloaded, sha256-verified,
+  and (for video/audio) primed to a ready-to-play `<video>`/`<audio>`
+  element before the CueEngine ever starts, so no cue depends on live
+  network at fire time (docs/ARCHITECTURE.md §5) — not via a service
+  worker as originally planned, a plain in-memory fetch+Blob store
+  turned out sufficient for a single-session client. All five cue types
+  (flash/color/image/video/audio) render for real now.
+  A **"Tap to join the show" gate** blocks starting the engine (not the
+  setup work before it) — required because Chrome/Safari refuse
+  audio/video autoplay-with-sound without a prior user gesture; this
+  wasn't anticipated in the original design and was only caught by
+  testing in a real browser (a bare page load, no click, throws
+  `NotAllowedError` on the first video/audio cue).
   "Bring to foreground" guard + Wake Lock — **done** (`web/src/wakeLock.js`,
   `CueEngine`'s `onVisibilityChange`).
 - Admin console (minimal): author a show as JSON with schema validation

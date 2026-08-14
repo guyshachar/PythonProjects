@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from jsonschema import Draft202012Validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,11 @@ from app.models import CheckinRequest, CheckinResponse, Event, Show, TimeRespons
 
 _SCHEMA_PATH = Path(__file__).resolve().parents[2] / "shared" / "show.schema.json"
 _show_validator = Draft202012Validator(json.loads(_SCHEMA_PATH.read_text()))
+
+_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets_store"
+_ASSETS_DIR.mkdir(exist_ok=True)
+
+_ASSET_CUE_TYPES = {"image", "video", "audio"}
 
 
 @asynccontextmanager
@@ -40,6 +46,12 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Dev-only static file host so Show.assets[].url points at something real
+# for local testing (see ../README.md "Assets"). This is NOT the asset
+# upload/CDN pipeline (docs/ROADMAP.md Phase 1 still open) — there's no
+# upload endpoint, just a directory a producer drops files into by hand.
+app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
 
 
 @app.get("/time", response_model=TimeResponse)
@@ -83,6 +95,28 @@ async def publish_show(event_id: str, show: Show, session: AsyncSession = Depend
             status_code=422,
             detail=[f"{'/'.join(str(p) for p in e.path)}: {e.message}" for e in errors],
         )
+
+    # The JSON Schema can't express "assetId must exist in assets[]" as a
+    # cross-array reference, so check it here. Catching a dangling
+    # assetId at publish time — not live, as a missing render at showtime
+    # — is the whole point of pre-fetching assets ahead of the show
+    # (docs/ARCHITECTURE.md §5): a cue an AssetStore can't resolve is
+    # exactly the live network dependency that's supposed to be
+    # impossible by showtime.
+    known_asset_ids = {a.assetId for a in show.assets}
+    missing = sorted(
+        {
+            cue.params["assetId"]
+            for cue in show.cues
+            if cue.type in _ASSET_CUE_TYPES and cue.params.get("assetId") not in known_asset_ids
+        }
+    )
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"cue(s) reference assetId(s) not present in show.assets: {missing}",
+        )
+
     return await repo.put_show(session, show)
 
 

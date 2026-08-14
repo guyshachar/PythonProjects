@@ -96,9 +96,20 @@ but it is a convenience, not the sync mechanism.
   strobe via `AVCaptureDevice`. This must be visible to producers when
   authoring a show (see `docs/SHOW_FORMAT.md`).
 - **Asset pre-fetch**: video/image/audio for a show must be fully
-  downloaded and decoded/primed *before* showtime (service worker cache
-  on web, local file cache on iOS) — first-frame decode latency at cue
-  time would silently desync playback.
+  downloaded and decoded/primed *before* showtime — first-frame decode
+  latency at cue time would silently desync playback, and a stadium
+  network is exactly the environment a cue can't depend on live. Web:
+  `web/src/assetStore.js` fetches+sha256-verifies every asset and
+  primes video/audio elements up front (plain fetch+Blob, not a service
+  worker — sufficient for a single-session client; a service worker
+  would matter for repeat-visit caching across sessions, not attempted
+  yet). iOS: local file cache, not yet built.
+- **Autoplay requires a user gesture**: browsers refuse to autoplay
+  audio/video with sound until the page has seen a user interaction —
+  the web client gates starting the CueEngine on a "Tap to join" click
+  for exactly this reason (`web/src/main.js`); a show that never
+  requires a tap would have every video/audio cue silently fail to play
+  with no error visible to anyone but the browser console.
 - **Privacy**: QR/beacon check-in only ever yields a coarse zone id, not
   precise geolocation. No fine-grained location permission needed for
   QR; BLE ranging requires the OS Bluetooth/location permission prompt

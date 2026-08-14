@@ -15,15 +15,34 @@ tenancy, auth, or domain code; each app here is its own deployable.
 | GET | `/events/{eventId}/show` | Fetch the current published Show + asset manifest |
 | POST | `/events/{eventId}/checkin` | Client reports a scanned QR token -> resolved zone id |
 | WS | `/events/{eventId}/live` | Control channel: go-live / delay / abort broadcasts |
+| GET | `/assets/{filename}` | Static file host — see "Assets" below |
 
 ## Status
 
 Events/Shows/Zones are persisted to Postgres (`app/db.py`,
 `app/db_models.py`, `app/repository.py`); schema is managed by Alembic
-(`alembic/`). Still missing: auth and asset upload/CDN — both tracked in
-`../docs/ROADMAP.md` Phase 1. Publishing a show never overwrites history;
-each publish is a new row and `GET .../show` returns the latest one (see
-`db_models.py`'s `ShowORM` docstring).
+(`alembic/`). Still missing: auth and real asset upload/CDN — both
+tracked in `../docs/ROADMAP.md` Phase 1. Publishing a show never
+overwrites history; each publish is a new row and `GET .../show` returns
+the latest one (see `db_models.py`'s `ShowORM` docstring).
+
+Publishing also cross-checks that every cue's `assetId` (image/video/
+audio) exists in the show's `assets[]` — JSON Schema can't express that
+as a cross-array reference, so `main.py`'s `publish_show` checks it in
+Python and 422s on a dangling reference. Catching this at publish time
+rather than live matters because the whole point of `assetStore.js`'s
+client-side pre-fetch is that a cue's asset is guaranteed resolvable
+before showtime.
+
+## Assets
+
+`app.mount("/assets", ...)` in `main.py` serves `assets_store/` as a
+plain static directory — a stand-in for a real CDN so `Show.assets[].url`
+points at something real during local dev/testing. It is **not** the
+production asset pipeline: there's no upload endpoint, no auth, and
+nothing in `assets_store/` is committed (see its `.gitignore`) — a
+producer (or you, testing) drops a file in by hand and references it by
+filename: `http://localhost:5100/assets/<filename>`.
 
 The WS control channel (`/events/{eventId}/live`) is intentionally
 **not** persisted — it's a live fan-out convenience for operator

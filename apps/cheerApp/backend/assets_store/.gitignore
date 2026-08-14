@@ -1,0 +1,5 @@
+# Dev-only local asset host (../app/main.py mounts this at /assets — see
+# ../README.md "Assets"). Not the real upload/CDN pipeline, just a
+# directory a producer drops test files into by hand; don't commit them.
+*
+!.gitignore

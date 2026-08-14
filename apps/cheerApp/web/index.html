@@ -12,11 +12,21 @@
       font: 13px/1.4 -apple-system, system-ui, sans-serif; color: #0f0;
       background: rgba(0,0,0,0.6); z-index: 1;
     }
+    #joinGate {
+      position: fixed; top: 40px; left: 0; right: 0; bottom: 0; z-index: 2;
+      display: flex; align-items: center; justify-content: center; background: #000;
+      font: 16px/1.4 -apple-system, system-ui, sans-serif;
+    }
+    #joinBtn {
+      padding: 16px 32px; font: inherit; color: #000; background: #0f0;
+      border: none; border-radius: 8px;
+    }
   </style>
 </head>
 <body>
   <div id="status">Loading…</div>
   <div id="stage"></div>
+  <div id="joinGate"><button id="joinBtn">Tap to join the show</button></div>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

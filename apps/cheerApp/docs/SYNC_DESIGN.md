@@ -129,6 +129,17 @@ device to device and is *not* covered by the offset math above. For v1:
   flash/color for v1; it's tracked as a follow-up once the flash/color
   path is validated live.
 
+**Current web implementation status**: the basic pre-roll (`load()` +
+wait for `canplaythrough`/`loadeddata`, `web/src/assetStore.js`) and
+plain `play()`/`pause()` (`web/src/cueEngine.js`'s `videoRenderer`/
+`mediaRenderer`) are done. The per-device warm-up-latency measurement
+and Web Audio API sample-accurate scheduling described above are **not
+implemented yet** — video/audio cues currently fire via `play()` at the
+synced instant with no further compensation, consistent with "video
+precision isn't held to the ~50ms bar for v1" above, but audio doesn't
+have that same explicit exemption and would benefit from this follow-up
+sooner.
+
 ## 6. Failure modes and fallbacks
 
 - **No sync yet when show starts** (join too late): client shows "still
