@@ -6,7 +6,28 @@
  */
 
 const SAMPLE_COUNT = 8;
-const KEEP_FRACTION = 0.75; // discard worst quarter by round-trip delay
+const KEEP_FRACTION = 0.75; // keep the best (lowest-RTT) 75%, discard the worst quarter
+const REQUEST_TIMEOUT_MS = 3000; // abort one hung /time round trip rather than stall the whole batch
+const MAX_ATTEMPTS = SAMPLE_COUNT * 2; // bound retries so a fully dead network still fails fast
+const MIN_SAMPLES = Math.ceil(SAMPLE_COUNT / 2); // don't trust an offset built from too few samples
+
+async function fetchSample(timeEndpoint) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const t0 = Date.now();
+    const res = await fetch(timeEndpoint, { cache: "no-store", signal: controller.signal });
+    const t3 = Date.now();
+    const { t1, t2 } = await res.json();
+
+    return {
+      delay: (t3 - t0) - (t2 - t1), // round-trip minus server processing
+      offset: ((t1 - t0) + (t2 - t3)) / 2,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 /**
  * @param {string} timeEndpoint e.g. "https://api.cheerapp.example/time"
@@ -14,21 +35,28 @@ const KEEP_FRACTION = 0.75; // discard worst quarter by round-trip delay
  */
 export async function measureOffset(timeEndpoint) {
   const samples = [];
-  for (let i = 0; i < SAMPLE_COUNT; i++) {
-    const t0 = Date.now();
-    const res = await fetch(timeEndpoint, { cache: "no-store" });
-    const t3 = Date.now();
-    const { t1, t2 } = await res.json();
+  // One bad round trip (timeout, dropped connection, bad JSON, ...) doesn't
+  // cost the whole batch — skip it and keep sampling, bounded by MAX_ATTEMPTS
+  // so a fully dead network still fails in finite time.
+  for (let attempt = 0; attempt < MAX_ATTEMPTS && samples.length < SAMPLE_COUNT; attempt++) {
+    try {
+      samples.push(await fetchSample(timeEndpoint));
+    } catch {
+      // skip this attempt
+    }
+  }
 
-    const delay = (t3 - t0) - (t2 - t1); // round-trip minus server processing
-    const offset = ((t1 - t0) + (t2 - t3)) / 2;
-    samples.push({ delay, offset });
+  if (samples.length < MIN_SAMPLES) {
+    throw new Error(`TimeSync: only ${samples.length}/${SAMPLE_COUNT} /time samples succeeded`);
   }
 
   samples.sort((a, b) => a.delay - b.delay);
   const kept = samples.slice(0, Math.max(1, Math.ceil(samples.length * KEEP_FRACTION)));
   const offsets = kept.map((s) => s.offset).sort((a, b) => a - b);
-  const medianOffset = offsets[Math.floor(offsets.length / 2)];
+  const mid = offsets.length / 2;
+  // True median: average the two middle values on an even-sized set instead
+  // of just taking the upper-middle one.
+  const medianOffset = Number.isInteger(mid) ? (offsets[mid - 1] + offsets[mid]) / 2 : offsets[Math.floor(mid)];
 
   return {
     offsetMs: medianOffset,

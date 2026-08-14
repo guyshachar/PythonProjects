@@ -4,10 +4,14 @@ import Foundation
 /// `/time` endpoint. Behaviorally mirrors web/src/timeSync.js — see
 /// cheerApp/docs/SYNC_DESIGN.md §1-2 for the math and sampling rationale.
 actor TimeSyncService {
+    private static let requestTimeout: TimeInterval = 3.0 // abort one hung /time round trip
+
     private let timeEndpoint: URL
     private let sampleCount: Int
     private let keepFraction: Double
     private let resyncInterval: TimeInterval
+    private let maxAttempts: Int // bound retries so a fully dead network still fails fast
+    private let minSamples: Int // don't trust an offset built from too few samples
 
     private(set) var offsetMs: Double? {
         didSet {
@@ -39,6 +43,8 @@ actor TimeSyncService {
         self.sampleCount = sampleCount
         self.keepFraction = keepFraction
         self.resyncInterval = resyncInterval
+        self.maxAttempts = sampleCount * 2
+        self.minSamples = Int((Double(sampleCount) / 2).rounded(.up))
     }
 
     var isSynced: Bool { offsetMs != nil }
@@ -68,37 +74,54 @@ actor TimeSyncService {
     }
 
     private func resync() async {
-        do {
-            var samples: [(delay: Double, offset: Double)] = []
-            samples.reserveCapacity(sampleCount)
+        var samples: [(delay: Double, offset: Double)] = []
+        samples.reserveCapacity(sampleCount)
 
-            for _ in 0..<sampleCount {
-                let t0 = nowMs()
-                var request = URLRequest(url: timeEndpoint)
-                request.cachePolicy = .reloadIgnoringLocalCacheData
-                let (data, _) = try await URLSession.shared.data(for: request)
-                let t3 = nowMs()
-
-                let response = try JSONDecoder().decode(TimeResponse.self, from: data)
-                let t1 = Double(response.t1)
-                let t2 = Double(response.t2)
-
-                let delay = (t3 - t0) - (t2 - t1)
-                let offset = ((t1 - t0) + (t2 - t3)) / 2
-                samples.append((delay: delay, offset: offset))
-            }
-
-            samples.sort { $0.delay < $1.delay }
-            let keepCount = max(1, Int((Double(samples.count) * keepFraction).rounded(.up)))
-            let kept = samples.prefix(keepCount)
-            let offsets = kept.map(\.offset).sorted()
-
-            self.offsetMs = offsets[offsets.count / 2]
-            self.confidenceMs = kept.map(\.delay).min()
-        } catch {
-            // Keep the previous offset on a failed resync (stale beats none),
-            // matching web/src/timeSync.js's TimeSync._resync().
+        // One bad round trip (timeout, dropped connection, bad body, ...)
+        // doesn't cost the whole batch — skip it and keep sampling, bounded
+        // by maxAttempts so a fully dead network still fails in finite time.
+        // Matches web/src/timeSync.js's measureOffset().
+        var attempts = 0
+        while samples.count < sampleCount && attempts < maxAttempts {
+            attempts += 1
+            guard let sample = try? await fetchSample() else { continue }
+            samples.append(sample)
         }
+
+        guard samples.count >= minSamples else {
+            // Keep the previous offset on a failed resync (stale beats none).
+            return
+        }
+
+        samples.sort { $0.delay < $1.delay }
+        let keepCount = max(1, Int((Double(samples.count) * keepFraction).rounded(.up)))
+        let kept = samples.prefix(keepCount)
+        let offsets = kept.map(\.offset).sorted()
+
+        self.offsetMs = median(of: offsets)
+        self.confidenceMs = kept.map(\.delay).min()
+    }
+
+    private func fetchSample() async throws -> (delay: Double, offset: Double) {
+        let t0 = nowMs()
+        var request = URLRequest(url: timeEndpoint)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = Self.requestTimeout
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let t3 = nowMs()
+
+        let response = try JSONDecoder().decode(TimeResponse.self, from: data)
+        let t1 = Double(response.t1)
+        let t2 = Double(response.t2)
+
+        return (delay: (t3 - t0) - (t2 - t1), offset: ((t1 - t0) + (t2 - t3)) / 2)
+    }
+
+    /// True median: averages the two middle values on an even-sized set
+    /// instead of just taking the upper-middle one.
+    private func median(of sorted: [Double]) -> Double {
+        let n = sorted.count
+        return n % 2 == 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[n / 2]
     }
 
     private func nowMs() -> Double {

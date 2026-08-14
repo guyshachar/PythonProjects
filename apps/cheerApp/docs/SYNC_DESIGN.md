@@ -34,13 +34,20 @@ asymmetric or bloated network path skews `θ` by however lopsided the
 send/receive delay was. Mitigation, run by every client before a show:
 
 1. Fire **N = 8** requests back to back (small payload, keep-alive
-   connection so TCP/TLS setup cost doesn't pollute the RTT).
+   connection so TCP/TLS setup cost doesn't pollute the RTT). Each request
+   has its own timeout (3s) and a failed/timed-out one is simply skipped
+   and retried (bounded to 2N attempts total) rather than discarding the
+   whole batch — one bad round trip on a flaky stadium network shouldn't
+   cost every sample collected so far. If fewer than N/2 requests succeed,
+   the resync is treated as failed (previous offset kept).
 2. Compute `δ` and `θ` for each sample.
-3. **Discard samples above the 25th-percentile RTT** (`δ`) — low-RTT
-   samples are the ones where send delay ≈ receive delay, which is the
-   assumption the offset formula depends on.
-4. Take the **median `θ`** of the surviving samples (median, not mean,
-   to reject any remaining single outlier).
+3. Sort by RTT (`δ`) and **keep the best (lowest-RTT) 75%, discard the
+   worst quarter** — low-RTT samples are the ones where send delay ≈
+   receive delay, which is the assumption the offset formula depends on.
+4. Take the **median `θ`** of the surviving samples (median, not mean, to
+   reject any remaining single outlier; the true median — averaging the
+   two middle values when the kept set is even-sized, not just picking
+   one of them).
 5. Record `offsetMs = θ`, `lastSyncAt = clientNow`, `confidenceMs = δ_min`.
 
 This runs: on app open, again right before "join show" is confirmed, and
@@ -131,8 +138,10 @@ device to device and is *not* covered by the offset math above. For v1:
   skipping older ones rather than firing a storm of stale effects.
 - **Backgrounded / screen locked**: iOS/Safari will not run the fine
   scheduling loop reliably; the app detects this (visibility change /
-  scene phase) and shows a "bring CheerApp to the foreground" prompt
-  rather than silently missing cues.
+  scene phase — implemented in web's `CueEngine` via `onVisibilityChange`,
+  which also drops and re-evaluates the pending fine loop rather than
+  letting it silently stall) and shows a "bring CheerApp to the
+  foreground" prompt rather than silently missing cues.
 - **Control channel (WS) drops**: has no effect on a show already in
   progress, since the timeline was pre-fetched — only late operator
   overrides (delay/abort) are lost until reconnect.

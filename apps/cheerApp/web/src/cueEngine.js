@@ -14,13 +14,19 @@ export class CueEngine {
   /**
    * @param {{startAtUtc: string, cues: object[]}} show
    * @param {import('./timeSync.js').TimeSync} timeSync
-   * @param {{zoneId: string, renderers: Record<string, (cue: object) => void>}} opts
+   * @param {{zoneId: string, renderers: Record<string, (cue: object) => (void|(() => void))>, onVisibilityChange?: (hidden: boolean) => void}} opts
+   *   `renderers` may return a cleanup fn to let stop() cut off an in-flight
+   *   effect. `onVisibilityChange` fires when the tab is backgrounded/
+   *   foregrounded (SYNC_DESIGN.md §6) — wire it to a "bring CheerApp to the
+   *   foreground" prompt; the engine itself pauses the fine loop while
+   *   hidden and re-evaluates (catch-up or drop) on return.
    */
-  constructor(show, timeSync, { zoneId, renderers }) {
+  constructor(show, timeSync, { zoneId, renderers, onVisibilityChange } = {}) {
     this.startAtMs = Date.parse(show.startAtUtc);
     this.timeSync = timeSync;
     this.zoneId = zoneId;
     this.renderers = renderers;
+    this._onVisibilityChange = onVisibilityChange ?? null;
 
     this.pending = show.cues
       .filter((cue) => cue.zones.includes("ALL") || cue.zones.includes(zoneId))
@@ -29,18 +35,48 @@ export class CueEngine {
 
     this._coarseTimer = null;
     this._rafHandle = null;
+    this._activeEffects = new Set(); // cleanup fns for in-flight renderer effects
+    this._visibilityHandler = () => this._handleVisibilityChange();
   }
 
   /** Begin scheduling. Safe to call once timeSync.isSynced is true. */
   start() {
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this._visibilityHandler);
+    }
     this._scheduleNext();
   }
 
   stop() {
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this._visibilityHandler);
+    }
     if (this._coarseTimer) clearTimeout(this._coarseTimer);
     if (this._rafHandle) cancelAnimationFrame(this._rafHandle);
     this._coarseTimer = null;
     this._rafHandle = null;
+    for (const cancel of this._activeEffects) cancel();
+    this._activeEffects.clear();
+  }
+
+  /**
+   * iOS/Safari won't run the rAF fine loop reliably in the background
+   * (SYNC_DESIGN.md §6): drop it while hidden rather than let it silently
+   * stall, and re-enter scheduling on return — which fires any cue still
+   * within the catch-up grace window and drops the rest, same as the
+   * existing late-join path.
+   */
+  _handleVisibilityChange() {
+    const hidden = document.visibilityState === "hidden";
+    this._onVisibilityChange?.(hidden);
+    if (hidden) {
+      if (this._rafHandle) {
+        cancelAnimationFrame(this._rafHandle);
+        this._rafHandle = null;
+      }
+    } else {
+      this._scheduleNext();
+    }
   }
 
   _nextUnfired() {
@@ -93,7 +129,15 @@ export class CueEngine {
       console.warn(`CueEngine: no renderer registered for cue type "${cue.type}"`, cue);
       return;
     }
-    renderer(cue);
+    // Renderers may optionally return a cleanup fn so stop() can cut off an
+    // in-flight effect (e.g. abort mid-strobe) instead of only cancelling
+    // pending schedules. Self-forgotten after the cue's own duration so
+    // _activeEffects doesn't grow unbounded over a long show.
+    const cancel = renderer(cue);
+    if (typeof cancel === "function") {
+      this._activeEffects.add(cancel);
+      setTimeout(() => this._activeEffects.delete(cancel), (cue.durationMs ?? 0) + 50);
+    }
   }
 }
 
@@ -107,34 +151,49 @@ export function flashRenderer(rootEl) {
     const periodMs = 1000 / cue.params.frequencyHz;
     const endAt = performance.now() + cue.durationMs;
     let on = false;
+    let stopped = false;
+    let handle = null;
     const tick = () => {
       on = !on;
       rootEl.style.background = on ? "#ffffff" : "#000000";
-      if (performance.now() < endAt) {
-        setTimeout(tick, periodMs / 2);
+      if (!stopped && performance.now() < endAt) {
+        handle = setTimeout(tick, periodMs / 2);
       } else {
         rootEl.style.background = "#000000";
       }
     };
     tick();
+    return () => {
+      stopped = true;
+      clearTimeout(handle);
+      rootEl.style.background = "#000000";
+    };
   };
 }
 
 export function colorRenderer(rootEl) {
   return (cue) => {
     rootEl.style.background = cue.params.hex;
-    setTimeout(() => {
+    const handle = setTimeout(() => {
       rootEl.style.background = "#000000";
     }, cue.durationMs);
+    return () => {
+      clearTimeout(handle);
+      rootEl.style.background = "#000000";
+    };
   };
 }
 
 export function imageRenderer(rootEl, assetUrlFor) {
   return (cue) => {
     rootEl.style.background = `#000 url(${assetUrlFor(cue.params.assetId)}) center/contain no-repeat`;
-    setTimeout(() => {
+    const handle = setTimeout(() => {
       rootEl.style.background = "#000000";
     }, cue.durationMs);
+    return () => {
+      clearTimeout(handle);
+      rootEl.style.background = "#000000";
+    };
   };
 }
 
@@ -142,10 +201,14 @@ export function imageRenderer(rootEl, assetUrlFor) {
 export function mediaRenderer(mediaElFor) {
   return (cue) => {
     const el = mediaElFor(cue.params.assetId);
-    if (!el) return;
+    if (!el) return undefined;
     el.currentTime = 0;
     if ("volume" in cue.params) el.volume = cue.params.volume;
     el.play().catch((err) => console.warn("CueEngine: media play() failed", err));
-    setTimeout(() => el.pause(), cue.durationMs);
+    const handle = setTimeout(() => el.pause(), cue.durationMs);
+    return () => {
+      clearTimeout(handle);
+      el.pause();
+    };
   };
 }
