@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CheerApp — sync demo</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #stage { position: fixed; inset: 0; background: #000; transition: background 40ms linear; }
+    #status {
+      position: fixed; top: 0; left: 0; right: 0; padding: 10px 14px;
+      font: 13px/1.4 -apple-system, system-ui, sans-serif; color: #0f0;
+      background: rgba(0,0,0,0.6); z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">Loading…</div>
+  <div id="stage"></div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
